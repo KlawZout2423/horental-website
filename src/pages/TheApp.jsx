@@ -14,7 +14,7 @@ const TheApp = () => {
               Built natively with Flutter, our comprehensive web application puts the power of real estate management right at your fingertips.
             </p>
             <div className="app-actions">
-              <a href="#" className="btn btn-primary app-btn">Launch Portal</a>
+              <a href="https://web-five-zeta-lt6h5j4aux.vercel.app" className="btn btn-primary app-btn">Launch Portal</a>
             </div>
           </div>
           <div className="app-hero-image animate-fade-in" style={{animationDelay: '0.2s'}}>

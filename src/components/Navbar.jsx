@@ -45,7 +45,7 @@ const Navbar = () => {
               <span className="nav-label">{item.label}</span>
             </Link>
           ))}
-          <a href="#" className="nav-cta btn-primary" onClick={() => setIsOpen(false)}>
+          <a href="https://web-five-zeta-lt6h5j4aux.vercel.app" className="nav-cta btn-primary" onClick={() => setIsOpen(false)}>
             Launch App
           </a>
         </div>
