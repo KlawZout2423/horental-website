@@ -14,15 +14,29 @@ import { NextRequest } from 'next/server';
 
 const apolloHandler = startServerAndCreateNextHandler(server, {
   context: async (req) => {
+    // Retrieve auth token: support both headers (for mobile/Flutter) and HttpOnly cookies (for website)
+    let token = '';
     const headers = req.headers;
     let authHeader: string | null = null;
+
     if (headers && typeof (headers as any).get === 'function') {
       authHeader = (headers as any).get('authorization');
     } else if (headers) {
       const auth = (headers as any)['authorization'];
       authHeader = Array.isArray(auth) ? auth[0] : auth || null;
     }
-    const token = authHeader?.replace('Bearer ', '') || '';
+
+    if (authHeader) {
+      token = authHeader.replace('Bearer ', '');
+    } else {
+      // Fallback to cookies
+      if (req.cookies && typeof (req.cookies as any).get === 'function') {
+        token = (req.cookies as any).get('auth_token')?.value || '';
+      } else if (req.cookies) {
+        token = (req.cookies as any)['auth_token'] || '';
+      }
+    }
+
     if (!token) return { user: null };
 
     try {

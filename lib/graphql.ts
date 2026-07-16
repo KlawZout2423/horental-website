@@ -22,7 +22,7 @@ export async function graphqlRequest<T = any>(
 ): Promise<T> {
   // Route through our Next.js proxy so the HttpOnly cookie is attached
   // server-side. The browser automatically sends the cookie with this request.
-  const proxyUrl = '/api/graphql';
+  const proxyUrl = '/graphql';
 
   try {
     const res = await fetch(proxyUrl, {
