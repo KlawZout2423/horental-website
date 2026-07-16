@@ -1,0 +1,282 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.backButton:hover {
+  color: var(--primary);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Premium Slider / Carousel Styles */
+.carousel {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background-color: #000;
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 640px) {
+  .carousel {
+    height: 320px;
+  }
+}
+
+.slide {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.carouselNav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background-color 0.2s;
+}
+
+.carouselNav:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.carouselPrev {
+  left: 16px;
+}
+
+.carouselNext {
+  right: 16px;
+}
+
+.carouselIndicators {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.activeIndicator {
+  background: #fff;
+  width: 20px;
+  border-radius: var(--radius-sm);
+}
+
+/* Thumbnail preview bar */
+.thumbnails {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.thumbnailWrapper {
+  flex-shrink: 0;
+  width: 80px;
+  height: 60px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s;
+}
+
+.thumbnailWrapper:hover {
+  opacity: 1;
+}
+
+.activeThumbnail {
+  border-color: var(--primary);
+  opacity: 1;
+}
+
+.thumbnailImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Main Details content */
+.detailsSection {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.badges {
+  display: flex;
+  gap: 8px;
+}
+
+.titleText {
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+@media (max-width: 640px) {
+  .titleText {
+    font-size: 1.8rem;
+  }
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+}
+
+.priceBlock {
+  padding: 20px;
+  border-radius: var(--radius-md);
+  background-color: var(--primary-light);
+  border: 1px dashed var(--primary);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: fit-content;
+}
+
+.priceVal {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.priceUnit {
+  font-size: 1rem;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.descriptionBox {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+
+.sectionTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.descriptionText {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  white-space: pre-line;
+}
+
+/* Sidebar Contact Widget */
+.sidebarCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+  background-color: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 94px;
+}
+
+.sidebarCardTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.landlordInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.infoLabel {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.infoValue {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.contactActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  phone     String?
+  companyId Int?
+  createdAt DateTime @default(now())
+
+  bookings   Booking[]
+  properties Property[]
+  company    Company?   @relation(fields: [companyId], references: [id])
+}
+
+model Company {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  logoUrl      String?
+  contact      String
+  isOwnCompany Boolean  @default(false)
+  momoAccount  String?
+  createdAt    DateTime @default(now())
+
+  users      User[]
+  properties Property[]
+  bookings   Booking[]
+}
+
+model Property {
+  id          Int      @id @default(autoincrement())
+  title       String
+  location    String
+  price       Float
+  description String?
+  imageUrl    String?
+  status      String   @default("available")
+  type        String?
+  contact     String?
+  ownerId     Int
+  companyId   Int
+  isFeatured  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  owner       User            @relation(fields: [ownerId], references: [id])
+  company     Company         @relation(fields: [companyId], references: [id])
+  bookings    Booking[]
+  images      PropertyImage[]
+  contactLogs ContactLog[]
+}
+
+model PropertyImage {
+  id         Int      @id @default(autoincrement())
+  url        String
+  caption    String?
+  order      Int      @default(0)
+  propertyId Int
+  createdAt  DateTime @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id               Int      @id @default(autoincrement())
+  startDate        DateTime
+  endDate          DateTime
+  totalAmount      Float
+  status           String   @default("pending")
+  commissionAmount Float    @default(0)
+  momoTxId         String?
+  userId           Int
+  propertyId       Int
+  companyId        Int
+  createdAt        DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+  company  Company  @relation(fields: [companyId], references: [id])
+}
+
+model ContactLog {
+  id            Int      @id @default(autoincrement())
+  customerName  String
+  customerPhone String
+  actionType    String
+  propertyId    Int
+  landlordPhone String
+  createdAt     DateTime @default(now())
+
+  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model PageVisit {
+  id        Int      @id @default(autoincrement())
+  path      String
+  createdAt DateTime @default(now())
+}

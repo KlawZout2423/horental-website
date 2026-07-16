@@ -1,0 +1,236 @@
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+  padding: 0 24px;
+}
+
+.scrolled {
+  box-shadow: var(--shadow-md);
+  border-bottom: 1px solid var(--border);
+}
+
+.container {
+  max-width: 1200px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.02em;
+}
+
+.logoIcon {
+  color: var(--primary);
+}
+
+.logoText {
+  color: var(--text-primary);
+}
+
+.logoTextSpan {
+  color: var(--primary);
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.navLink {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  position: relative;
+  padding: 6px 0;
+}
+
+.navLink:hover {
+  color: var(--primary);
+}
+
+.navLink::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--primary);
+  transition: width 0.2s ease;
+}
+
+.navLink:hover::after {
+  width: 100%;
+}
+
+.activeNavLink {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.activeNavLink::after {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  cursor: pointer;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-round);
+  background: linear-gradient(135deg, #c1121f 0%, #780b13 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: -0.02em;
+  border: 2px solid var(--border);
+  box-shadow: 0 4px 10px rgba(193, 18, 31, 0.25);
+  transition: all 0.2s ease;
+}
+
+.avatar:hover {
+  border-color: #ffffff;
+  box-shadow: 0 4px 14px rgba(193, 18, 31, 0.4);
+  transform: translateY(-1px);
+}
+
+.userMenu {
+  position: absolute;
+  top: 52px;
+  right: 0;
+  width: 210px;
+  background-color: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.15), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.2s ease-out;
+  z-index: 100;
+}
+
+.userMenuHeader {
+  padding: 8px 16px 6px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.userMenuRole {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 3px 10px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  background-color: var(--primary-light);
+  color: var(--primary);
+  border-radius: 9999px;
+  letter-spacing: 0.04em;
+}
+
+.userMenuItem {
+  padding: 10px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.userMenuItem:hover {
+  background-color: var(--bg-surface-secondary);
+  color: var(--primary);
+  padding-left: 24px;
+}
+
+.userMenuDivider {
+  height: 1px;
+  background-color: rgba(15, 23, 42, 0.06);
+  margin: 6px 0;
+}
+
+.menuButton {
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+/* Mobile Nav Links */
+.mobileMenu {
+  display: none;
+  position: fixed;
+  top: 70px;
+  left: 0;
+  right: 0;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  padding: 24px;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.3s ease;
+  z-index: 999;
+}
+
+@media (max-width: 768px) {
+  .navLinks {
+    display: none;
+  }
+  
+  .actions {
+    display: none;
+  }
+
+  .menuButton {
+    display: block;
+  }
+
+  .mobileMenu {
+    display: flex;
+  }
+}
