@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../lib/auth';
 import styles from './Footer.module.css';
@@ -30,7 +31,7 @@ export default function Footer() {
           {/* Brand Column */}
           <div className={styles.brandColumn}>
             <div className={styles.logo}>
-              <img src="/logo.png" alt="HO Rentals Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
+              <Image src="/logo.png" alt="HO Rentals Logo" width={32} height={32} style={{ objectFit: 'contain' }} />
               <span>HO<span className={styles.logoTextSpan}>Rentals</span></span>
             </div>
             <p className={styles.description}>

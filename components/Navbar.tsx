@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../lib/auth';
@@ -61,7 +62,7 @@ export default function Navbar() {
       <div className={styles.container}>
         {/* Logo */}
         <Link href="/" className={styles.logo} onClick={() => setIsMobileMenuOpen(false)}>
-          <img src="/logo.png" alt="HO Rentals Logo" style={{ height: '36px', width: 'auto', objectFit: 'contain' }} />
+          <Image src="/logo.png" alt="HO Rentals Logo" width={36} height={36} style={{ objectFit: 'contain' }} />
           <span className={styles.logoText}>HO<span className={styles.logoTextSpan}>Rentals</span></span>
         </Link>
 
