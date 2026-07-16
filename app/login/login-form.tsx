@@ -92,7 +92,7 @@ export default function LoginForm() {
             <label htmlFor="phone">Phone Number</label>
             <input
               id="phone"
-              type="tel"
+              type="text"
               placeholder="e.g. +233 24 000 0000"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
