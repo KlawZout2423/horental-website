@@ -205,6 +205,16 @@ export const UPDATE_PROPERTY_STATUS = `
   }
 `;
 
+export const TOGGLE_FEATURED = `
+  mutation TogglePropertyFeatured($id: Int!) {
+    togglePropertyFeatured(id: $id) {
+      id
+      title
+      isFeatured
+    }
+  }
+`;
+
 export const GET_USERS = `
   query GetUsers {
     users {

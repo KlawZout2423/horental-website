@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { Search, MapPin, SlidersHorizontal, RefreshCcw, Star, Heart } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Search, MapPin, SlidersHorizontal, RefreshCcw, Star, Heart, X } from 'lucide-react';
+import { useAuth } from '../../lib/auth';
 import { graphqlRequest, GET_PROPERTIES } from '../../lib/graphql';
 import styles from './properties.module.css';
+import AuthPromptModal from '../../components/AuthPromptModal';
 
-import { Property } from '../../lib/types';
+import { Property, getPricePeriodLabel } from '../../lib/types';
 
 // All property type categories matching the Flutter app chips list
 const PROPERTY_CATEGORIES = [
@@ -26,6 +28,8 @@ const PROPERTY_CATEGORIES = [
 ];
 
 export default function PropertiesClient() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
@@ -41,6 +45,23 @@ export default function PropertiesClient() {
   // Bookmark active state
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
+
+  // Authenticate user before seeing search results
+  useEffect(() => {
+    if (!authLoading && !user) {
+      setShowAuthModal(true);
+    }
+  }, [authLoading, user]);
+
+  const handleCardClick = (e: React.MouseEvent, propertyId: string) => {
+    if (!user) {
+      e.preventDefault();
+      setTargetPropertyId(propertyId);
+      setShowAuthModal(true);
+    }
+  };
 
   // Calculate dynamic maximum price for range slider (rounded up to nearest 100)
   const maxPossiblePrice = properties.length > 0
@@ -72,16 +93,20 @@ export default function PropertiesClient() {
     }
     fetchProperties();
 
-    // Log unique page visit per session
+    // Log unique page visit (24h cooldown)
     if (typeof window !== 'undefined') {
-      const hasVisited = sessionStorage.getItem('visit_search');
-      if (!hasVisited) {
+      const storageKey = 'visit_search_timestamp';
+      const lastVisit = localStorage.getItem(storageKey);
+      const now = Date.now();
+      const COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
+
+      if (!lastVisit || now - parseInt(lastVisit, 10) > COOLDOWN) {
         graphqlRequest(`
           mutation RecordVisit($path: String!) {
             recordPageVisit(path: $path)
           }
         `, { path: '/properties' })
-          .then(() => sessionStorage.setItem('visit_search', 'true'))
+          .then(() => localStorage.setItem(storageKey, String(now)))
           .catch((err) => console.error('Page visit log error:', err));
       }
     }
@@ -163,6 +188,11 @@ export default function PropertiesClient() {
   const handleToggleSave = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!user) {
+      setTargetPropertyId(id);
+      setShowAuthModal(true);
+      return;
+    }
     setSavedIds((prev) => {
       const next = prev.includes(id) ? prev.filter((savedId) => savedId !== id) : [...prev, id];
       if (typeof window !== 'undefined') {
@@ -181,8 +211,8 @@ export default function PropertiesClient() {
 
   return (
     <div className={`${styles.container} animate-fade-in`}>
-      <h1 className={styles.title}>Search Accommodations</h1>
-      <p className={styles.subtitle}>Filter and discover student hostels, rooms, and self-contained apartments near campus</p>
+      <h1 className={styles.title}>Search Properties</h1>
+      <p className={styles.subtitle}>Filter and browse rooms, apartments, hostels, shops and lands in Ho and the Volta Region</p>
 
       {/* Sticky Mobile Filter Toggle Bar */}
       <div className={styles.mobileFilterBar}>
@@ -201,15 +231,32 @@ export default function PropertiesClient() {
       </div>
 
       <div className={styles.layout}>
+        {/* Backdrop for mobile modal filter drawer */}
+        {showMobileFilters && (
+          <div 
+            className={styles.mobileBackdrop} 
+            onClick={() => setShowMobileFilters(false)} 
+          />
+        )}
+
         {/* Sidebar Filters */}
         <aside className={`${styles.sidebar} ${showMobileFilters ? styles.showMobile : ''}`}>
           <div className={styles.filterSectionTitle}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <SlidersHorizontal size={16} /> Filters
             </span>
-            <button onClick={handleResetFilters} className={styles.resetButton}>
-              Reset All
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button onClick={handleResetFilters} className={styles.resetButton}>
+                Reset All
+              </button>
+              <button 
+                onClick={() => setShowMobileFilters(false)} 
+                className={styles.closeMobileFilterBtn}
+                aria-label="Close filters"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
           {/* Search text filter */}
@@ -219,7 +266,7 @@ export default function PropertiesClient() {
               <input
                 id="search-keyword"
                 type="text"
-                placeholder="Search campus or area..."
+                placeholder="Search location, hostel or property..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="form-control"
@@ -333,13 +380,22 @@ export default function PropertiesClient() {
             </div>
           </div>
 
-          <button
-            onClick={() => setShowMobileFilters(false)}
-            className={`btn btn-primary ${styles.mobileApplyBtn}`}
-            style={{ marginTop: '16px' }}
-          >
-            Apply Filters
-          </button>
+          <div className={styles.mobileDrawerFooter}>
+            <button
+              onClick={() => setShowMobileFilters(false)}
+              className="btn btn-primary"
+              style={{ flex: 1, padding: '12px', fontWeight: 700 }}
+            >
+              Show {filteredProperties.length} Properties
+            </button>
+            <button
+              onClick={() => setShowMobileFilters(false)}
+              className="btn btn-outline"
+              style={{ padding: '12px 16px', fontWeight: 600 }}
+            >
+              Cancel
+            </button>
+          </div>
         </aside>
 
         {/* Listings Display Area */}
@@ -378,6 +434,7 @@ export default function PropertiesClient() {
                   <Link
                     href={`/properties/${p.id}`}
                     key={p.id}
+                    onClick={(e) => handleCardClick(e, p.id)}
                     className={`${styles.propertyCard} animate-slide-up`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
@@ -400,20 +457,20 @@ export default function PropertiesClient() {
 
                     <div className={styles.cardContent}>
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span className={`badge badge-${p.status === 'available' ? 'available' : 'rented'}`} style={{ padding: '2px 8px', fontSize: '0.7rem' }}>
-                          {p.status}
+                        <span className={`badge badge-${p.status === 'available' ? 'available' : p.status === 'rented' || p.status === 'occupied' ? 'rented' : 'pending'}`} style={{ padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px', fontWeight: 700 }}>
+                          {p.status === 'available' ? 'Available' : p.status === 'rented' ? 'Occupied' : p.status}
                         </span>
-                        <span className="badge" style={{ backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600, padding: '2px 8px', fontSize: '0.7rem' }}>
+                        <span className="badge" style={{ backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600, padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px' }}>
                           {p.type}
                         </span>
                       </div>
 
-                      <h3 className={styles.cardTitle} style={{ marginTop: '0px', marginBottom: '8px' }}>{p.title}</h3>
+                      <h3 className={styles.cardTitle} style={{ marginTop: '2px', marginBottom: '6px', fontSize: '1.05rem', fontWeight: 700, textTransform: 'capitalize' }}>{p.title}</h3>
 
-                      <div className={styles.cardMetaRow}>
-                        <div className={styles.cardLocation}>
-                          <MapPin size={12} style={{ color: 'var(--primary)' }} />
-                          <span>{p.location}</span>
+                      <div className={styles.cardMetaRow} style={{ marginBottom: '8px' }}>
+                        <div className={styles.cardLocation} style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>
+                          <MapPin size={13} style={{ color: 'var(--primary)' }} />
+                          <span>📍 {p.location.toLowerCase().includes('ho') ? p.location : `${p.location}, Ho`}</span>
                         </div>
                       </div>
 
@@ -423,10 +480,12 @@ export default function PropertiesClient() {
                         let showWater = desc.includes('water');
                         let showPrepaid = desc.includes('prepaid') || desc.includes('meter');
                         let showBed = desc.includes('bed') || desc.includes('room') || desc.includes('desk') || desc.includes('hostel');
+                        let showParking = desc.includes('park') || desc.includes('car');
 
                         if (!showWifi && !showWater && !showPrepaid && !showBed) {
                           showWater = true;
                           showBed = true;
+                          showPrepaid = true;
                         }
 
                         return (
@@ -435,15 +494,16 @@ export default function PropertiesClient() {
                             {showWater && <span className={styles.amenity}>💧 Water</span>}
                             {showPrepaid && <span className={styles.amenity}>⚡ Prepaid</span>}
                             {showWifi && <span className={styles.amenity}>📶 WiFi</span>}
+                            {showParking && <span className={styles.amenity}>🚗 Parking</span>}
                           </div>
                         );
                       })()}
                     </div>
 
-                    <div className={styles.cardFooter}>
+                    <div className={styles.cardFooter} style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '12px' }}>
                       <div className={styles.cardPrice}>
-                        <span style={{ fontSize: '1.15rem', fontWeight: 800 }}>GH₵{p.price.toLocaleString()}</span>
-                        <span className={styles.cardPricePeriod}>/sem</span>
+                        <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>GH₵ {p.price.toLocaleString()}</span>
+                        <span className={styles.cardPricePeriod} style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{getPricePeriodLabel(p.description, true)}</span>
                       </div>
                       <span className={styles.viewDetailsBtn}>View Details &rarr;</span>
                     </div>
@@ -454,6 +514,17 @@ export default function PropertiesClient() {
           )}
         </div>
       </div>
+
+      <AuthPromptModal
+        isOpen={showAuthModal}
+        onClose={() => {
+          setShowAuthModal(false);
+          if (!user) {
+            router.push('/');
+          }
+        }}
+        targetPropertyId={targetPropertyId}
+      />
     </div>
   );
 }

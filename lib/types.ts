@@ -25,3 +25,15 @@ export interface RegisterInput {
   password: string;
   email?: string;
 }
+
+export function getPricePeriodLabel(desc?: string, short: boolean = true): string {
+  if (!desc) return short ? '/sem' : '/ semester';
+  const lower = desc.toLowerCase();
+  if (lower.includes('priceperiod: per month') || lower.includes('priceperiod: month') || lower.includes('per month')) {
+    return short ? '/month' : '/ month';
+  }
+  if (lower.includes('priceperiod: per year') || lower.includes('priceperiod: year') || lower.includes('per year')) {
+    return short ? '/year' : '/ year';
+  }
+  return short ? '/sem' : '/ semester';
+}

@@ -7,8 +7,9 @@ import { useAuth } from '../lib/auth';
 import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTIES } from '../lib/graphql';
 import styles from './page.module.css';
+import AuthPromptModal from '../components/AuthPromptModal';
 
-import { Property } from '../lib/types';
+import { Property, getPricePeriodLabel } from '../lib/types';
 
 const TYPE_CHIPS = [
   { label: 'All', type: 'All' },
@@ -49,6 +50,16 @@ export default function Home() {
 
   // Bookmark active state
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
+
+  const handleCardClick = (e: React.MouseEvent, propertyId: string) => {
+    if (!user) {
+      e.preventDefault();
+      setTargetPropertyId(propertyId);
+      setShowAuthModal(true);
+    }
+  };
   
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -69,14 +80,13 @@ export default function Home() {
       try {
         const data = await graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES);
         if (data && data.properties) {
-          const featured = data.properties.filter((p) => p.isFeatured === true);
-          if (featured.length > 0) {
-            setProperties(featured);
-            setFilteredProperties(featured);
-          } else {
-            setProperties(data.properties);
-            setFilteredProperties(data.properties);
-          }
+          // Show ALL properties, featured ones sorted to the top
+          const sorted = [...data.properties].sort((a, b) => {
+            if (a.isFeatured === b.isFeatured) return 0;
+            return a.isFeatured ? -1 : 1;
+          });
+          setProperties(sorted);
+          setFilteredProperties(sorted);
         }
       } catch (e) {
         console.error('Error fetching properties:', e);
@@ -86,16 +96,20 @@ export default function Home() {
     }
     fetchProperties();
 
-    // Log unique page visit per session
+    // Log unique page visit (24h cooldown)
     if (typeof window !== 'undefined') {
-      const hasVisited = sessionStorage.getItem('visit_landing');
-      if (!hasVisited) {
+      const storageKey = 'visit_landing_timestamp';
+      const lastVisit = localStorage.getItem(storageKey);
+      const now = Date.now();
+      const COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
+
+      if (!lastVisit || now - parseInt(lastVisit, 10) > COOLDOWN) {
         graphqlRequest(`
           mutation RecordVisit($path: String!) {
             recordPageVisit(path: $path)
           }
         `, { path: '/' })
-          .then(() => sessionStorage.setItem('visit_landing', 'true'))
+          .then(() => localStorage.setItem(storageKey, String(now)))
           .catch((err) => console.error('Page visit log error:', err));
       }
     }
@@ -124,6 +138,12 @@ export default function Home() {
           p.location.toLowerCase().includes(q)
       );
     }
+
+    // Always keep featured at the top within any filter result
+    result = [...result].sort((a, b) => {
+      if (a.isFeatured === b.isFeatured) return 0;
+      return a.isFeatured ? -1 : 1;
+    });
 
     setFilteredProperties(result);
   }, [activeTypeFilter, searchQuery, properties]);
@@ -169,6 +189,11 @@ export default function Home() {
   const handleToggleSave = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!user) {
+      setTargetPropertyId(id);
+      setShowAuthModal(true);
+      return;
+    }
     setSavedIds((prev) => {
       const next = prev.includes(id) ? prev.filter((savedId) => savedId !== id) : [...prev, id];
       if (typeof window !== 'undefined') {
@@ -192,46 +217,36 @@ export default function Home() {
       <header className={styles.hero}>
         <div className={styles.heroWrapper}>
           <div className={styles.heroLeft}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '40px', backgroundColor: 'rgba(255,255,255,0.1)', fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-light)', marginBottom: '8px' }}>
-              <Sparkles size={14} /> Student Accommodation Platform
+            <div className={styles.heroBadge} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '40px', backgroundColor: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)', fontSize: '0.85rem', fontWeight: 700, color: '#FEF3C7', marginBottom: '12px' }}>
+              <Sparkles size={14} /> Ghana Rentals Property Platform
             </div>
-            <h1 className={styles.title}>Find Your Next Campus Home</h1>
+            <h1 className={styles.title}>Find Your Perfect Place in Ghana</h1>
             <p className={styles.subtitle}>
-              Verified hostels, single rooms & self-contained apartments near HTU, UHAS & Trafalgar campuses.
+              Rooms, apartments, hostels, shops & lands across Ho, Volta Region and across Ghana.
             </p>
 
             <form onSubmit={handleSearchSubmit} className={styles.searchContainer}>
               <div className={styles.searchInputWrapper}>
-                <Search size={18} style={{ color: 'var(--text-secondary)' }} />
+                <Search size={18} className={styles.searchIcon} />
                 <input
                   type="text"
-                  placeholder="Search campus or area..."
+                  placeholder="Search location, hostel or property..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={styles.searchInput}
-                  aria-label="Search campus or area"
+                  aria-label="Search location, hostel or property"
                 />
               </div>
-              <select
-                value={activeTypeFilter}
-                onChange={(e) => setActiveTypeFilter(e.target.value)}
-                className={styles.searchSelect}
-                aria-label="Select property category"
-              >
-                <option value="All">All Categories</option>
-                <option value="Student Hostel">Hostels</option>
-                <option value="Single Room">Single Room</option>
-                <option value="self-contained">Self-Contained</option>
-              </select>
-              <button type="submit" className="btn btn-primary" style={{ padding: '10px 24px', borderRadius: '9999px' }}>
-                Search
+              <button type="submit" className={styles.searchButton}>
+                <Search size={18} className={styles.btnIconOnly} />
+                <span className={styles.btnText}>Search</span>
               </button>
             </form>
           </div>
           
           <div className={styles.heroRight}>
             <div className={styles.heroImageContainer}>
-              <img src="/student_campus_vibe.png" alt="Students on Campus" className={styles.heroImage} />
+              <img src="/student_campus_vibe.png" alt="Properties in Ghana" className={styles.heroImage} />
             </div>
             <div className={`${styles.floatingBadge} ${styles.badgeTop}`}>
               <ShieldCheck size={16} style={{ color: '#10B981' }} />
@@ -239,7 +254,7 @@ export default function Home() {
             </div>
             <div className={`${styles.floatingBadge} ${styles.badgeBottom}`}>
               <Star size={16} fill="var(--accent)" color="var(--accent)" />
-              <span>Trusted by Students</span>
+              <span>Trusted by Tenants & Buyers</span>
             </div>
           </div>
         </div>
@@ -300,16 +315,16 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Branded Section: "Top Picks Near Campus" */}
+      {/* Property Listings Section */}
       <section className={`${styles.section} ${styles.listingsSection}`} style={{ maxWidth: 'none' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
             <div>
-              <h2 className={styles.sectionTitle} style={{ textAlign: 'left', marginBottom: '8px' }}>Orbit Spotlight</h2>
-              <p style={{ color: 'var(--text-secondary)' }}>Highly-rated student hostels orbiting your campus</p>
+              <h2 className={styles.sectionTitle} style={{ textAlign: 'left', marginBottom: '4px', fontSize: '1.85rem' }}>Top Listings</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Discover the newest verified rentals across Ho.</p>
             </div>
-            <Link href="/properties" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              View All <ArrowRight size={16} />
+            <Link href="/properties" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+              View All &rarr;
             </Link>
           </div>
 
@@ -337,31 +352,31 @@ export default function Home() {
                 {(() => {
                   switch (activeTypeFilter) {
                     case 'Student Hostel':
-                      return 'No student hostels available yet — be the first to list!';
+                      return 'No hostels listed yet — be the first!';
                     case 'Single Room':
-                      return 'No single rooms available yet — be the first to list!';
+                      return 'No single rooms listed yet — be the first!';
                     case 'Chamber & Hall':
-                      return 'No chamber & halls available yet — be the first to list!';
+                      return 'No chamber & hall listings yet — be the first!';
                     case 'Single Room SC':
-                      return 'No self-contained single rooms available yet — be the first to list!';
+                      return 'No self-contained single rooms listed yet — be the first!';
                     case 'Chamber and Hall SC':
-                      return 'No self-contained chamber & halls available yet — be the first to list!';
+                      return 'No self-contained chamber & halls listed yet — be the first!';
                     case 'Two Bedroom SC':
-                      return 'No 2-bedroom apartments available yet — be the first to list!';
+                      return 'No 2-bedroom apartments listed yet — be the first!';
                     case 'Three Bedroom SC':
-                      return 'No 3-bedroom apartments available yet — be the first to list!';
+                      return 'No 3-bedroom apartments listed yet — be the first!';
                     case 'Four Bedroom SC':
-                      return 'No 4-bedroom apartments available yet — be the first to list!';
+                      return 'No 4-bedroom apartments listed yet — be the first!';
                     case 'Furnitures':
-                      return 'No furniture listings available yet — be the first to list!';
+                      return 'No furniture listings yet — be the first!';
                     case 'Lands':
-                      return 'No land plots available yet — be the first to list!';
+                      return 'No land plots listed yet — be the first!';
                     case 'Shops':
-                      return 'No shop spaces available yet — be the first to list!';
+                      return 'No shop spaces listed yet — be the first!';
                     case 'Short Stay':
-                      return 'No short stay rentals available yet — be the first to list!';
+                      return 'No short stay rentals listed yet — be the first!';
                     default:
-                      return 'No properties available yet — be the first to list!';
+                      return 'No properties listed yet — be the first!';
                   }
                 })()}
               </h3>
@@ -369,15 +384,15 @@ export default function Home() {
                 {(() => {
                   switch (activeTypeFilter) {
                     case 'Student Hostel':
-                      return "We couldn't find any student hostels matching your filters. If you are a hostel owner, help students by listing your hostel!";
+                      return "No hostels match your current filters. If you own a hostel, list it here to reach people looking for accommodation.";
                     case 'Single Room':
-                      return "We couldn't find any single rooms available. If you have rooms to let, list them to reach students!";
+                      return "No single rooms are listed right now. Have a room to let? Add your listing and connect with interested tenants.";
                     case 'Chamber & Hall':
-                      return "We couldn't find any chamber & hall listings. Post your listing today to connect with active searchers!";
+                      return "No chamber & hall listings found. Post yours today to reach people actively searching in this category.";
                     case 'Single Room SC':
-                      return "No self-contained single rooms are listed right now. Help students find housing by listing your property!";
+                      return "No self-contained single rooms are listed yet. List your property to reach people looking for this type.";
                     case 'Chamber and Hall SC':
-                      return "No self-contained chamber and hall apartments found. List your space to make it visible to seekers!";
+                      return "No self-contained chamber & hall apartments found. List your space to make it visible to seekers.";
                     case 'Two Bedroom SC':
                     case 'Three Bedroom SC':
                     case 'Four Bedroom SC':
@@ -391,7 +406,7 @@ export default function Home() {
                     case 'Short Stay':
                       return "No short stay rentals found matching this filter. If you host guest houses or short-term flats, list them here!";
                     default:
-                      return "We couldn't find any student accommodations or listings matching your active filters. If you are a landlord, help students by listing your property!";
+                      return "No listings match your current filters. If you have a property to let or sell, post it here and reach people actively searching in Ho and surrounding areas.";
                   }
                 })()}
               </p>
@@ -415,7 +430,8 @@ export default function Home() {
                   <Link 
                     href={`/properties/${p.id}`} 
                     key={p.id} 
-                    className={`${styles.propertyCard} animate-slide-up`}
+                    onClick={(e) => handleCardClick(e, p.id)}
+                    className={`${styles.propertyCard} ${p.isFeatured ? styles.featuredCard : ''} animate-slide-up`}
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className={styles.imageWrapper}>
@@ -424,6 +440,14 @@ export default function Home() {
                         alt={p.title} 
                         className={styles.propertyImage}
                       />
+
+                      {/* Featured badge */}
+                      {p.isFeatured && (
+                        <div className={styles.featuredBadge}>
+                          <Star size={11} fill="currentColor" />
+                          <span>FEATURED</span>
+                        </div>
+                      )}
                       
                       {/* Heart save button */}
                       <button
@@ -437,20 +461,20 @@ export default function Home() {
                     
                     <div className={styles.cardContent}>
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span className={`badge badge-${p.status === 'available' ? 'available' : 'rented'}`} style={{ padding: '2px 8px', fontSize: '0.7rem' }}>
-                          {p.status}
+                        <span className={`badge badge-${p.status === 'available' ? 'available' : p.status === 'rented' || p.status === 'occupied' ? 'rented' : 'pending'}`} style={{ padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px', fontWeight: 700 }}>
+                          {p.status === 'available' ? 'Available' : p.status === 'rented' ? 'Occupied' : p.status}
                         </span>
-                        <span className="badge" style={{ backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600, padding: '2px 8px', fontSize: '0.7rem' }}>
+                        <span className="badge" style={{ backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600, padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px' }}>
                           {p.type}
                         </span>
                       </div>
 
-                      <h3 className={styles.cardTitle} style={{ marginTop: '0px', marginBottom: '8px' }}>{p.title}</h3>
+                      <h3 className={styles.cardTitle} style={{ marginTop: '2px', marginBottom: '6px', fontSize: '1.05rem', fontWeight: 700, textTransform: 'capitalize' }}>{p.title}</h3>
 
-                      <div className={styles.cardMetaRow}>
-                        <div className={styles.cardLocation}>
-                          <MapPin size={12} style={{ color: 'var(--primary)' }} />
-                          <span>{p.location}</span>
+                      <div className={styles.cardMetaRow} style={{ marginBottom: '8px' }}>
+                        <div className={styles.cardLocation} style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>
+                          <MapPin size={13} style={{ color: 'var(--primary)' }} />
+                          <span>📍 {p.location.toLowerCase().includes('ho') ? p.location : `${p.location}, Ho`}</span>
                         </div>
                       </div>
                       
@@ -460,10 +484,12 @@ export default function Home() {
                         let showWater = desc.includes('water');
                         let showPrepaid = desc.includes('prepaid') || desc.includes('meter');
                         let showBed = desc.includes('bed') || desc.includes('room') || desc.includes('desk') || desc.includes('hostel');
+                        let showParking = desc.includes('park') || desc.includes('car');
                         
                         if (!showWifi && !showWater && !showPrepaid && !showBed) {
                           showWater = true;
                           showBed = true;
+                          showPrepaid = true;
                         }
 
                         return (
@@ -472,15 +498,16 @@ export default function Home() {
                             {showWater && <span className={styles.amenity}>💧 Water</span>}
                             {showPrepaid && <span className={styles.amenity}>⚡ Prepaid</span>}
                             {showWifi && <span className={styles.amenity}>📶 WiFi</span>}
+                            {showParking && <span className={styles.amenity}>🚗 Parking</span>}
                           </div>
                         );
                       })()}
                     </div>
                     
-                    <div className={styles.cardFooter}>
+                    <div className={styles.cardFooter} style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '12px' }}>
                       <div className={styles.cardPrice}>
-                        <span style={{ fontSize: '1.15rem', fontWeight: 800 }}>GH₵{p.price.toLocaleString()}</span>
-                        <span className={styles.cardPricePeriod}>/sem</span>
+                        <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>GH₵ {p.price.toLocaleString()}</span>
+                        <span className={styles.cardPricePeriod} style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{getPricePeriodLabel(p.description, true)}</span>
                       </div>
                       <span className={styles.viewDetailsBtn}>View Details &rarr;</span>
                     </div>
@@ -493,30 +520,36 @@ export default function Home() {
       </section>
 
       {/* Trust Banner */}
-      <section className={styles.section} style={{ paddingTop: '0px', paddingBottom: '60px' }}>
+      <section className={`${styles.section} ${styles.trustSection}`}>
         <div className={styles.trustBanner}>
           <div className={styles.trustBannerItem}>
             <ShieldCheck size={20} className={styles.trustIcon} />
             <div>
-              <strong>Double Verification:</strong> Physical audit of facilities near campus.
+              <strong>Verified Listings:</strong> Properties physically checked before going live.
             </div>
           </div>
           <div className={styles.trustBannerDivider}></div>
           <div className={styles.trustBannerItem}>
             <HelpCircle size={20} className={styles.trustIcon} />
             <div>
-              <strong>Direct Renting:</strong> Zero middleman agent commissions.
+              <strong>Direct Renting:</strong> Zero middleman (Agent).
             </div>
           </div>
           <div className={styles.trustBannerDivider}></div>
           <div className={styles.trustBannerItem}>
             <PhoneCall size={20} className={styles.trustIcon} />
             <div>
-              <strong>24/7 Support:</strong> Direct student navigation helpline.
+              <strong>24/7 Support:</strong> We're here to help you find or list a property.
             </div>
           </div>
         </div>
       </section>
+
+      <AuthPromptModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        targetPropertyId={targetPropertyId}
+      />
     </div>
   );
 }

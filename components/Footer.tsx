@@ -35,7 +35,7 @@ export default function Footer() {
               <span>HO<span className={styles.logoTextSpan}>Rentals</span></span>
             </div>
             <p className={styles.description}>
-              The premium student accommodation finder. Browse high-quality hostels, single rooms, and apartments tailored for students.
+              The trusted property platform for Ho and the Volta Region. Browse rooms, apartments, hostels, shops and lands — all in one place.
             </p>
           </div>
 
@@ -55,8 +55,8 @@ export default function Footer() {
             <h4 className={styles.title}>Company</h4>
             <div className={styles.links}>
               <Link href="/" className={styles.link}>About Us</Link>
-              <Link href="/" className={styles.link}>Contact Support</Link>
-              <Link href="/" className={styles.link}>Terms & Conditions</Link>
+              <a href="mailto:support@horentals.com" className={styles.link}>Contact Support</a>
+              <Link href="/terms" className={styles.link}>Terms &amp; Conditions</Link>
             </div>
           </div>
 
@@ -64,7 +64,7 @@ export default function Footer() {
           <div className={styles.newsletter}>
             <h4 className={styles.title}>Stay Updated</h4>
             <p className={styles.description} style={{ fontSize: '0.85rem' }}>
-              Subscribe to get notified when new hostels near your campus are listed.
+              Subscribe to get notified when new properties in your area are listed.
             </p>
             <form className={styles.form} onSubmit={handleSubmit}>
               <input 
@@ -84,8 +84,8 @@ export default function Footer() {
         <div className={styles.bottom}>
           <p>&copy; {new Date().getFullYear()} HO Rentals. All rights reserved.</p>
           <div style={{ display: 'flex', gap: '20px' }}>
-            <Link href="/" className={styles.link}>Privacy Policy</Link>
-            <Link href="/" className={styles.link}>Security</Link>
+            <Link href="/privacy" className={styles.link}>Privacy Policy</Link>
+            <Link href="/security" className={styles.link}>Security</Link>
           </div>
         </div>
       </div>

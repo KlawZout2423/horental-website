@@ -21,6 +21,7 @@ export default function UploadPage({
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [price, setPrice] = useState('');
+  const [pricePeriod, setPricePeriod] = useState('semester');
   const [type, setType] = useState('Student Hostel');
   const [status, setStatus] = useState('available');
   const [contact, setContact] = useState('');
@@ -159,6 +160,8 @@ export default function UploadPage({
         finalDescription += `\n\nFeatures: ${amenitiesList.join(' | ')}`;
       }
 
+      finalDescription += `\n\nPricePeriod: per ${pricePeriod}`;
+
       const input = {
         title,
         location,
@@ -229,7 +232,7 @@ export default function UploadPage({
             </div>
 
             <div className="form-group">
-              <label htmlFor="location">Location / Campus Area</label>
+              <label htmlFor="location">Location / Area</label>
               <input
                 id="location"
                 type="text"
@@ -242,16 +245,29 @@ export default function UploadPage({
             </div>
 
             <div className="form-group">
-              <label htmlFor="price">Price (GH₵ per Semester)</label>
-              <input
-                id="price"
-                type="number"
-                placeholder="e.g. 1500"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                required
-                className="form-control"
-              />
+              <label htmlFor="price">Price & Duration</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  id="price"
+                  type="number"
+                  placeholder="e.g. 1500"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  required
+                  className="form-control"
+                  style={{ flex: 1 }}
+                />
+                <select
+                  value={pricePeriod}
+                  onChange={(e) => setPricePeriod(e.target.value)}
+                  className="form-control"
+                  style={{ width: '150px', backgroundColor: 'var(--bg-surface)' }}
+                >
+                  <option value="semester">per semester</option>
+                  <option value="month">per month</option>
+                  <option value="year">per year</option>
+                </select>
+              </div>
             </div>
 
             <div className="form-group">
@@ -312,7 +328,7 @@ export default function UploadPage({
                 <label htmlFor="description">Property Description & Amenities</label>
                 <textarea
                   id="description"
-                  placeholder="Describe your property (e.g., proximity to campus, water availability, electricity meter, study desks, fenced yard, etc.)"
+                  placeholder="Describe your property (e.g., water availability, electricity meter, furnished, fenced yard, parking, etc.)"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   required

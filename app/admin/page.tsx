@@ -13,9 +13,10 @@ import {
   DELETE_USER, 
   UPDATE_USER_ROLE, 
   UPDATE_PROPERTY,
-  GET_CONTACT_LOGS
+  GET_CONTACT_LOGS,
+  TOGGLE_FEATURED
 } from '../../lib/graphql';
-import { ShieldAlert, Trash2, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit } from 'lucide-react';
+import { ShieldAlert, Trash2, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star } from 'lucide-react';
 import styles from './admin.module.css';
 
 interface DashboardStats {
@@ -85,6 +86,7 @@ export default function AdminPage() {
   const [editEcgPostPaid, setEditEcgPostPaid] = useState(false);
   const [editEcgPrepaid, setEditEcgPrepaid] = useState(false);
   const [editIsFeatured, setEditIsFeatured] = useState(false);
+  const [editPricePeriod, setEditPricePeriod] = useState('semester');
 
   // Filter Helper lists
   const pendingProperties = properties.filter((p) => p.status.toLowerCase() === 'pending');
@@ -200,6 +202,33 @@ export default function AdminPage() {
     }
   };
 
+  const handleToggleFeatured = async (id: string, currentFeatured: boolean) => {
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      const parsedId = parseInt(id, 10);
+      if (isNaN(parsedId)) throw new Error('Invalid property ID.');
+      const result = await graphqlRequest<{ togglePropertyFeatured: { id: string; isFeatured: boolean } }>(
+        TOGGLE_FEATURED,
+        { id: parsedId }
+      );
+      const newFeatured = result.togglePropertyFeatured.isFeatured;
+      setProperties((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, isFeatured: newFeatured } : p))
+      );
+      setMessage({
+        text: newFeatured
+          ? '⭐ Property is now featured on the landing page.'
+          : 'Property removed from featured listings.',
+        isError: false,
+      });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to toggle featured status.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleUpdateUserRole = async (userId: string, newRole: string) => {
     setActionLoading(true);
     setMessage(null);
@@ -270,6 +299,15 @@ export default function AdminPage() {
     setEditEcgPostPaid(desc.includes('ecg post-paid') || desc.includes('post-paid') || desc.includes('postpaid'));
     setEditEcgPrepaid(desc.includes('ecg prepaid') || desc.includes('prepaid'));
 
+    // Parse price period
+    if (desc.includes('priceperiod: per month') || desc.includes('priceperiod: month') || desc.includes('per month')) {
+      setEditPricePeriod('month');
+    } else if (desc.includes('priceperiod: per year') || desc.includes('priceperiod: year') || desc.includes('per year')) {
+      setEditPricePeriod('year');
+    } else {
+      setEditPricePeriod('semester');
+    }
+
     const featuresIndex = p.description ? p.description.indexOf('\n\nFeatures:') : -1;
     if (featuresIndex !== -1 && p.description) {
       setEditDescription(p.description.substring(0, featuresIndex).trim());
@@ -327,6 +365,8 @@ export default function AdminPage() {
       if (amenitiesList.length > 0) {
         finalDescription += `\n\nFeatures: ${amenitiesList.join(' | ')}`;
       }
+
+      finalDescription += `\n\nPricePeriod: per ${editPricePeriod}`;
 
       const input = {
         title: editTitle,
@@ -807,7 +847,14 @@ export default function AdminPage() {
                               alt={p.title} 
                               style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)', flexShrink: 0 }}
                             />
-                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.title}</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.title}</span>
+                              {p.isFeatured && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 700, color: '#F59E0B' }}>
+                                  <Star size={10} fill="#F59E0B" /> Featured
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td style={{ textTransform: 'capitalize', fontWeight: 600, color: 'var(--text-secondary)' }}>{p.type}</td>
@@ -827,6 +874,23 @@ export default function AdminPage() {
                               style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px' }}
                             >
                               {p.status === 'available' ? 'Mark Rented' : 'Mark Available'}
+                            </button>
+
+                            <button
+                              onClick={() => handleToggleFeatured(p.id, p.isFeatured ?? false)}
+                              disabled={actionLoading}
+                              title={p.isFeatured ? 'Remove from featured' : 'Feature on landing page'}
+                              className="btn btn-outline"
+                              style={{
+                                padding: '6px',
+                                height: '32px',
+                                width: '32px',
+                                color: p.isFeatured ? '#F59E0B' : 'var(--text-muted)',
+                                borderColor: p.isFeatured ? '#F59E0B' : 'var(--border)',
+                                backgroundColor: p.isFeatured ? 'rgba(245,158,11,0.08)' : 'transparent',
+                              }}
+                            >
+                              <Star size={14} fill={p.isFeatured ? '#F59E0B' : 'none'} />
                             </button>
 
                             <button
@@ -1057,8 +1121,15 @@ export default function AdminPage() {
                   </div>
                   
                   <div className="form-group">
-                    <label>Price (GH₵)</label>
-                    <input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} required className="form-control" />
+                    <label>Price & Duration</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} required className="form-control" style={{ flex: 1 }} />
+                      <select value={editPricePeriod} onChange={(e) => setEditPricePeriod(e.target.value)} className="form-control" style={{ width: '130px', backgroundColor: 'var(--bg-surface)' }}>
+                        <option value="semester">per semester</option>
+                        <option value="month">per month</option>
+                        <option value="year">per year</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
                 

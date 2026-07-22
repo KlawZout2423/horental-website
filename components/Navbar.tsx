@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../lib/auth';
-import { Home, Search, PlusCircle, Shield, LogOut, Menu, X, User } from 'lucide-react';
+import { Home, Search, PlusCircle, Shield, LogOut, Menu, X, User, Heart, Sun, Moon } from 'lucide-react';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
@@ -14,6 +14,27 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('app_theme') as 'light' | 'dark' | null;
+    if (storedTheme) {
+      setTheme(storedTheme);
+      document.documentElement.setAttribute('data-theme', storedTheme);
+    } else {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const initial = isDark ? 'dark' : 'light';
+      setTheme(initial);
+      document.documentElement.setAttribute('data-theme', initial);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    localStorage.setItem('app_theme', nextTheme);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -70,6 +91,7 @@ export default function Navbar() {
         <div className={styles.navLinks}>
           <Link href="/" className={isActive('/')}>Home</Link>
           <Link href="/properties" className={isActive('/properties')}>Search Rentals</Link>
+          <Link href="/favorites" className={isActive('/favorites')}>Favorites</Link>
           {user && (user.role === 'admin' || user.role === 'partner') && (
             <Link href="/upload" className={isActive('/upload')}>Upload Property</Link>
           )}
@@ -80,6 +102,17 @@ export default function Navbar() {
 
         {/* Desktop Actions */}
         <div className={styles.actions}>
+          {/* Dark / Light theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="btn btn-icon"
+            style={{ color: 'var(--text-primary)', padding: '8px', cursor: 'pointer' }}
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            aria-label="Toggle Theme"
+          >
+            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+          </button>
+
           {user ? (
             <div className={styles.userInfo} onClick={toggleDropdown}>
               <div className={styles.avatar}>{getInitials(user.name)}</div>
@@ -97,6 +130,9 @@ export default function Navbar() {
                       <Shield size={16} /> Admin Panel
                     </Link>
                   )}
+                  <Link href="/favorites" className={styles.userMenuItem}>
+                    <Heart size={16} /> Favorite Rentals
+                  </Link>
                   <Link href="/properties" className={styles.userMenuItem}>
                     <Search size={16} /> Browse Properties
                   </Link>
@@ -119,51 +155,87 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Hamburger Menu Icon */}
-        <button className={styles.menuButton} onClick={toggleMobileMenu}>
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        {/* Mobile & Right Header Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Dark / Light theme toggle button — mobile header only */}
+          <button
+            onClick={toggleTheme}
+            className={`${styles.mobileHeaderThemeBtn} btn btn-icon`}
+            style={{ color: 'var(--text-primary)', padding: '8px', cursor: 'pointer' }}
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            aria-label="Toggle Theme"
+          >
+            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+          </button>
+
+          {/* Hamburger Menu Icon */}
+          <button className={styles.menuButton} onClick={toggleMobileMenu} aria-label="Toggle Navigation Menu">
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
         <div className={styles.mobileMenu}>
           <Link href="/" className={isActive('/')} onClick={toggleMobileMenu}>
-            Home
+            <Home size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Home
           </Link>
           <Link href="/properties" className={isActive('/properties')} onClick={toggleMobileMenu}>
-            Search Rentals
+            <Search size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Search Rentals
+          </Link>
+          <Link href="/favorites" className={isActive('/favorites')} onClick={toggleMobileMenu}>
+            <Heart size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Favorites
           </Link>
           {user && (user.role === 'admin' || user.role === 'partner') && (
             <Link href="/upload" className={isActive('/upload')} onClick={toggleMobileMenu}>
-              Upload Property
+              <PlusCircle size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Upload Property
             </Link>
           )}
           {user && user.role === 'admin' && (
             <Link href="/admin" className={isActive('/admin')} onClick={toggleMobileMenu}>
-              Admin Dashboard
+              <Shield size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Admin Dashboard
             </Link>
           )}
+
           <div className={styles.userMenuDivider}></div>
+
+          {/* Mobile Theme Toggle Row */}
+          <div 
+            onClick={toggleTheme} 
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 4px', cursor: 'pointer', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.95rem' }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+              <span>App Theme</span>
+            </span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--primary)', textTransform: 'capitalize', fontWeight: 700 }}>
+              {theme} Mode
+            </span>
+          </div>
+
+          <div className={styles.userMenuDivider}></div>
+
           {user ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 4px' }}>
                 <div className={styles.avatar}>{getInitials(user.name)}</div>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{user.name}</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{user.name}</div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{user.email}</div>
+                  <span className={styles.userMenuRole} style={{ marginTop: '4px', display: 'inline-block' }}>{user.role}</span>
                 </div>
               </div>
-              <button onClick={() => { logout(); toggleMobileMenu(); }} className="btn btn-danger" style={{ width: '100%' }}>
+              <button onClick={() => { logout(); toggleMobileMenu(); }} className="btn btn-danger" style={{ width: '100%', marginTop: '4px' }}>
                 <LogOut size={16} /> Logout
               </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <Link href="/login" className="btn btn-outline" onClick={toggleMobileMenu} style={{ width: '100%' }}>
+              <Link href="/login" className="btn btn-outline" onClick={toggleMobileMenu} style={{ width: '100%', textAlign: 'center' }}>
                 Sign In
               </Link>
-              <Link href="/register" className="btn btn-primary" onClick={toggleMobileMenu} style={{ width: '100%' }}>
+              <Link href="/register" className="btn btn-primary" onClick={toggleMobileMenu} style={{ width: '100%', textAlign: 'center' }}>
                 Sign Up
               </Link>
             </div>

@@ -130,9 +130,9 @@
   top: 52px;
   right: 0;
   width: 210px;
-  background-color: rgba(255, 255, 255, 0.96);
+  background-color: var(--glass-bg);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.15), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
   padding: 10px 0;
@@ -188,7 +188,7 @@
 
 .userMenuDivider {
   height: 1px;
-  background-color: rgba(15, 23, 42, 0.06);
+  background-color: var(--border);
   margin: 6px 0;
 }
 
@@ -217,6 +217,10 @@
   z-index: 999;
 }
 
+.mobileHeaderThemeBtn {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .navLinks {
     display: none;
@@ -224,6 +228,10 @@
   
   .actions {
     display: none;
+  }
+
+  .mobileHeaderThemeBtn {
+    display: inline-flex;
   }
 
   .menuButton {

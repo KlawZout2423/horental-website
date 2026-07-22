@@ -7,6 +7,27 @@ import { useAuth } from '../../lib/auth';
 import { Eye, EyeOff, Loader, UserPlus, ArrowLeft } from 'lucide-react';
 import styles from '../login/login.module.css';
 
+const getPasswordStrength = (pwd: string) => {
+  if (!pwd) return { score: 0, label: '', color: 'transparent' };
+  let score = 0;
+  if (pwd.length >= 8) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+  let label = 'Weak';
+  let color = '#EF4444';
+  if (score >= 3) {
+    label = 'Strong';
+    color = '#10B981';
+  } else if (score >= 2) {
+    label = 'Medium';
+    color = '#F59E0B';
+  }
+
+  return { score, label, color };
+};
+
 export default function RegisterForm() {
   const { register, user } = useAuth();
   const router = useRouter();
@@ -23,6 +44,8 @@ export default function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const strength = getPasswordStrength(password);
+
   const redirectUrl = searchParams.get('redirect') || '/';
 
   // Redirect if already logged in
@@ -36,8 +59,8 @@ export default function RegisterForm() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (strength.score < 2) {
+      setError('Password is too weak. Please make it stronger by adding uppercase letters, numbers, or special characters.');
       return;
     }
 
@@ -151,6 +174,33 @@ export default function RegisterForm() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+            {password && (
+              <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    Password Strength: <strong style={{ color: strength.color }}>{strength.label}</strong>
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                  {[0, 1, 2, 3].map((index) => {
+                    const filledSegmentsCount = strength.score + 1;
+                    const isFilled = index < filledSegmentsCount;
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          height: '4px',
+                          flex: 1,
+                          backgroundColor: isFilled ? strength.color : 'var(--bg-surface-secondary)',
+                          borderRadius: '2px',
+                          transition: 'background-color 0.3s ease'
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="form-group">
