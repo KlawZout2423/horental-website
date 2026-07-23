@@ -215,44 +215,41 @@
 @media (max-width: 968px) {
   .hero {
     min-height: auto;
-    padding: 80px 24px 48px;
+    padding: 32px 16px 20px;
   }
   
   .heroWrapper {
     flex-direction: column;
     text-align: center;
-    gap: 32px;
+    gap: 20px;
   }
 
   .heroLeft {
     align-items: center;
     text-align: center;
-  }
-
-  .title {
-    font-size: 2.25rem;
-  }
-
-  .subtitle {
-    font-size: 1.05rem;
-  }
-
-@media (max-width: 968px) {
-  /* Hide the hero banner completely on mobile — leave only search bar & chips */
-  .hero {
-    display: none !important;
+    width: 100%;
   }
 
   .heroRight {
     display: none;
   }
 
-  /* Hide subtitle text under Top Listings on mobile */
-  .sectionHeaderSubtitle {
-    display: none !important;
+  .title {
+    font-size: 1.85rem;
+    line-height: 1.25;
   }
 
-  /* Sticky bar sits directly below fixed 70px Navbar */
+  .subtitle {
+    font-size: 0.95rem;
+    margin-bottom: 16px;
+  }
+
+  .searchContainer {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 8px;
+  }
+
   .stickySearchBar {
     position: sticky;
     top: 70px;
@@ -260,12 +257,10 @@
     background-color: var(--bg-surface);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
     border-bottom: 1px solid var(--border);
-    margin-top: 0;
   }
 
-  /* Show the mobile search bar row */
   .mobileSearchRow {
-    display: block;
+    display: none;
   }
 
   .chipsOuter {
@@ -276,13 +271,11 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-}
 
   .chipsOuter::-webkit-scrollbar {
     display: none;
   }
 
-  /* Reduce section padding on mobile */
   .section {
     padding: 28px 16px;
   }
@@ -291,6 +284,7 @@
     padding-top: 20px;
     padding-bottom: 28px;
   }
+}
 
   /* Single column grid on mobile */
   .gridCards {
