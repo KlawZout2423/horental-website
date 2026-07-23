@@ -215,13 +215,13 @@
 @media (max-width: 968px) {
   .hero {
     min-height: auto;
-    padding: 32px 16px 20px;
+    padding: 18px 16px 12px;
   }
   
   .heroWrapper {
     flex-direction: column;
     text-align: center;
-    gap: 20px;
+    gap: 12px;
   }
 
   .heroLeft {
@@ -234,20 +234,33 @@
     display: none;
   }
 
+  .heroBadge {
+    margin-bottom: 6px !important;
+    padding: 4px 12px !important;
+    font-size: 0.78rem !important;
+  }
+
   .title {
-    font-size: 1.85rem;
-    line-height: 1.25;
+    font-size: 1.55rem;
+    line-height: 1.2;
   }
 
   .subtitle {
-    font-size: 0.95rem;
-    margin-bottom: 16px;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
   }
 
   .searchContainer {
     width: 100%;
     max-width: 100%;
-    margin-top: 8px;
+    min-height: 46px;
+    padding: 4px 4px 4px 14px;
+    margin-top: 4px;
+  }
+
+  .searchButton {
+    padding: 8px 18px;
+    font-size: 0.85rem;
   }
 
   .stickySearchBar {
@@ -264,7 +277,7 @@
   }
 
   .chipsOuter {
-    padding: 10px 16px 12px;
+    padding: 6px 16px 8px;
     border-bottom: none;
     overflow-x: auto;
     justify-content: flex-start;
