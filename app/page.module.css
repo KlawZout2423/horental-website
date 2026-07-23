@@ -466,6 +466,18 @@
     justify-content: flex-start;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    position: relative;
+  }
+  .chipsOuter::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(90deg, transparent 0%, var(--bg-surface) 100%);
+    pointer-events: none;
+    z-index: 10;
   }
   .chipsOuter::-webkit-scrollbar {
     display: none;
@@ -611,7 +623,7 @@
 
 .imageWrapper {
   position: relative;
-  height: 245px;
+  height: 215px;
   width: 100%;
   background-color: var(--bg-surface-secondary);
   overflow: hidden;
@@ -711,19 +723,19 @@
 }
 
 .cardContent {
-  padding: 16px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   flex-grow: 1;
 }
 
 .cardPrice {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--primary);
   display: flex;
-  justify-content: space-between;
+  justify-space-between;
   align-items: center;
 }
 
@@ -746,15 +758,15 @@
 }
 
 .cardTitle {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.4;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  height: 2.8em;
+  min-height: 1.4em;
 }
 
 .cardLocation {
@@ -768,7 +780,7 @@
 
 .cardFooter {
   border-top: 1px solid var(--border);
-  padding: 10px 16px;
+  padding: 8px 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;

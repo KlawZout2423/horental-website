@@ -238,8 +238,9 @@ export default function Home() {
                 />
               </div>
               <button type="submit" className={styles.searchButton}>
-                <Search size={18} className={styles.btnIconOnly} />
+                <Search size={16} />
                 <span className={styles.btnText}>Search</span>
+                <ArrowRight size={16} />
               </button>
             </form>
           </div>
