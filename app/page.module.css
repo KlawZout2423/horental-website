@@ -735,7 +735,7 @@
   font-weight: 800;
   color: var(--primary);
   display: flex;
-  justify-space-between;
+  justify-content: space-between;
   align-items: center;
 }
 
