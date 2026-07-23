@@ -19,7 +19,12 @@ export async function POST(req: NextRequest) {
 
       return new Promise<string>((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
-          { folder: 'horentals' },
+          {
+            folder: 'horentals',
+            transformation: [
+              { width: 1400, height: 1050, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }
+            ]
+          },
           (error, result) => {
             if (error) {
               console.error('Cloudinary upload error:', error);

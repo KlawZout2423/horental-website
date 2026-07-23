@@ -9,7 +9,7 @@ import { graphqlRequest, GET_PROPERTIES } from '../../lib/graphql';
 import styles from './properties.module.css';
 import AuthPromptModal from '../../components/AuthPromptModal';
 
-import { Property, getPricePeriodLabel, matchesAdvancedFilters } from '../../lib/types';
+import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImageUrl } from '../../lib/types';
 
 const TYPE_CHIPS = [
   { label: 'All', type: 'All' },
@@ -630,15 +630,16 @@ export default function PropertiesClient() {
                   <Link
                     href={`/properties/${p.id}`}
                     key={p.id}
-                    onClick={(e) => handleCardClick(e, p.id)}
                     className={`${styles.propertyCard} animate-slide-up`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className={styles.imageWrapper}>
                       <img
-                        src={p.imageUrl || getFallbackImage(p.type)}
+                        src={getOptimizedImageUrl(p.imageUrl || getFallbackImage(p.type), 600)}
                         alt={p.title}
                         className={styles.propertyImage}
+                        loading="lazy"
+                        decoding="async"
                       />
 
                       {/* Heart save button */}
@@ -671,6 +672,13 @@ export default function PropertiesClient() {
                       </div>
 
                       {(() => {
+                        const isLand = p.type?.toLowerCase().includes('land');
+                        const isFurniture = p.type?.toLowerCase().includes('furniture');
+                        const isShop = p.type?.toLowerCase().includes('shop');
+                        if (isLand || isFurniture || isShop) {
+                          return null;
+                        }
+
                         const desc = p.description?.toLowerCase() || '';
                         let showWifi = desc.includes('wi-fi') || desc.includes('wifi');
                         let showWater = desc.includes('water');

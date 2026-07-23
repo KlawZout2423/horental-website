@@ -155,7 +155,7 @@ export default function RegisterForm() {
               type="tel"
               placeholder="e.g. 0241234567"
               value={phone}
-              onChange={(e) => setPhone(formatGhanaPhone(e.target.value))}
+              onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
               required
               maxLength={10}
               autoComplete="tel"

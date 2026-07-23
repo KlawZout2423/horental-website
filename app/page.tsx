@@ -9,7 +9,7 @@ import { graphqlRequest, GET_PROPERTIES } from '../lib/graphql';
 import styles from './page.module.css';
 import AuthPromptModal from '../components/AuthPromptModal';
 
-import { Property, getPricePeriodLabel } from '../lib/types';
+import { Property, getPricePeriodLabel, getOptimizedImageUrl } from '../lib/types';
 
 const TYPE_CHIPS = [
   { label: 'All', type: 'All' },
@@ -286,6 +286,61 @@ export default function Home() {
             </button>
           </form>
         </div>
+
+        {/* Property Type Filter Chips */}
+        <div className={styles.chipsOuter}>
+          <div className={styles.chipsContainer} ref={dropdownRef}>
+            {TYPE_CHIPS.map((chip) => {
+              const isSelfContained = chip.type === 'self-contained';
+              const isFilters = chip.type === 'filters';
+              const isActive =
+                activeTypeFilter === chip.type ||
+                (isSelfContained &&
+                  SELF_CONTAINED_OPTIONS.some((opt) => opt.type === activeTypeFilter));
+
+              if (isSelfContained) {
+                return (
+                  <div key={chip.type} className={styles.dropdownContainer}>
+                    <button
+                      type="button"
+                      className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
+                      onClick={() => handleChipClick(chip.type)}
+                    >
+                      <span>{chip.label}</span>
+                      <ChevronDown size={14} />
+                    </button>
+                    {showSelfContainedDropdown && (
+                      <div className={styles.dropdownMenu}>
+                        {SELF_CONTAINED_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.type}
+                            type="button"
+                            className={styles.dropdownItem}
+                            onClick={() => handleSelfContainedSelect(opt.type)}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={chip.type}
+                  type="button"
+                  className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
+                  onClick={() => handleChipClick(chip.type)}
+                >
+                  {isFilters && <SlidersHorizontal size={14} />}
+                  <span>{chip.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Property Listings Section */}
@@ -403,15 +458,16 @@ export default function Home() {
                   <Link 
                     href={`/properties/${p.id}`} 
                     key={p.id} 
-                    onClick={(e) => handleCardClick(e, p.id)}
                     className={`${styles.propertyCard} ${p.isFeatured ? styles.featuredCard : ''} animate-slide-up`}
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className={styles.imageWrapper}>
                       <img 
-                        src={p.imageUrl || getFallbackImage(p.type)} 
+                        src={getOptimizedImageUrl(p.imageUrl || getFallbackImage(p.type), 600)} 
                         alt={p.title} 
                         className={styles.propertyImage}
+                        loading="lazy"
+                        decoding="async"
                       />
 
                       {/* Featured badge */}
@@ -452,6 +508,13 @@ export default function Home() {
                       </div>
                       
                       {(() => {
+                        const isLand = p.type?.toLowerCase().includes('land');
+                        const isFurniture = p.type?.toLowerCase().includes('furniture');
+                        const isShop = p.type?.toLowerCase().includes('shop');
+                        if (isLand || isFurniture || isShop) {
+                          return null;
+                        }
+
                         const desc = p.description?.toLowerCase() || '';
                         let showWifi = desc.includes('wi-fi') || desc.includes('wifi');
                         let showWater = desc.includes('water');

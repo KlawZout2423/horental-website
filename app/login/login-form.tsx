@@ -37,7 +37,7 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      let phoneInput = phone.trim();
+      let phoneInput = phone.trim().replace(/[^0-9]/g, '');
       let emailOrPhone = phoneInput;
       
       // If it doesn't look like an email, convert it to phone-email format
@@ -45,11 +45,10 @@ export default function LoginForm() {
         if (emailOrPhone.toLowerCase() === 'admin') {
           emailOrPhone = 'admin@horentals.com';
         } else {
-          const cleanedPhone = emailOrPhone.replace(/[^0-9a-zA-Z]/g, '');
-          if (!cleanedPhone || cleanedPhone.length < 5) {
-            throw new Error('Please enter a valid phone number.');
+          if (phoneInput.length !== 10) {
+            throw new Error('Please enter a valid 10-digit Ghanaian phone number (e.g. 0241234567).');
           }
-          emailOrPhone = `${cleanedPhone}@horentals.com`;
+          emailOrPhone = `${phoneInput}@horentals.com`;
         }
       }
       await login(emailOrPhone, password);
@@ -89,14 +88,15 @@ export default function LoginForm() {
 
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <div className="form-group">
-            <label htmlFor="phone">Phone Number</label>
+            <label htmlFor="phone">Phone Number (10 Digits)</label>
             <input
               id="phone"
-              type="text"
-              placeholder="e.g. +233 24 000 0000"
+              type="tel"
+              placeholder="e.g. 0241234567"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
               required
+              maxLength={10}
               autoComplete="tel"
               className="form-control"
             />

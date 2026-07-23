@@ -4,18 +4,18 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth';
-import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2, Maximize2 } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTY_BY_ID, UPDATE_PROPERTY } from '../../../lib/graphql';
 import styles from './detail.module.css';
 import AuthPromptModal from '../../../components/AuthPromptModal';
 import Toast from '../../../components/Toast';
-import { getPricePeriodLabel, formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../../lib/types';
+import { getPricePeriodLabel, formatGhanaPhone, isValidGhanaPhone, sanitizeInput, getOptimizedImageUrl } from '../../../lib/types';
 
 interface GalleryItem {
   id: string;
   url: string;
   caption?: string;
-  order: number;
+  order?: number;
 }
 
 interface PropertyOwner {
@@ -47,14 +47,70 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Gallery slider state
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      setShowAuthPrompt(true);
+  // Lightbox Modal state
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const touchStartX = React.useRef<number | null>(null);
+
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setIsLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setIsLightboxOpen(false);
+  };
+
+  const handleNextLightbox = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!property?.gallery || property.gallery.length <= 1) return;
+    const slidesList = property.gallery.map((g: GalleryItem) => g.url);
+    setLightboxIndex((prev) => (prev + 1) % slidesList.length);
+  };
+
+  const handlePrevLightbox = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!property?.gallery || property.gallery.length <= 1) return;
+    const slidesList = property.gallery.map((g: GalleryItem) => g.url);
+    setLightboxIndex((prev) => (prev - 1 + slidesList.length) % slidesList.length);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEndLightbox = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) {
+        handleNextLightbox();
+      } else {
+        handlePrevLightbox();
+      }
     }
-  }, [authLoading, user]);
+    touchStartX.current = null;
+  };
+
+  useEffect(() => {
+    const galLen = property?.gallery?.length || 0;
+    if (!isLightboxOpen || galLen === 0) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowRight') setLightboxIndex((prev) => (prev + 1) % galLen);
+      if (e.key === 'ArrowLeft') setLightboxIndex((prev) => (prev - 1 + galLen) % galLen);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLightboxOpen, property]);
+
+
 
   // Reservation states
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
@@ -97,7 +153,6 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
     setIsBookingViewing(true);
     try {
       const landlordPhone = property?.contact || '';
-      const cleanPhone = landlordPhone.replace(/[^0-9]/g, '');
       const formattedDate = viewingDate || 'Next available date';
       
       const message = encodeURIComponent(
@@ -118,31 +173,19 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
           propertyId: parseInt(id, 10),
           landlordPhone
         });
-      } catch (err) {
-        console.error('Contact log error:', err);
+      } catch (logErr) {
+        console.error('Contact log creation failed:', logErr);
       }
 
+      setIsBookingViewing(false);
       setViewingSubmitted(true);
-
-      setTimeout(() => {
-        if (cleanPhone) {
-          window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
-        }
-      }, 1000);
+      if (typeof window !== 'undefined') {
+        window.open(`https://wa.me/233557922593?text=${message}`, '_blank');
+      }
     } catch (err) {
-      console.error('Booking failed:', err);
-    } finally {
+      console.error('Booking viewing failed:', err);
       setIsBookingViewing(false);
     }
-  };
-
-  const maskPhoneNumber = (num: string) => {
-    if (!num) return '';
-    const digits = num.replace(/[^0-9]/g, '');
-    if (digits.length >= 4) {
-      return `${digits.substring(0, 3)} ••• ••• ${digits.substring(digits.length - 1)}`;
-    }
-    return '••• ••• •••';
   };
 
   const handleConnectClick = async (actionType: 'call' | 'whatsapp') => {
@@ -314,15 +357,26 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
   // Compile image gallery slides
   const slides = [
     property.imageUrl,
-    ...(property.gallery?.sort((a, b) => a.order - b.order).map((g) => g.url) || [])
+    ...(property.gallery ? [...property.gallery].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((g) => g.url) : [])
   ].filter(Boolean);
 
-  const handlePrevSlide = () => {
+  const handlePrevSlide = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setActiveImageIndex((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
   };
 
-  const handleNextSlide = () => {
+  const handleNextSlide = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setActiveImageIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
+  };
+
+  const maskPhoneNumber = (phoneStr?: string) => {
+    if (!phoneStr) return '024 ••• ••••';
+    const formatted = formatGhanaPhone(phoneStr);
+    if (formatted.length === 10) {
+      return `${formatted.slice(0, 3)} ${formatted.slice(3, 6)} ••••`;
+    }
+    return '024 ••• ••••';
   };
 
   const getFallbackImage = (type: string) => {
@@ -368,7 +422,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
   return (
     <div className={`${styles.container} animate-fade-in`}>
       {/* Back Button & Share */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
         <Link href="/properties" className={styles.backButton} style={{ marginBottom: 0 }}>
           <ArrowLeft size={16} /> Back to Listings
         </Link>
@@ -387,28 +441,47 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
           {/* Gallery Carousel */}
           {slides.length > 0 ? (
             <div>
-              <div className={styles.carousel}>
+              <div
+                className={styles.carousel}
+                onClick={() => openLightbox(activeImageIndex)}
+                style={{ cursor: 'zoom-in' }}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEndLightbox}
+              >
                 <img
-                  src={slides[activeImageIndex]}
+                  src={getOptimizedImageUrl(slides[activeImageIndex], 1000)}
                   alt=""
                   className={styles.slideBlurBg}
                   aria-hidden="true"
                 />
                 <img
-                  src={slides[activeImageIndex]}
+                  src={getOptimizedImageUrl(slides[activeImageIndex], 1000)}
                   alt={`${property.title} - Image ${activeImageIndex + 1}`}
                   className={styles.slide}
+                  decoding="async"
                 />
+
+                <div className={styles.zoomHint}>
+                  <Maximize2 size={13} /> Full View
+                </div>
                 
                 {slides.length > 1 && (
                   <>
-                    <button onClick={handlePrevSlide} className={`${styles.carouselNav} ${styles.carouselPrev}`}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handlePrevSlide(e); }}
+                      className={`${styles.carouselNav} ${styles.carouselPrev}`}
+                      aria-label="Previous image"
+                    >
                       <ChevronLeft size={24} />
                     </button>
-                    <button onClick={handleNextSlide} className={`${styles.carouselNav} ${styles.carouselNext}`}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleNextSlide(e); }}
+                      className={`${styles.carouselNav} ${styles.carouselNext}`}
+                      aria-label="Next image"
+                    >
                       <ChevronRight size={24} />
                     </button>
-                    <div className={styles.carouselIndicators}>
+                    <div className={styles.carouselIndicators} onClick={(e) => e.stopPropagation()}>
                       {slides.map((_, idx) => (
                         <button
                           key={idx}
@@ -427,18 +500,28 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                   {slides.map((slide, idx) => (
                     <div
                       key={idx}
-                      onClick={() => setActiveImageIndex(idx)}
+                      onClick={() => openLightbox(idx)}
                       className={`${styles.thumbnailWrapper} ${idx === activeImageIndex ? styles.activeThumbnail : ''}`}
+                      title="Click to view full image"
                     >
-                      <img src={slide} alt="thumbnail" className={styles.thumbnailImage} />
+                      <img
+                        src={getOptimizedImageUrl(slide, 200)}
+                        alt="thumbnail"
+                        className={styles.thumbnailImage}
+                        loading="lazy"
+                        decoding="async"
+                      />
                     </div>
                   ))}
                 </div>
               )}
             </div>
           ) : (
-            <div className={styles.carousel}>
+            <div className={styles.carousel} onClick={() => openLightbox(0)} style={{ cursor: 'zoom-in' }}>
               <img src={getFallbackImage(property.type)} alt={property.title} className={styles.slide} />
+              <div className={styles.zoomHint}>
+                <Maximize2 size={13} /> Full View
+              </div>
             </div>
           )}
 
@@ -1024,10 +1107,81 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         isOpen={showAuthPrompt}
         onClose={() => {
           setShowAuthPrompt(false);
-          router.push('/properties');
         }}
         targetPropertyId={id}
       />
+
+      {/* Fullscreen Image Lightbox Modal */}
+      {isLightboxOpen && slides.length > 0 && (
+        <div
+          className={styles.lightboxOverlay}
+          onClick={closeLightbox}
+          role="dialog"
+          aria-label="Full Image Viewer"
+        >
+          <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.lightboxHeader}>
+              <span className={styles.lightboxCounter}>
+                {lightboxIndex + 1} / {slides.length}
+              </span>
+              <button
+                onClick={closeLightbox}
+                className={styles.lightboxCloseBtn}
+                aria-label="Close viewer"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <div
+              className={styles.lightboxImageWrapper}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEndLightbox}
+            >
+              {slides.length > 1 && (
+                <button
+                  onClick={handlePrevLightbox}
+                  className={`${styles.lightboxNav} ${styles.lightboxPrev}`}
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft size={28} />
+                </button>
+              )}
+
+              <img
+                src={slides[lightboxIndex]}
+                alt={`${property?.title || 'Property'} - Full Image ${lightboxIndex + 1}`}
+                className={styles.lightboxImage}
+              />
+
+              {slides.length > 1 && (
+                <button
+                  onClick={handleNextLightbox}
+                  className={`${styles.lightboxNav} ${styles.lightboxNext}`}
+                  aria-label="Next image"
+                >
+                  <ChevronRight size={28} />
+                </button>
+              )}
+            </div>
+
+            {slides.length > 1 && (
+              <div className={styles.lightboxThumbnails}>
+                {slides.map((slide: string, idx: number) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setLightboxIndex(idx)}
+                    className={`${styles.lightboxThumb} ${idx === lightboxIndex ? styles.lightboxThumbActive : ''}`}
+                  >
+                    <img src={slide} alt="" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {toastMsg && (
         <Toast message={toastMsg} onClose={() => setToastMsg(null)} />

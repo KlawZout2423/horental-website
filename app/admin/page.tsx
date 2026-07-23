@@ -87,6 +87,33 @@ export default function AdminPage() {
   const [editEcgPrepaid, setEditEcgPrepaid] = useState(false);
   const [editIsFeatured, setEditIsFeatured] = useState(false);
   const [editPricePeriod, setEditPricePeriod] = useState('semester');
+  const [isCleaningMedia, setIsCleaningMedia] = useState(false);
+
+  const handleRunStorageCleanup = async () => {
+    if (!confirm('Scan and delete all orphaned/unused images from Cloudinary storage and database?')) {
+      return;
+    }
+    setIsCleaningMedia(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/cleanup-orphaned-images', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Cleanup failed');
+      
+      setMessage({
+        text: `🧹 ${data.message} (${data.stats?.reclaimedSpaceMB || '0 MB'} reclaimed)`,
+        isError: false,
+      });
+      loadAdminDashboardData();
+    } catch (err: any) {
+      setMessage({
+        text: err.message || 'Storage cleanup failed.',
+        isError: true,
+      });
+    } finally {
+      setIsCleaningMedia(false);
+    }
+  };
 
   // Filter Helper lists
   const approvedProperties = properties;
@@ -526,6 +553,16 @@ export default function AdminPage() {
           </div>
           
           <div className={styles.headerActions}>
+            <button 
+              onClick={handleRunStorageCleanup} 
+              disabled={isCleaningMedia}
+              className="btn btn-outline" 
+              style={{ padding: '8px 16px', fontSize: '0.85rem', height: '36px', gap: '6px', color: '#F59E0B', borderColor: '#F59E0B' }}
+              title="Scan and delete unreferenced/orphaned images from Cloudinary storage"
+            >
+              <Trash2 size={14} className={isCleaningMedia ? 'animate-spin' : ''} />
+              {isCleaningMedia ? 'Cleaning Storage...' : 'Clean Unused Media'}
+            </button>
             <button 
               onClick={loadAdminDashboardData} 
               disabled={loadingData}

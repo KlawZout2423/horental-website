@@ -40,9 +40,9 @@ export default function AuthPromptModal({ isOpen, onClose, targetPropertyId }: A
           <Lock size={30} />
         </div>
 
-        <h2 className={styles.title}>Account Required to View Property</h2>
+        <h2 className={styles.title}>Account Required to Contact Landlord</h2>
         <p className={styles.subtitle}>
-          Sign in or create a free account to view full landlord contact details, complete room photos, and full property descriptions.
+          Sign in or create a free account to call, WhatsApp chat, or book physical viewings directly with verified landlords.
         </p>
 
         <div className={styles.benefitsList}>

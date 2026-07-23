@@ -16,7 +16,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-/** Read user data from the non-HttpOnly user_data cookie (safe — no secrets). */
+const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000; // 12 hours timeout
+
+/** Read user data from the non-HttpOnly user_data cookie and validate session age. */
 function readUserFromCookie(): User | null {
   if (typeof document === 'undefined') return null;
   try {
@@ -25,7 +27,14 @@ function readUserFromCookie(): User | null {
       .find((row) => row.startsWith('user_data='));
     if (!match) return null;
     const raw = decodeURIComponent(match.split('=').slice(1).join('='));
-    return JSON.parse(raw) as User;
+    const parsed = JSON.parse(raw) as User & { loggedInAt?: number };
+
+    // Check if session has expired (exceeded 12 hours)
+    if (parsed.loggedInAt && Date.now() - parsed.loggedInAt > SESSION_MAX_AGE_MS) {
+      return null;
+    }
+
+    return parsed;
   } catch {
     return null;
   }
@@ -37,12 +46,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Hydrate user from the non-HttpOnly user_data cookie on mount.
-    // The auth_token is HttpOnly — the browser sends it automatically on
-    // every request, but JS cannot read it (that's the point).
-    const cookieUser = readUserFromCookie();
-    setUser(cookieUser);
-    setLoading(false);
+    const verifySession = () => {
+      const cookieUser = readUserFromCookie();
+      if (!cookieUser && user) {
+        logout();
+      } else if (cookieUser) {
+        setUser(cookieUser);
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    };
+
+    verifySession();
+
+    // Recheck session expiration whenever the user comes back to the window or tab
+    window.addEventListener('focus', verifySession);
+    document.addEventListener('visibilitychange', verifySession);
+
+    return () => {
+      window.removeEventListener('focus', verifySession);
+      document.removeEventListener('visibilitychange', verifySession);
+    };
   }, []);
 
   const login = async (email: string, password: string) => {

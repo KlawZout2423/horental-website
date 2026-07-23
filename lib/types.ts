@@ -33,6 +33,22 @@ export function isNewListing(createdAt?: string, maxDays: number = 7): boolean {
   return ageInMs <= maxAgeInMs;
 }
 
+/**
+ * Automatically optimizes image URLs (Cloudinary & Unsplash) with WebP auto-format,
+ * compression, and target width scaling to make page loads 10x faster.
+ */
+export function getOptimizedImageUrl(url?: string, width: number = 800): string {
+  if (!url) return '';
+  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+    return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width},c_limit/`);
+  }
+  if (url.includes('images.unsplash.com')) {
+    const hasQuery = url.includes('?');
+    return `${url}${hasQuery ? '&' : '?'}w=${width}&q=75&auto=format`;
+  }
+  return url;
+}
+
 export interface RegisterInput {
   name: string;
   phone: string;
@@ -80,6 +96,18 @@ export function isValidGhanaPhone(phone?: string): boolean {
 export function getPricePeriodLabel(desc?: string, short: boolean = true): string {
   if (!desc) return short ? '/sem' : '/ semester';
   const lower = desc.toLowerCase();
+  if (lower.includes('priceperiod: per academic year') || lower.includes('per academic year') || lower.includes('academic year')) {
+    return short ? '/acad year' : '/ academic year';
+  }
+  if (lower.includes('priceperiod: per plot') || lower.includes('per plot')) {
+    return short ? '/plot' : '/ plot';
+  }
+  if (lower.includes('priceperiod: per acre') || lower.includes('per acre') || lower.includes('per achre')) {
+    return short ? '/acre' : '/ acre';
+  }
+  if (lower.includes('priceperiod: per outright sale') || lower.includes('outright sale')) {
+    return short ? '' : ' (outright sale)';
+  }
   if (lower.includes('priceperiod: per month') || lower.includes('priceperiod: month') || lower.includes('per month')) {
     return short ? '/month' : '/ month';
   }

@@ -30,7 +30,7 @@ export default function UploadPage({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   
-  // Amenities checkboxes state
+  // Amenities checkboxes state (all default to false - chosen explicitly by user)
   const [hasWifi, setHasWifi] = useState(false);
   const [hasCctv, setHasCctv] = useState(false);
   const [hasFurnished, setHasFurnished] = useState(false);
@@ -47,10 +47,33 @@ export default function UploadPage({
   const [ecgSeparateMeter, setEcgSeparateMeter] = useState(false);
   const [ecgPostPaid, setEcgPostPaid] = useState(false);
   const [ecgPrepaid, setEcgPrepaid] = useState(false);
-  
+
+  // Lands Specific States
+  const [landPlotSize, setLandPlotSize] = useState('');
+  const [landDocType, setLandDocType] = useState('Site Plan');
+  const [landZoning, setLandZoning] = useState('Residential');
+
+  // Furnitures Specific States
+  const [furnitureCondition, setFurnitureCondition] = useState('Brand New');
+  const [furnitureCategory, setFurnitureCategory] = useState('Bed & Mattress');
+  const [furnitureDelivery, setFurnitureDelivery] = useState('Buyer Pick-Up');
+
   // Status states
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleTypeChange = (newType: string) => {
+    setType(newType);
+    if (newType === 'Lands') {
+      setPricePeriod('plot');
+    } else if (newType === 'Furnitures') {
+      setPricePeriod('outright sale');
+    } else {
+      if (pricePeriod === 'plot' || pricePeriod === 'acre' || pricePeriod === 'outright sale') {
+        setPricePeriod('semester');
+      }
+    }
+  };
 
   // Check login status and role privileges
   useEffect(() => {
@@ -128,38 +151,56 @@ export default function UploadPage({
 
       let finalDescription = sanitizeInput(description);
       const amenitiesList: string[] = [];
-      
-      const otherOptions: string[] = [];
-      if (hasWifi) otherOptions.push('WiFi');
-      if (hasCctv) otherOptions.push('CCTV Camera');
-      if (hasFurnished) otherOptions.push('Furnished');
-      if (hasGatedFenced) otherOptions.push('Gated & Fenced');
-      if (isNewlyBuilt) otherOptions.push('Newly Built');
-      if (hasBed) otherOptions.push('Bed');
-      if (hasStudyDesk) otherOptions.push('Study Desk');
-      if (otherOptions.length > 0) {
-        amenitiesList.push(`Amenities: ${otherOptions.join(', ')}`);
-      }
 
-      // Compile detailed water options
-      const waterOptions: string[] = [];
-      if (ghanaWaterShared) waterOptions.push('Ghana Water (Shared)');
-      if (ghanaWaterSeparate) waterOptions.push('Ghana Water (Separate)');
-      if (polytank) waterOptions.push('Polytank');
-      if (borehole) waterOptions.push('Borehole');
-      if (well) waterOptions.push('Well');
-      if (waterOptions.length > 0) {
-        amenitiesList.push(`Water: ${waterOptions.join(', ')}`);
-      }
+      if (type === 'Lands') {
+        const landSpecs: string[] = [];
+        if (landPlotSize.trim()) landSpecs.push(`Plot Size: ${landPlotSize.trim()}`);
+        if (landDocType) landSpecs.push(`Title/Docs: ${landDocType}`);
+        if (landZoning) landSpecs.push(`Zoning: ${landZoning}`);
+        if (landSpecs.length > 0) {
+          amenitiesList.push(`Land Specs: ${landSpecs.join(', ')}`);
+        }
+      } else if (type === 'Furnitures') {
+        const furnSpecs: string[] = [];
+        if (furnitureCondition) furnSpecs.push(`Condition: ${furnitureCondition}`);
+        if (furnitureCategory) furnSpecs.push(`Category: ${furnitureCategory}`);
+        if (furnitureDelivery) furnSpecs.push(`Delivery: ${furnitureDelivery}`);
+        if (furnSpecs.length > 0) {
+          amenitiesList.push(`Furniture Specs: ${furnSpecs.join(', ')}`);
+        }
+      } else {
+        const otherOptions: string[] = [];
+        if (hasWifi) otherOptions.push('WiFi');
+        if (hasCctv) otherOptions.push('CCTV Camera');
+        if (hasFurnished) otherOptions.push('Furnished');
+        if (hasGatedFenced) otherOptions.push('Gated & Fenced');
+        if (isNewlyBuilt) otherOptions.push('Newly Built');
+        if (hasBed) otherOptions.push('Bed');
+        if (hasStudyDesk) otherOptions.push('Study Desk');
+        if (otherOptions.length > 0) {
+          amenitiesList.push(`Amenities: ${otherOptions.join(', ')}`);
+        }
 
-      // Compile detailed meter options
-      const meterOptions: string[] = [];
-      if (ecgSharedMeter) meterOptions.push('ECG Shared Meter');
-      if (ecgSeparateMeter) meterOptions.push('ECG Separate Meter');
-      if (ecgPostPaid) meterOptions.push('ECG Post-paid');
-      if (ecgPrepaid) meterOptions.push('ECG Prepaid');
-      if (meterOptions.length > 0) {
-        amenitiesList.push(`Electricity: ${meterOptions.join(', ')}`);
+        // Compile detailed water options
+        const waterOptions: string[] = [];
+        if (ghanaWaterShared) waterOptions.push('Ghana Water (Shared)');
+        if (ghanaWaterSeparate) waterOptions.push('Ghana Water (Separate)');
+        if (polytank) waterOptions.push('Polytank');
+        if (borehole) waterOptions.push('Borehole');
+        if (well) waterOptions.push('Well');
+        if (waterOptions.length > 0) {
+          amenitiesList.push(`Water: ${waterOptions.join(', ')}`);
+        }
+
+        // Compile detailed meter options
+        const meterOptions: string[] = [];
+        if (ecgSharedMeter) meterOptions.push('ECG Shared Meter');
+        if (ecgSeparateMeter) meterOptions.push('ECG Separate Meter');
+        if (ecgPostPaid) meterOptions.push('ECG Post-paid');
+        if (ecgPrepaid) meterOptions.push('ECG Prepaid');
+        if (meterOptions.length > 0) {
+          amenitiesList.push(`Electricity: ${meterOptions.join(', ')}`);
+        }
       }
 
       if (amenitiesList.length > 0) {
@@ -267,11 +308,29 @@ export default function UploadPage({
                   value={pricePeriod}
                   onChange={(e) => setPricePeriod(e.target.value)}
                   className="form-control"
-                  style={{ width: '150px', backgroundColor: 'var(--bg-surface)' }}
+                  style={{ width: '160px', backgroundColor: 'var(--bg-surface)' }}
                 >
-                  <option value="semester">per semester</option>
-                  <option value="month">per month</option>
-                  <option value="year">per year</option>
+                  {type === 'Lands' ? (
+                    <>
+                      <option value="plot">per plot</option>
+                      <option value="acre">per acre</option>
+                      <option value="outright sale">Outright Sale (Total)</option>
+                      <option value="year">per year (lease)</option>
+                    </>
+                  ) : type === 'Furnitures' ? (
+                    <>
+                      <option value="outright sale">Outright Sale</option>
+                      <option value="month">per month</option>
+                      <option value="item">per item</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="semester">per semester</option>
+                      <option value="academic year">per academic year</option>
+                      <option value="month">per month</option>
+                      <option value="year">per year</option>
+                    </>
+                  )}
                 </select>
               </div>
             </div>
@@ -281,7 +340,7 @@ export default function UploadPage({
               <select
                 id="type"
                 value={type}
-                onChange={(e) => setType(e.target.value)}
+                onChange={(e) => handleTypeChange(e.target.value)}
                 required
                 className="form-control"
                 style={{ backgroundColor: 'var(--bg-surface)' }}
@@ -312,12 +371,12 @@ export default function UploadPage({
                 style={{ backgroundColor: 'var(--bg-surface)' }}
               >
                 <option value="available">Available</option>
-                <option value="rented">Rented / Occupied</option>
+                <option value="rented">Rented / Occupied / Sold</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label htmlFor="contact">Landlord Ghana Phone Number (10 Digits)</label>
+              <label htmlFor="contact">Contact Phone Number (10 Digits)</label>
               <input
                 id="contact"
                 type="tel"
@@ -332,10 +391,16 @@ export default function UploadPage({
 
             <div className={styles.fullWidth}>
               <div className="form-group">
-                <label htmlFor="description">Property Description & Amenities</label>
+                <label htmlFor="description">Listing Description</label>
                 <textarea
                   id="description"
-                  placeholder="Describe your property (e.g., water availability, electricity meter, furnished, fenced yard, parking, etc.)"
+                  placeholder={
+                    type === 'Lands'
+                      ? 'Describe land details (e.g. road access, soil type, site plan, nearby landmarks, etc.)'
+                      : type === 'Furnitures'
+                      ? 'Describe furniture details (e.g. materials, dimensions, usage history, seller notes, etc.)'
+                      : 'Describe your property (e.g. water availability, electricity meter, furnished state, etc.)'
+                  }
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   required
@@ -346,99 +411,197 @@ export default function UploadPage({
               </div>
             </div>
 
-            {/* Amenities Select Checkboxes */}
+            {/* Dynamic Features Section based on Category */}
             <div className={styles.fullWidth} style={{ marginBottom: '8px' }}>
               <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: '12px', display: 'block' }}>Key Features Included</label>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  
-                  {/* Water section */}
-                  <div>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>💧 Water Supply</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={ghanaWaterShared} onChange={(e) => setGhanaWaterShared(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>Ghana Water (Shared)</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={ghanaWaterSeparate} onChange={(e) => setGhanaWaterSeparate(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>Ghana Water (Separate)</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={polytank} onChange={(e) => setPolytank(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>Polytank</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={borehole} onChange={(e) => setBorehole(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>Borehole</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={well} onChange={(e) => setWell(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>Well</span>
-                      </label>
+                <label style={{ fontWeight: 600, marginBottom: '12px', display: 'block' }}>
+                  {type === 'Lands'
+                    ? 'Land Specifications'
+                    : type === 'Furnitures'
+                    ? 'Furniture Specifications'
+                    : 'Key Features & Amenities'}
+                </label>
+
+                {type === 'Lands' ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px', padding: '20px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                    <div>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px', display: 'block' }}>📐 Plot Size / Dimensions</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 70 x 100 ft, 2 Acres, 1 Plot"
+                        value={landPlotSize}
+                        onChange={(e) => setLandPlotSize(e.target.value)}
+                        className="form-control"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px', display: 'block' }}>📜 Title / Documentation</label>
+                      <select
+                        value={landDocType}
+                        onChange={(e) => setLandDocType(e.target.value)}
+                        className="form-control"
+                        style={{ backgroundColor: 'var(--bg-surface)' }}
+                      >
+                        <option value="Site Plan">Site Plan</option>
+                        <option value="Indenture / Lease">Indenture / Lease</option>
+                        <option value="Registered Title">Registered Title</option>
+                        <option value="Freehold">Freehold</option>
+                        <option value="Customary / Unregistered">Customary / Unregistered</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px', display: 'block' }}>🏗️ Zoning / Intended Purpose</label>
+                      <select
+                        value={landZoning}
+                        onChange={(e) => setLandZoning(e.target.value)}
+                        className="form-control"
+                        style={{ backgroundColor: 'var(--bg-surface)' }}
+                      >
+                        <option value="Residential">Residential</option>
+                        <option value="Commercial">Commercial</option>
+                        <option value="Agricultural">Agricultural</option>
+                        <option value="Industrial">Industrial</option>
+                        <option value="Mixed Use">Mixed Use</option>
+                      </select>
                     </div>
                   </div>
-
-                  {/* Meter section */}
-                  <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '16px' }}>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>⚡ Electricity Meter</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={ecgSharedMeter} onChange={(e) => setEcgSharedMeter(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>ECG Shared Meter</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={ecgSeparateMeter} onChange={(e) => setEcgSeparateMeter(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>ECG Separate Meter</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={ecgPostPaid} onChange={(e) => setEcgPostPaid(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>ECG Post-paid</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={ecgPrepaid} onChange={(e) => setEcgPrepaid(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>ECG Prepaid</span>
-                      </label>
+                ) : type === 'Furnitures' ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px', padding: '20px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                    <div>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px', display: 'block' }}>✨ Condition</label>
+                      <select
+                        value={furnitureCondition}
+                        onChange={(e) => setFurnitureCondition(e.target.value)}
+                        className="form-control"
+                        style={{ backgroundColor: 'var(--bg-surface)' }}
+                      >
+                        <option value="Brand New">Brand New</option>
+                        <option value="Slightly Used (Like New)">Slightly Used (Like New)</option>
+                        <option value="Fairly Used">Fairly Used</option>
+                        <option value="Refurbished">Refurbished</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px', display: 'block' }}>🛋️ Item Category</label>
+                      <select
+                        value={furnitureCategory}
+                        onChange={(e) => setFurnitureCategory(e.target.value)}
+                        className="form-control"
+                        style={{ backgroundColor: 'var(--bg-surface)' }}
+                      >
+                        <option value="Bed & Mattress">Bed & Mattress</option>
+                        <option value="Sofa & Seating">Sofa & Seating</option>
+                        <option value="Dining Set">Dining Set</option>
+                        <option value="Desk & Chair">Desk & Chair</option>
+                        <option value="Kitchen Appliance">Kitchen Appliance</option>
+                        <option value="Wardrobe / Cabinet">Wardrobe / Cabinet</option>
+                        <option value="Home Electronics / Decor">Home Electronics / Decor</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px', display: 'block' }}>🚚 Delivery Options</label>
+                      <select
+                        value={furnitureDelivery}
+                        onChange={(e) => setFurnitureDelivery(e.target.value)}
+                        className="form-control"
+                        style={{ backgroundColor: 'var(--bg-surface)' }}
+                      >
+                        <option value="Buyer Pick-Up">Buyer Pick-Up</option>
+                        <option value="Free Delivery">Free Delivery</option>
+                        <option value="Paid Delivery Available">Paid Delivery Available</option>
+                      </select>
                     </div>
                   </div>
-
-                  {/* Other Amenities */}
-                  <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '16px' }}>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>📶 Other Amenities</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={hasWifi} onChange={(e) => setHasWifi(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>High-Speed WiFi</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={hasCctv} onChange={(e) => setHasCctv(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>CCTV Camera</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={hasFurnished} onChange={(e) => setHasFurnished(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>Furnished</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={hasGatedFenced} onChange={(e) => setHasGatedFenced(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>Gated & Fenced</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={isNewlyBuilt} onChange={(e) => setIsNewlyBuilt(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>Newly Built</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={hasBed} onChange={(e) => setHasBed(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>Bed</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                        <input type="checkbox" checked={hasStudyDesk} onChange={(e) => setHasStudyDesk(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                        <span>Study Desk</span>
-                      </label>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                    
+                    {/* Water section */}
+                    <div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>💧 Water Supply</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={ghanaWaterShared} onChange={(e) => setGhanaWaterShared(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Ghana Water (Shared)</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={ghanaWaterSeparate} onChange={(e) => setGhanaWaterSeparate(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Ghana Water (Separate)</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={polytank} onChange={(e) => setPolytank(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Polytank</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={borehole} onChange={(e) => setBorehole(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Borehole</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={well} onChange={(e) => setWell(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Well</span>
+                        </label>
+                      </div>
                     </div>
-                  </div>
 
-                </div>
+                    {/* Meter section */}
+                    <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '16px' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>⚡ Electricity Meter</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={ecgSharedMeter} onChange={(e) => setEcgSharedMeter(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>ECG Shared Meter</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={ecgSeparateMeter} onChange={(e) => setEcgSeparateMeter(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>ECG Separate Meter</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={ecgPostPaid} onChange={(e) => setEcgPostPaid(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>ECG Post-paid</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={ecgPrepaid} onChange={(e) => setEcgPrepaid(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>ECG Prepaid</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Other Amenities */}
+                    <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '16px' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>📶 Other Amenities</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasWifi} onChange={(e) => setHasWifi(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>High-Speed WiFi</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasCctv} onChange={(e) => setHasCctv(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>CCTV Camera</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasFurnished} onChange={(e) => setHasFurnished(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Furnished</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasGatedFenced} onChange={(e) => setHasGatedFenced(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Gated & Fenced</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={isNewlyBuilt} onChange={(e) => setIsNewlyBuilt(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Newly Built</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasBed} onChange={(e) => setHasBed(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Bed</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasStudyDesk} onChange={(e) => setHasStudyDesk(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Study Desk</span>
+                        </label>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
               </div>
             </div>
 

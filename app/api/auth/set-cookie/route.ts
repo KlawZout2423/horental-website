@@ -29,26 +29,31 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json({ success: true });
 
     const isProduction = process.env.NODE_ENV === 'production';
+    const SESSION_MAX_AGE = 60 * 60 * 12; // 12 hours session timeout
+
+    const userPayload = {
+      ...user,
+      loggedInAt: Date.now()
+    };
 
     // HttpOnly: JS cannot read this — XSS-safe
     // Secure: only sent over HTTPS in production
-    // SameSite=Strict: blocks CSRF from cross-site requests
+    // SameSite=Lax: enables seamless navigation across tabs
     response.cookies.set('auth_token', token, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'strict',
+      sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: SESSION_MAX_AGE,
     });
 
     // User data cookie — NOT HttpOnly so the client can read name/role for UI rendering
-    // This contains no secrets — it's safe to be readable by JS
-    response.cookies.set('user_data', JSON.stringify(user), {
+    response.cookies.set('user_data', JSON.stringify(userPayload), {
       httpOnly: false,
       secure: isProduction,
-      sameSite: 'strict',
+      sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: SESSION_MAX_AGE,
     });
 
     return response;
