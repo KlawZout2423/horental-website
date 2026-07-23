@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, MapPin, SlidersHorizontal, RefreshCcw, Star, Heart, X } from 'lucide-react';
+import { Search, MapPin, SlidersHorizontal, RefreshCcw, Star, Heart, X, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { graphqlRequest, GET_PROPERTIES } from '../../lib/graphql';
 import styles from './properties.module.css';
@@ -11,7 +11,17 @@ import AuthPromptModal from '../../components/AuthPromptModal';
 
 import { Property, getPricePeriodLabel, matchesAdvancedFilters } from '../../lib/types';
 
-// All property type categories matching the Flutter app chips list
+const TYPE_CHIPS = [
+  { label: 'All', type: 'All' },
+  { label: 'Self-Contained ▾', type: 'self-contained' },
+  { label: 'Student Hostel', type: 'Student Hostel' },
+  { label: 'Single Room', type: 'Single Room' },
+  { label: 'Chamber & Hall', type: 'Chamber & Hall' },
+  { label: 'Shops', type: 'Shops' },
+  { label: 'Lands', type: 'Lands' },
+  { label: 'Short Stay', type: 'Short Stay' }
+];
+
 const SELF_CONTAINED_OPTIONS = [
   { label: 'All Self-Contained', type: 'self-contained' },
   { label: 'Single Room SC', type: 'Single Room SC' },
@@ -71,6 +81,34 @@ export default function PropertiesClient() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
+
+  // Self-Contained Dropdown State
+  const [showSelfContainedDropdown, setShowSelfContainedDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowSelfContainedDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleChipClick = (type: string) => {
+    if (type === 'self-contained') {
+      setShowSelfContainedDropdown((prev) => !prev);
+      return;
+    }
+    setShowSelfContainedDropdown(false);
+    setPropertyType(type);
+  };
+
+  const handleSelfContainedSelect = (subType: string) => {
+    setPropertyType(subType);
+    setShowSelfContainedDropdown(false);
+  };
 
   // Authenticate user before seeing search results
   useEffect(() => {
