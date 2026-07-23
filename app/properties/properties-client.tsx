@@ -570,20 +570,20 @@ export default function PropertiesClient() {
         {/* Listings Display Area */}
         <div className={styles.listingsArea}>
           <div className={styles.resultsHeader}>
-            <span>Found {filteredProperties.length} properties</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label htmlFor="sort-select" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Sort by:</label>
-              <select
-                id="sort-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'newest' | 'price_asc' | 'price_desc')}
-                className={styles.sortSelect}
-              >
-                <option value="newest">Newest First</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-              </select>
-            </div>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+              Found {filteredProperties.length} properties
+            </span>
+            <select
+              id="sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'newest' | 'price_asc' | 'price_desc')}
+              className={styles.sortSelect}
+              aria-label="Sort properties"
+            >
+              <option value="newest">Sort: Newest First</option>
+              <option value="price_asc">Sort: Price (Low → High)</option>
+              <option value="price_desc">Sort: Price (High → Low)</option>
+            </select>
           </div>
 
           {loading ? (
