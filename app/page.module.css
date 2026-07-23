@@ -238,9 +238,18 @@
   }
 
 @media (max-width: 968px) {
-  /* Hide the desktop hero illustration on mobile */
+  /* Hide the hero banner completely on mobile — leave only search bar & chips */
+  .hero {
+    display: none !important;
+  }
+
   .heroRight {
     display: none;
+  }
+
+  /* Hide subtitle text under Top Listings on mobile */
+  .sectionHeaderSubtitle {
+    display: none !important;
   }
 
   /* Sticky bar sits directly below fixed 70px Navbar */
@@ -260,7 +269,7 @@
   }
 
   .chipsOuter {
-    padding: 6px 16px 12px;
+    padding: 10px 16px 12px;
     border-bottom: none;
     overflow-x: auto;
     justify-content: flex-start;
