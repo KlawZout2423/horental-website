@@ -110,21 +110,6 @@ export default function PropertiesClient() {
     setShowSelfContainedDropdown(false);
   };
 
-  // Authenticate user before seeing search results
-  useEffect(() => {
-    if (!authLoading && !user) {
-      setShowAuthModal(true);
-    }
-  }, [authLoading, user]);
-
-  const handleCardClick = (e: React.MouseEvent, propertyId: string) => {
-    if (!user) {
-      e.preventDefault();
-      setTargetPropertyId(propertyId);
-      setShowAuthModal(true);
-    }
-  };
-
   // Calculate dynamic maximum price for range slider (rounded up to nearest 100)
   const maxPossiblePrice = properties.length > 0
     ? Math.ceil(Math.max(...properties.map(p => p.price)) / 100) * 100
@@ -723,9 +708,6 @@ export default function PropertiesClient() {
         isOpen={showAuthModal}
         onClose={() => {
           setShowAuthModal(false);
-          if (!user) {
-            router.push('/');
-          }
         }}
         targetPropertyId={targetPropertyId}
       />
