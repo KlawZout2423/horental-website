@@ -280,9 +280,9 @@ export default function PropertiesClient() {
       <div className={styles.layout}>
         {/* Backdrop for mobile modal filter drawer */}
         {showMobileFilters && (
-          <div 
-            className={styles.mobileBackdrop} 
-            onClick={() => setShowMobileFilters(false)} 
+          <div
+            className={styles.mobileBackdrop}
+            onClick={() => setShowMobileFilters(false)}
           />
         )}
 
@@ -296,8 +296,8 @@ export default function PropertiesClient() {
               <button onClick={handleResetFilters} className={styles.resetButton}>
                 Reset All
               </button>
-              <button 
-                onClick={() => setShowMobileFilters(false)} 
+              <button
+                onClick={() => setShowMobileFilters(false)}
                 className={styles.closeMobileFilterBtn}
                 aria-label="Close filters"
               >
