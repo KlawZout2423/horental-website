@@ -306,6 +306,26 @@
   color: var(--text-secondary);
 }
 
+.sortSelect {
+  width: auto;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.sortSelect:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -338,7 +358,7 @@
 
 .imageWrapper {
   position: relative;
-  height: 245px;
+  height: 215px;
   width: 100%;
   background-color: var(--bg-surface-secondary);
   overflow: hidden;
@@ -382,10 +402,10 @@
 }
 
 .cardContent {
-  padding: 16px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   flex-grow: 1;
 }
 
@@ -409,7 +429,7 @@
 }
 
 .cardPrice {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--primary);
   display: flex;
@@ -424,15 +444,15 @@
 }
 
 .cardTitle {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.4;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  height: 2.8em;
+  min-height: 1.4em;
 }
 
 .cardLocation {
@@ -449,11 +469,11 @@
   align-items: center;
   font-size: 0.78rem;
   color: var(--text-secondary);
-  padding: 8px 0;
+  padding: 6px 0;
   border-top: 1px dashed var(--border);
   border-bottom: 1px dashed var(--border);
   margin-top: auto;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   width: 100%;
 }
 
@@ -465,7 +485,7 @@
 
 .cardFooter {
   border-top: 1px solid var(--border);
-  padding: 10px 16px;
+  padding: 8px 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;

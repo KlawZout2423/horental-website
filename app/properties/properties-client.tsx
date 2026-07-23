@@ -532,8 +532,7 @@ export default function PropertiesClient() {
                 id="sort-select"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'newest' | 'price_asc' | 'price_desc')}
-                className={styles.selectInput}
-                style={{ width: 'auto', padding: '6px 12px', fontSize: '0.85rem' }}
+                className={styles.sortSelect}
               >
                 <option value="newest">Newest First</option>
                 <option value="price_asc">Price: Low to High</option>
