@@ -18,15 +18,9 @@ export default function Navbar() {
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('app_theme') as 'light' | 'dark' | null;
-    if (storedTheme) {
-      setTheme(storedTheme);
-      document.documentElement.setAttribute('data-theme', storedTheme);
-    } else {
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const initial = isDark ? 'dark' : 'light';
-      setTheme(initial);
-      document.documentElement.setAttribute('data-theme', initial);
-    }
+    const initial = storedTheme ?? 'light';
+    setTheme(initial);
+    document.documentElement.setAttribute('data-theme', initial);
   }, []);
 
   const toggleTheme = () => {
@@ -91,6 +85,7 @@ export default function Navbar() {
         <div className={styles.navLinks}>
           <Link href="/" className={isActive('/')}>Home</Link>
           <Link href="/properties" className={isActive('/properties')}>Search Rentals</Link>
+          <Link href="/about" className={isActive('/about')}>About Us</Link>
           <Link href="/favorites" className={isActive('/favorites')}>Favorites</Link>
           {user && (user.role === 'admin' || user.role === 'partner') && (
             <Link href="/upload" className={isActive('/upload')}>Upload Property</Link>
@@ -105,7 +100,7 @@ export default function Navbar() {
           {/* Dark / Light theme toggle */}
           <button
             onClick={toggleTheme}
-            className="btn btn-icon"
+            className={`${styles.themeToggleBtn} btn btn-icon`}
             style={{ color: 'var(--text-primary)', padding: '8px', cursor: 'pointer' }}
             title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
             aria-label="Toggle Theme"
@@ -160,7 +155,7 @@ export default function Navbar() {
           {/* Dark / Light theme toggle button — mobile header only */}
           <button
             onClick={toggleTheme}
-            className={`${styles.mobileHeaderThemeBtn} btn btn-icon`}
+            className={`${styles.mobileHeaderThemeBtn} ${styles.themeToggleBtn} btn btn-icon`}
             style={{ color: 'var(--text-primary)', padding: '8px', cursor: 'pointer' }}
             title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
             aria-label="Toggle Theme"

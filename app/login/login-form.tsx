@@ -65,8 +65,8 @@ export default function LoginForm() {
     <div className={styles.page}>
       {/* Back to home */}
       <Link href="/" className={styles.backBtn} aria-label="Back to home">
-        <ArrowLeft size={18} />
-        <span>Home</span>
+        <ArrowLeft size={16} />
+        <span>Back to HO Rentals</span>
       </Link>
       <div className={`${styles.card} animate-fade-in`}>
 
@@ -124,6 +124,11 @@ export default function LoginForm() {
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
+            </div>
+            <div style={{ textAlign: 'right', marginTop: '6px' }}>
+              <Link href="/forgot-password" style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 600 }}>
+                Forgot Password?
+              </Link>
             </div>
           </div>
 

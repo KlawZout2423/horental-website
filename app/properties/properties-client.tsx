@@ -9,7 +9,7 @@ import { graphqlRequest, GET_PROPERTIES } from '../../lib/graphql';
 import styles from './properties.module.css';
 import AuthPromptModal from '../../components/AuthPromptModal';
 
-import { Property, getPricePeriodLabel } from '../../lib/types';
+import { Property, getPricePeriodLabel, matchesAdvancedFilters } from '../../lib/types';
 
 // All property type categories matching the Flutter app chips list
 const PROPERTY_CATEGORIES = [
@@ -41,6 +41,12 @@ export default function PropertiesClient() {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [availability, setAvailability] = useState('All');
+  const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc'>('newest');
+
+  // Advanced Multi-Criteria Filter States
+  const [selectedWaterTypes, setSelectedWaterTypes] = useState<string[]>([]);
+  const [selectedMeterTypes, setSelectedMeterTypes] = useState<string[]>([]);
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
   // Bookmark active state
   const [savedIds, setSavedIds] = useState<string[]>([]);
@@ -160,8 +166,25 @@ export default function PropertiesClient() {
       result = result.filter((p) => p.status.toLowerCase() === availability.toLowerCase());
     }
 
-    setFilteredProperties(result);
-  }, [searchQuery, propertyType, minPrice, maxPrice, availability, properties]);
+    // Filter by Advanced Criteria (Water, Metering, Amenities)
+    result = result.filter((p) =>
+      matchesAdvancedFilters(p.description, {
+        waterTypes: selectedWaterTypes,
+        meterTypes: selectedMeterTypes,
+        amenities: selectedAmenities,
+      })
+    );
+
+    // Sort results
+    const sorted = [...result];
+    if (sortBy === 'price_asc') {
+      sorted.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'price_desc') {
+      sorted.sort((a, b) => b.price - a.price);
+    }
+
+    setFilteredProperties(sorted);
+  }, [searchQuery, propertyType, minPrice, maxPrice, availability, sortBy, selectedWaterTypes, selectedMeterTypes, selectedAmenities, properties]);
 
   const handleResetFilters = () => {
     setSearchQuery('');
@@ -169,7 +192,30 @@ export default function PropertiesClient() {
     setMinPrice('');
     setMaxPrice('');
     setAvailability('All');
+    setSelectedWaterTypes([]);
+    setSelectedMeterTypes([]);
+    setSelectedAmenities([]);
   };
+
+  const handleToggleWaterFilter = (type: string) => {
+    setSelectedWaterTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
+  const handleToggleMeterFilter = (type: string) => {
+    setSelectedMeterTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
+  const handleToggleAmenityFilter = (amenity: string) => {
+    setSelectedAmenities((prev) =>
+      prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity]
+    );
+  };
+
+  const activeAdvancedFilterCount = selectedWaterTypes.length + selectedMeterTypes.length + selectedAmenities.length;
 
   // Load saved bookmarks from localStorage on mount
   useEffect(() => {
@@ -219,6 +265,7 @@ export default function PropertiesClient() {
         <button
           onClick={() => setShowMobileFilters(!showMobileFilters)}
           className={styles.mobileFilterToggle}
+          aria-label="Filter Listings"
         >
           <SlidersHorizontal size={14} />
           <span>{showMobileFilters ? 'Hide Filters' : 'Filter Listings'}</span>
@@ -380,6 +427,83 @@ export default function PropertiesClient() {
             </div>
           </div>
 
+          {/* Water Facilities Filter */}
+          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>💧 Water Supply</span>
+              {selectedWaterTypes.length > 0 && <span className={styles.activeFilterCount}>{selectedWaterTypes.length}</span>}
+            </label>
+            <div className={styles.checkboxList}>
+              {[
+                { id: 'ghana-water', label: 'Ghana Water Supply', value: 'Ghana Water' },
+                { id: 'polytank-water', label: 'Polytank / Storage Tank', value: 'Polytank' },
+                { id: 'borehole-water', label: 'Borehole Water', value: 'Borehole' },
+                { id: 'well-water', label: 'Well Water', value: 'Well' },
+              ].map((item) => (
+                <label key={item.id} className={styles.checkboxOption}>
+                  <input
+                    type="checkbox"
+                    checked={selectedWaterTypes.includes(item.value)}
+                    onChange={() => handleToggleWaterFilter(item.value)}
+                  />
+                  <span>{item.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Metering & Electricity Filter */}
+          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>⚡ Electricity & Metering</span>
+              {selectedMeterTypes.length > 0 && <span className={styles.activeFilterCount}>{selectedMeterTypes.length}</span>}
+            </label>
+            <div className={styles.checkboxList}>
+              {[
+                { id: 'prepaid-meter', label: 'ECG Prepaid Meter', value: 'Prepaid' },
+                { id: 'separate-meter', label: 'ECG Separate Meter / Postpaid', value: 'Postpaid' },
+                { id: 'shared-meter', label: 'ECG Shared Meter', value: 'Shared' },
+              ].map((item) => (
+                <label key={item.id} className={styles.checkboxOption}>
+                  <input
+                    type="checkbox"
+                    checked={selectedMeterTypes.includes(item.value)}
+                    onChange={() => handleToggleMeterFilter(item.value)}
+                  />
+                  <span>{item.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Amenities & Comfort Checklist Filter */}
+          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>✨ Comforts & Security</span>
+              {selectedAmenities.length > 0 && <span className={styles.activeFilterCount}>{selectedAmenities.length}</span>}
+            </label>
+            <div className={styles.checkboxList}>
+              {[
+                { id: 'amenity-wifi', label: 'High-Speed WiFi', value: 'WiFi' },
+                { id: 'amenity-ac', label: 'Air Conditioning (AC)', value: 'AC' },
+                { id: 'amenity-desk', label: 'Study Desk & Chair', value: 'Study Desk' },
+                { id: 'amenity-furnished', label: 'Furnished / Bed Included', value: 'Furnished' },
+                { id: 'amenity-cctv', label: 'CCTV Security Camera', value: 'CCTV' },
+                { id: 'amenity-gated', label: 'Gated & Fenced', value: 'Gated & Fenced' },
+                { id: 'amenity-parking', label: 'Vehicle Parking Space', value: 'Parking' },
+              ].map((item) => (
+                <label key={item.id} className={styles.checkboxOption}>
+                  <input
+                    type="checkbox"
+                    checked={selectedAmenities.includes(item.value)}
+                    onChange={() => handleToggleAmenityFilter(item.value)}
+                  />
+                  <span>{item.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className={styles.mobileDrawerFooter}>
             <button
               onClick={() => setShowMobileFilters(false)}
@@ -402,6 +526,20 @@ export default function PropertiesClient() {
         <div className={styles.listingsArea}>
           <div className={styles.resultsHeader}>
             <span>Found {filteredProperties.length} properties</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label htmlFor="sort-select" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Sort by:</label>
+              <select
+                id="sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'newest' | 'price_asc' | 'price_desc')}
+                className={styles.selectInput}
+                style={{ width: 'auto', padding: '6px 12px', fontSize: '0.85rem' }}
+              >
+                <option value="newest">Newest First</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+              </select>
+            </div>
           </div>
 
           {loading ? (

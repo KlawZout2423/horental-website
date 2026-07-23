@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../../lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
+import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../lib/types';
 
 const COMMISSION_FEE = 5;
 
@@ -115,13 +116,16 @@ export const resolvers = {
 
   Mutation: {
     register: async (_: any, { input }: { input: any }) => {
+      const sanitizedName = sanitizeInput(input.name);
+      const formattedPhone = formatGhanaPhone(input.phone);
+
       const hashed = await bcrypt.hash(input.password, 10);
       const user = await prisma.user.create({
         data: {
-          name: input.name,
+          name: sanitizedName,
           email: input.email,
           password: hashed,
-          phone: input.phone,
+          phone: formattedPhone,
         },
       });
 
@@ -154,11 +158,11 @@ export const resolvers = {
 
       return prisma.property.create({
         data: {
-          title: input.title,
-          location: input.location,
+          title: sanitizeInput(input.title),
+          location: sanitizeInput(input.location),
           price: input.price,
-          description: input.description,
-          contact: input.contact,
+          description: sanitizeInput(input.description),
+          contact: formatGhanaPhone(input.contact),
           type: input.type,
           status: input.status || 'available',
           imageUrl: input.imageUrl,
@@ -357,11 +361,11 @@ export const resolvers = {
     createContactLog: async (_: any, args: { customerName: string; customerPhone: string; actionType: string; propertyId: number; landlordPhone: string }) => {
       return prisma.contactLog.create({
         data: {
-          customerName: args.customerName,
-          customerPhone: args.customerPhone,
-          actionType: args.actionType,
+          customerName: sanitizeInput(args.customerName),
+          customerPhone: formatGhanaPhone(args.customerPhone),
+          actionType: sanitizeInput(args.actionType),
           propertyId: args.propertyId,
-          landlordPhone: args.landlordPhone,
+          landlordPhone: formatGhanaPhone(args.landlordPhone),
         },
         include: { property: true }
       });

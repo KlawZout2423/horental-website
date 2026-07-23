@@ -30,6 +30,15 @@
 }
 
 @media (max-width: 600px) {
+  .container {
+    padding: 20px 14px;
+  }
+  .card {
+    padding: 20px 16px;
+  }
+  .fileUploader {
+    padding: 20px 12px;
+  }
   .formGrid {
     grid-template-columns: 1fr;
   }

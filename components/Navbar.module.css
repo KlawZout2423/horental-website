@@ -49,7 +49,7 @@
 .navLinks {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 24px;
 }
 
 .navLink {
@@ -67,7 +67,7 @@
 .navLink::after {
   content: '';
   position: absolute;
-  bottom: 0;
+  bottom: -4px;
   left: 0;
   width: 0;
   height: 2px;
@@ -207,6 +207,9 @@
   top: 70px;
   left: 0;
   right: 0;
+  max-height: calc(100vh - 75px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   padding: 24px;
@@ -218,7 +221,7 @@
 }
 
 .mobileHeaderThemeBtn {
-  display: none;
+  display: none !important;
 }
 
 @media (max-width: 768px) {
@@ -231,7 +234,7 @@
   }
 
   .mobileHeaderThemeBtn {
-    display: inline-flex;
+    display: inline-flex !important;
   }
 
   .menuButton {
@@ -241,4 +244,13 @@
   .mobileMenu {
     display: flex;
   }
+}
+
+.themeToggleBtn {
+  transition: all 0.2s ease !important;
+}
+
+.themeToggleBtn:hover {
+  transform: none !important;
+  background-color: var(--bg-surface-secondary) !important;
 }

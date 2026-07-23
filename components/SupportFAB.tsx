@@ -1,12 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Phone, Mail, X } from 'lucide-react';
-import { useAuth } from '../lib/auth';
+import { MessageSquare, Mail, X } from 'lucide-react';
 import styles from './SupportFAB.module.css';
 
 export default function SupportFAB() {
-  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -20,9 +18,6 @@ export default function SupportFAB() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  if (!user) return null;
-
   return (
     <div className={styles.fabContainer} ref={containerRef}>
       {isOpen && (
@@ -34,7 +29,7 @@ export default function SupportFAB() {
           <div className={styles.popupDivider} />
           
           <a
-            href="https://wa.me/233245229661?text=Hi%20HO%20Rentals,%20I%20have%20an%20issue/inquiry%20regarding%20the%20platform."
+            href="https://wa.me/233557922593?text=Hi%20HO%20Rentals,%20I%20have%20an%20issue/inquiry%20regarding%20the%20platform."
             target="_blank"
             rel="noopener noreferrer"
             className={styles.optionItem}
@@ -43,31 +38,31 @@ export default function SupportFAB() {
             <MessageSquare size={18} className={styles.optionIcon} style={{ color: '#25D366' }} />
             <div className={styles.optionLabel}>
               <span>WhatsApp Chat</span>
-              <span className={styles.optionValue}>Instant Response</span>
+              <span className={styles.optionValue}>0557 922 593</span>
             </div>
           </a>
 
           <a
-            href="tel:+233245229661"
+            href="sms:+233557922593?body=Hi%20HO%20Rentals,%20I%20need%20help%20with..."
             className={styles.optionItem}
             onClick={() => setIsOpen(false)}
           >
-            <Phone size={18} className={styles.optionIcon} style={{ color: 'var(--primary)' }} />
+            <MessageSquare size={18} className={styles.optionIcon} style={{ color: 'var(--primary)' }} />
             <div className={styles.optionLabel}>
-              <span>Direct Phone Call</span>
-              <span className={styles.optionValue}>+233 24 522 9661</span>
+              <span>SMS Support</span>
+              <span className={styles.optionValue}>0557 922 593</span>
             </div>
           </a>
 
           <a
-            href="mailto:support@horentals.com"
+            href="mailto:thehorentals@gmail.com"
             className={styles.optionItem}
             onClick={() => setIsOpen(false)}
           >
             <Mail size={18} className={styles.optionIcon} style={{ color: '#3b82f6' }} />
             <div className={styles.optionLabel}>
               <span>Send Email</span>
-              <span className={styles.optionValue}>support@horentals.com</span>
+              <span className={styles.optionValue}>thehorentals@gmail.com</span>
             </div>
           </a>
         </div>

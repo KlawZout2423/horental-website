@@ -4,11 +4,12 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth';
-import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2 } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTY_BY_ID, UPDATE_PROPERTY } from '../../../lib/graphql';
 import styles from './detail.module.css';
 import AuthPromptModal from '../../../components/AuthPromptModal';
-import { getPricePeriodLabel } from '../../../lib/types';
+import Toast from '../../../components/Toast';
+import { getPricePeriodLabel, formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../../lib/types';
 
 interface GalleryItem {
   id: string;
@@ -76,6 +77,20 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
   const [viewingPhone, setViewingPhone] = useState('');
   const [isBookingViewing, setIsBookingViewing] = useState(false);
   const [viewingSubmitted, setViewingSubmitted] = useState(false);
+
+  // Report Listing & Toast states
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('Incorrect Price');
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const handleShare = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      setToastMsg('Property link copied to clipboard! 📋');
+    }
+  };
 
   const handleBookViewingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,14 +274,24 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ width: '40px', height: '40px', border: '4px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <p style={{ color: 'var(--text-secondary)' }}>Loading property information...</p>
-        <style dangerouslySetInnerHTML={{__html: `
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}} />
+      <div className={styles.container} style={{ opacity: 0.7 }}>
+        <div style={{ width: '120px', height: '20px', background: 'var(--border)', borderRadius: '4px', marginBottom: '24px' }}></div>
+        <div className={styles.layout}>
+          <div>
+            <div className={styles.carousel} style={{ background: 'var(--border)', height: '480px' }}></div>
+            <div style={{ marginTop: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ width: '30%', height: '24px', background: 'var(--border)', borderRadius: '12px' }}></div>
+              <div style={{ width: '70%', height: '36px', background: 'var(--border)', borderRadius: '6px' }}></div>
+              <div style={{ width: '40%', height: '20px', background: 'var(--border)', borderRadius: '4px' }}></div>
+              <div style={{ width: '25%', height: '54px', background: 'var(--border)', borderRadius: '12px', marginTop: '12px' }}></div>
+            </div>
+          </div>
+          <div className={styles.sidebarCard} style={{ height: '380px', background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+            <div style={{ width: '60%', height: '24px', background: 'var(--border)', borderRadius: '4px', marginBottom: '24px' }}></div>
+            <div style={{ width: '100%', height: '48px', background: 'var(--border)', borderRadius: '24px', marginBottom: '12px' }}></div>
+            <div style={{ width: '100%', height: '48px', background: 'var(--border)', borderRadius: '24px' }}></div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -342,10 +367,19 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className={`${styles.container} animate-fade-in`}>
-      {/* Back Button */}
-      <Link href="/properties" className={styles.backButton}>
-        <ArrowLeft size={16} /> Back to Listings
-      </Link>
+      {/* Back Button & Share */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <Link href="/properties" className={styles.backButton} style={{ marginBottom: 0 }}>
+          <ArrowLeft size={16} /> Back to Listings
+        </Link>
+        <button
+          onClick={handleShare}
+          className="btn btn-outline"
+          style={{ padding: '6px 14px', fontSize: '0.85rem', fontWeight: 600, gap: '6px' }}
+        >
+          <Share2 size={14} /> Share Listing
+        </button>
+      </div>
 
       <div className={styles.layout}>
         {/* Main Details Area */}
@@ -354,6 +388,12 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
           {slides.length > 0 ? (
             <div>
               <div className={styles.carousel}>
+                <img
+                  src={slides[activeImageIndex]}
+                  alt=""
+                  className={styles.slideBlurBg}
+                  aria-hidden="true"
+                />
                 <img
                   src={slides[activeImageIndex]}
                   alt={`${property.title} - Image ${activeImageIndex + 1}`}
@@ -555,6 +595,19 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                       )}
                     </div>
                   )}
+                  {/* Report Listing Button */}
+                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Listing ID: #{property.id}</span>
+                    <button
+                      onClick={() => {
+                        setReportSubmitted(false);
+                        setShowReportModal(true);
+                      }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Flag size={13} style={{ color: 'var(--danger)' }} /> Report Listing
+                    </button>
+                  </div>
                 </>
               );
             })()}
@@ -593,27 +646,21 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               <Calendar size={16} /> Book Physical Viewing
             </button>
 
-            <button onClick={() => handleConnectClick('call')} className="btn btn-outline" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <Phone size={16} /> Call Landlord
-            </button>
-            
             <button 
               onClick={() => handleConnectClick('whatsapp')} 
               className="btn btn-secondary" 
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              <MessageSquare size={16} /> WhatsApp Chat
+              <MessageSquare size={16} /> WhatsApp Chat (0557922593)
             </button>
 
-            {property.contact && (
-              <a 
-                href={`sms:${property.contact.trim()}?body=Hi, I am interested in your property "${property.title}" listed on HO Rentals.`} 
-                className="btn btn-outline" 
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-              >
-                <MessageSquare size={16} /> SMS Landlord
-              </a>
-            )}
+            <a 
+              href={`sms:0557922593?body=Hi, I am interested in property "${property.title}" listed on HO Rentals.`} 
+              className="btn btn-outline" 
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <MessageSquare size={16} /> SMS Support (0557922593)
+            </a>
           </div>
         </aside>
       </div>
@@ -640,7 +687,10 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
             borderRadius: 'var(--radius-lg)',
             width: '100%',
             maxWidth: '440px',
-            padding: '32px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: '28px',
             boxShadow: 'var(--shadow-lg)',
             position: 'relative',
             display: 'flex',
@@ -708,9 +758,10 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     </label>
                     <input
                       type="text"
-                      placeholder={momoProvider === 'card' ? '4000 1234 5678 9010' : '024 123 4567'}
+                      placeholder={momoProvider === 'card' ? '4000 1234 5678 9010' : 'e.g. 0241234567'}
                       value={momoNumber}
-                      onChange={(e) => setMomoNumber(e.target.value)}
+                      onChange={(e) => setMomoNumber(momoProvider === 'card' ? e.target.value : formatGhanaPhone(e.target.value))}
+                      maxLength={momoProvider === 'card' ? 16 : 10}
                       className="form-control"
                       style={{ padding: '12px' }}
                     />
@@ -797,7 +848,10 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
             borderRadius: 'var(--radius-lg)',
             width: '100%',
             maxWidth: '440px',
-            padding: '32px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: '28px',
             boxShadow: 'var(--shadow-lg)',
             position: 'relative',
             display: 'flex',
@@ -849,8 +903,9 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                   type="tel"
                   placeholder="e.g. 0241234567"
                   value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  onChange={(e) => setCustomerPhone(formatGhanaPhone(e.target.value))}
                   required
+                  maxLength={10}
                   className="form-control"
                   style={{ padding: '12px' }}
                 />
@@ -1039,8 +1094,9 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     type="tel"
                     placeholder="e.g. 0241234567"
                     value={viewingPhone}
-                    onChange={(e) => setViewingPhone(e.target.value)}
+                    onChange={(e) => setViewingPhone(formatGhanaPhone(e.target.value))}
                     required
+                    maxLength={10}
                     className="form-control"
                     style={{ padding: '10px', fontSize: '0.85rem' }}
                   />
@@ -1060,6 +1116,106 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         </div>
       )}
 
+      {/* Report Listing Modal */}
+      {showReportModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            width: '100%',
+            maxWidth: '440px',
+            padding: '28px',
+            boxShadow: 'var(--shadow-lg)',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <button
+              onClick={() => setShowReportModal(false)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+            >
+              <X size={18} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--danger-light)', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Flag size={18} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Report Listing</h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Listing ID: #{id}</p>
+              </div>
+            </div>
+
+            {reportSubmitted ? (
+              <div style={{ padding: '20px', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 'var(--radius-md)', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <CheckCircle2 size={28} style={{ color: '#047857', margin: '0 auto' }} />
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#065F46' }}>Report Submitted</h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Thank you for helping keep HO Rentals safe and verified. Our moderation team will inspect this listing.</p>
+                <button onClick={() => setShowReportModal(false)} className="btn btn-outline" style={{ marginTop: '8px', padding: '8px 16px', fontSize: '0.85rem' }}>Close</button>
+              </div>
+            ) : (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                setReportSubmitted(true);
+              }} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Reason for Report</label>
+                  <select
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="form-control"
+                    style={{ padding: '10px', fontSize: '0.85rem', backgroundColor: 'var(--bg-surface)' }}
+                  >
+                    <option value="Incorrect Price">Incorrect Price</option>
+                    <option value="Already Rented">Already Rented / Occupied</option>
+                    <option value="Fake/Scam Listing">Fake or Scam Listing</option>
+                    <option value="Unresponsive Number">Unresponsive Landlord Contact</option>
+                    <option value="Inaccurate Photos">Inaccurate Photos / Description</option>
+                    <option value="Other">Other Reason</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Additional Details (Optional)</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Provide any additional context..."
+                    value={reportDetails}
+                    onChange={(e) => setReportDetails(e.target.value)}
+                    className="form-control"
+                    style={{ padding: '10px', fontSize: '0.85rem', resize: 'none' }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ width: '100%', padding: '12px', fontWeight: 'bold', backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }}
+                >
+                  Submit Report
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       <AuthPromptModal
         isOpen={showAuthPrompt}
         onClose={() => {
@@ -1068,6 +1224,10 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         }}
         targetPropertyId={id}
       />
+
+      {toastMsg && (
+        <Toast message={toastMsg} onClose={() => setToastMsg(null)} />
+      )}
     </div>
   );
 }

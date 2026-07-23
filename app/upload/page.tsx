@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
 import { graphqlRequest, CREATE_PROPERTY } from '../../lib/graphql';
 import { UploadCloud, Image as ImageIcon, Sparkles, Loader } from 'lucide-react';
+import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../lib/types';
 import styles from './upload.module.css';
 
 export default function UploadPage({
@@ -114,13 +115,18 @@ export default function UploadPage({
         throw new Error('No image URLs returned from the file hosting service.');
       }
 
+      const formattedContact = formatGhanaPhone(contact);
+      if (!isValidGhanaPhone(formattedContact)) {
+        throw new Error('Please enter a valid 10-digit Ghanaian phone number for landlord contact (e.g. 0241234567).');
+      }
+
       // 2. Perform the GraphQL property creation mutation
       const parsedPrice = parseFloat(price);
       if (isNaN(parsedPrice)) {
         throw new Error('Invalid price value.');
       }
 
-      let finalDescription = description.trim();
+      let finalDescription = sanitizeInput(description);
       const amenitiesList: string[] = [];
       
       const otherOptions: string[] = [];
@@ -311,14 +317,15 @@ export default function UploadPage({
             </div>
 
             <div className="form-group">
-              <label htmlFor="contact">Landlord Phone Number</label>
+              <label htmlFor="contact">Landlord Ghana Phone Number (10 Digits)</label>
               <input
                 id="contact"
                 type="tel"
-                placeholder="e.g. +233 24 123 4567"
+                placeholder="e.g. 0241234567"
                 value={contact}
-                onChange={(e) => setContact(e.target.value)}
+                onChange={(e) => setContact(formatGhanaPhone(e.target.value))}
                 required
+                maxLength={10}
                 className="form-control"
               />
             </div>

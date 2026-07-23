@@ -369,6 +369,16 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .contentBody {
+    padding: 16px;
+  }
+  .topHeader {
+    padding: 0 16px;
+  }
 }
 
 .table {

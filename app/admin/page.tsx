@@ -16,7 +16,7 @@ import {
   GET_CONTACT_LOGS,
   TOGGLE_FEATURED
 } from '../../lib/graphql';
-import { ShieldAlert, Trash2, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star } from 'lucide-react';
+import { Trash2, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star } from 'lucide-react';
 import styles from './admin.module.css';
 
 interface DashboardStats {
@@ -89,8 +89,7 @@ export default function AdminPage() {
   const [editPricePeriod, setEditPricePeriod] = useState('semester');
 
   // Filter Helper lists
-  const pendingProperties = properties.filter((p) => p.status.toLowerCase() === 'pending');
-  const approvedProperties = properties.filter((p) => p.status.toLowerCase() !== 'pending');
+  const approvedProperties = properties;
 
   // Security Redirect: Only allow Admin role
   useEffect(() => {
@@ -455,18 +454,7 @@ export default function AdminPage() {
               <span>Active Listings</span>
               <span className={styles.navCountBadge}>{approvedProperties.length}</span>
             </button>
-            <button
-              onClick={() => setActiveTab('moderation')}
-              className={`${styles.navItem} ${activeTab === 'moderation' ? styles.activeNavItem : ''}`}
-            >
-              <ShieldAlert size={16} />
-              <span>Pending Reviews</span>
-              {pendingProperties.length > 0 && (
-                <span className={styles.navCountBadge} style={{ backgroundColor: 'var(--primary)' }}>
-                  {pendingProperties.length}
-                </span>
-              )}
-            </button>
+
             <button
               onClick={() => setActiveTab('users')}
               className={`${styles.navItem} ${activeTab === 'users' ? styles.activeNavItem : ''}`}
@@ -531,7 +519,6 @@ export default function AdminPage() {
             <span className={styles.breadcrumbActive}>
               {activeTab === 'analytics' && 'Analytics'}
               {activeTab === 'properties' && 'Properties'}
-              {activeTab === 'moderation' && 'Moderation'}
               {activeTab === 'users' && 'Users'}
               {activeTab === 'audits' && 'Audit Logs'}
               {activeTab === 'upload' && 'Upload Property'}
@@ -556,7 +543,6 @@ export default function AdminPage() {
           <h1 className={styles.pageTitle}>
             {activeTab === 'analytics' && 'Overview Analytics'}
             {activeTab === 'properties' && 'Property Listings'}
-            {activeTab === 'moderation' && 'Moderation Queue'}
             {activeTab === 'users' && 'Account Manager'}
             {activeTab === 'audits' && 'Contact Inquiry Audits'}
             {activeTab === 'upload' && 'List a New Property'}
@@ -564,7 +550,6 @@ export default function AdminPage() {
           <p className={styles.pageSubtitle}>
             {activeTab === 'analytics' && 'Overview statistics and performance distribution metrics.'}
             {activeTab === 'properties' && 'View, search, edit availability, and delete published property listings.'}
-            {activeTab === 'moderation' && 'Approve or reject newly submitted listings awaiting platform verification.'}
             {activeTab === 'users' && 'Manage registered accounts and adjust credentials and system roles.'}
             {activeTab === 'audits' && 'Real-time record of customer call and WhatsApp inquiries to landlords.'}
             {activeTab === 'upload' && 'Upload hostels, rooms, or self-contained flats directly into the system database.'}
@@ -909,74 +894,6 @@ export default function AdminPage() {
                               style={{ padding: '6px', height: '32px', width: '32px', color: 'var(--danger)', borderColor: 'var(--border)' }}
                             >
                               <Trash2 size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          ) : activeTab === 'moderation' ? (
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Listing Info</th>
-                    <th>Type</th>
-                    <th>Price (GH₵)</th>
-                    <th>Location</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingProperties.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                        No listings pending moderation review.
-                      </td>
-                    </tr>
-                  ) : (
-                    pendingProperties.map((p) => (
-                      <tr key={p.id}>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <img 
-                              src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'} 
-                              alt={p.title} 
-                              style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)', flexShrink: 0 }}
-                            />
-                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.title}</span>
-                          </div>
-                        </td>
-                        <td style={{ textTransform: 'capitalize', fontWeight: 600, color: 'var(--text-secondary)' }}>{p.type}</td>
-                        <td style={{ fontWeight: 700 }}>{p.price.toLocaleString()}</td>
-                        <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{p.location}</td>
-                        <td>
-                          <span className="badge badge-pending">
-                            {p.status}
-                          </span>
-                        </td>
-                        <td>
-                          <div className={styles.actionsCell} style={{ justifyContent: 'flex-end' }}>
-                            <button
-                              onClick={() => handleTogglePropertyStatus(p.id, 'pending')}
-                              disabled={actionLoading}
-                              className="btn"
-                              style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px', backgroundColor: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 700 }}
-                            >
-                              Approve Listing
-                            </button>
-                            
-                            <button
-                              onClick={() => handleDeleteProperty(p.id)}
-                              disabled={actionLoading}
-                              className="btn btn-outline"
-                              style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px', color: 'var(--danger)', borderColor: 'var(--border)' }}
-                            >
-                              Reject
                             </button>
                           </div>
                         </td>

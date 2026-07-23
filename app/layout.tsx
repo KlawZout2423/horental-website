@@ -21,9 +21,9 @@ export const metadata: Metadata = {
   title: "HO Rentals | Find Properties in Ho & Volta Region",
   description: "Browse rooms, apartments, hostels, shops and lands in Ho, Hohoe and across the Volta Region. Find your perfect place with HO Rentals.",
   icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+    icon: [{ url: "/icon.png", type: "image/png" }],
+    shortcut: [{ url: "/icon.png", type: "image/png" }],
+    apple: [{ url: "/icon.png", type: "image/png" }],
   },
 };
 

@@ -217,7 +217,7 @@ export default function Home() {
       <header className={styles.hero}>
         <div className={styles.heroWrapper}>
           <div className={styles.heroLeft}>
-            <div className={styles.heroBadge} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '40px', backgroundColor: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)', fontSize: '0.85rem', fontWeight: 700, color: '#FEF3C7', marginBottom: '12px' }}>
+            <div className={styles.heroBadge} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '40px', backgroundColor: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)', fontSize: '0.85rem', fontWeight: 700, color: '#ffffff', marginBottom: '12px' }}>
               <Sparkles size={14} /> Ghana Rentals Property Platform
             </div>
             <h1 className={styles.title}>Find Your Perfect Place in Ghana</h1>
@@ -260,70 +260,93 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Horizontal scrolling chips */}
-      <div className={styles.chipsOuter}>
-        <div className={styles.chipsContainer}>
-          {TYPE_CHIPS.map((chip) => {
-            const isSelected = activeTypeFilter === chip.type || 
-                              (chip.type === 'self-contained' && 
-                               SELF_CONTAINED_OPTIONS.some(opt => opt.type === activeTypeFilter));
-            
-            if (chip.type === 'self-contained') {
-              return (
-                <div key={chip.type} className={styles.dropdownContainer} ref={dropdownRef}>
-                  <button
-                    onClick={() => handleChipClick(chip.type)}
-                    className={`${styles.chip} ${isSelected ? styles.activeChip : ''}`}
-                  >
-                    <span>{chip.label}</span>
-                    <ChevronDown size={14} />
-                  </button>
-                  
-                  {showSelfContainedDropdown && (
-                    <div className={styles.dropdownMenu}>
-                      {SELF_CONTAINED_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.type}
-                          onClick={() => handleSelfContainedSelect(opt.type)}
-                          className={styles.dropdownItem}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            }
+      {/* Sticky search + chips wrapper — sticky on mobile */}
+      <div className={styles.stickySearchBar}>
+        {/* Mobile-only mini search (hidden on desktop since hero has the full one) */}
+        <div className={styles.mobileSearchRow}>
+          <form onSubmit={handleSearchSubmit} className={styles.mobileSearchForm}>
+            <div className={styles.mobileSearchInputWrapper}>
+              <Search size={16} className={styles.searchIcon} />
+              <input
+                type="text"
+                placeholder="Search properties..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={styles.searchInput}
+                aria-label="Search properties"
+              />
+            </div>
+            <button type="submit" className={styles.mobileSearchBtn} aria-label="Search">
+              <Search size={16} />
+            </button>
+          </form>
+        </div>
 
-            return (
-              <button
-                key={chip.type}
-                onClick={() => handleChipClick(chip.type)}
-                className={`${styles.chip} ${isSelected ? styles.activeChip : ''}`}
-              >
-                {chip.type === 'filters' ? (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <SlidersHorizontal size={14} /> Filters
-                  </span>
-                ) : (
-                  <span>{chip.label}</span>
-                )}
-              </button>
-            );
-          })}
+        {/* Horizontal scrolling chips */}
+        <div className={styles.chipsOuter}>
+          <div className={styles.chipsContainer}>
+            {TYPE_CHIPS.map((chip) => {
+              const isSelected = activeTypeFilter === chip.type || 
+                                (chip.type === 'self-contained' && 
+                                 SELF_CONTAINED_OPTIONS.some(opt => opt.type === activeTypeFilter));
+              
+              if (chip.type === 'self-contained') {
+                return (
+                  <div key={chip.type} className={styles.dropdownContainer} ref={dropdownRef}>
+                    <button
+                      onClick={() => handleChipClick(chip.type)}
+                      className={`${styles.chip} ${isSelected ? styles.activeChip : ''}`}
+                    >
+                      <span>{chip.label}</span>
+                      <ChevronDown size={14} />
+                    </button>
+                    
+                    {showSelfContainedDropdown && (
+                      <div className={styles.dropdownMenu}>
+                        {SELF_CONTAINED_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.type}
+                            onClick={() => handleSelfContainedSelect(opt.type)}
+                            className={styles.dropdownItem}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={chip.type}
+                  onClick={() => handleChipClick(chip.type)}
+                  className={`${styles.chip} ${isSelected ? styles.activeChip : ''}`}
+                >
+                  {chip.type === 'filters' ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <SlidersHorizontal size={14} /> Filters
+                    </span>
+                  ) : (
+                    <span>{chip.label}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Property Listings Section */}
       <section className={`${styles.section} ${styles.listingsSection}`} style={{ maxWidth: 'none' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
+          <div className={styles.sectionHeaderRow}>
             <div>
-              <h2 className={styles.sectionTitle} style={{ textAlign: 'left', marginBottom: '4px', fontSize: '1.85rem' }}>Top Listings</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Discover the newest verified rentals across Ho.</p>
+              <h2 className={styles.sectionHeaderTitle}>Top Listings</h2>
+              <p className={styles.sectionHeaderSubtitle}>Discover the newest verified rentals across Ho.</p>
             </div>
-            <Link href="/properties" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+            <Link href="/properties" className={`btn btn-outline ${styles.viewAllLink}`}>
               View All &rarr;
             </Link>
           </div>

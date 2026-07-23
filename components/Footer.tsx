@@ -54,9 +54,10 @@ export default function Footer() {
           <div>
             <h4 className={styles.title}>Company</h4>
             <div className={styles.links}>
-              <Link href="/" className={styles.link}>About Us</Link>
-              <a href="mailto:support@horentals.com" className={styles.link}>Contact Support</a>
+              <Link href="/about" className={styles.link}>About Us</Link>
+              <a href="mailto:thehorentals@gmail.com" className={styles.link}>Contact Support</a>
               <Link href="/terms" className={styles.link}>Terms &amp; Conditions</Link>
+              <Link href="/privacy" className={styles.link}>Privacy Policy</Link>
             </div>
           </div>
 

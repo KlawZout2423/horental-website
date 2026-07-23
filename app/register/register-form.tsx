@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
 import { Eye, EyeOff, Loader, UserPlus, ArrowLeft } from 'lucide-react';
+import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../lib/types';
 import styles from '../login/login.module.css';
 
 const getPasswordStrength = (pwd: string) => {
@@ -57,7 +58,18 @@ export default function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    const sanitizedName = sanitizeInput(name);
+    const formattedPhone = formatGhanaPhone(phone);
+
+    if (!sanitizedName) {
+      setError('Please enter your full name.');
+      return;
+    }
+
+    if (!isValidGhanaPhone(formattedPhone)) {
+      setError('Please enter a valid 10-digit Ghanaian phone number (e.g. 0241234567).');
+      return;
+    }
 
     if (strength.score < 2) {
       setError('Password is too weak. Please make it stronger by adding uppercase letters, numbers, or special characters.');
@@ -77,13 +89,12 @@ export default function RegisterForm() {
     setLoading(true);
 
     try {
-      const cleanedPhone = phone.trim().replace(/[^0-9a-zA-Z]/g, '');
-      const generatedEmail = `${cleanedPhone}@horentals.com`;
+      const generatedEmail = `${formattedPhone}@horentals.com`;
 
       await register({
-        name: name.trim(),
+        name: sanitizedName,
         email: generatedEmail,
-        phone: phone.trim(),
+        phone: formattedPhone,
         password,
       });
 
@@ -100,8 +111,8 @@ export default function RegisterForm() {
     <div className={styles.page}>
       {/* Back to home */}
       <Link href="/" className={styles.backBtn} aria-label="Back to home">
-        <ArrowLeft size={18} />
-        <span>Home</span>
+        <ArrowLeft size={16} />
+        <span>Back to HO Rentals</span>
       </Link>
       <div className={`${styles.card} animate-fade-in`}>
 
@@ -138,14 +149,15 @@ export default function RegisterForm() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="phone">Phone Number</label>
+            <label htmlFor="phone">Ghana Phone Number (10 Digits)</label>
             <input
               id="phone"
               type="tel"
-              placeholder="e.g. +233 24 000 0000"
+              placeholder="e.g. 0241234567"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(formatGhanaPhone(e.target.value))}
               required
+              maxLength={10}
               autoComplete="tel"
               className="form-control"
             />

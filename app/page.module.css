@@ -215,7 +215,7 @@
 @media (max-width: 968px) {
   .hero {
     min-height: auto;
-    padding: 120px 24px 60px;
+    padding: 80px 24px 48px;
   }
   
   .heroWrapper {
@@ -243,78 +243,113 @@
 }
 
 @media (max-width: 600px) {
+  /* Completely hide the hero on mobile — the sticky bar at the top replaces it */
   .hero {
-    padding: 78px 16px 12px;
-    min-height: auto;
-    background: var(--bg);
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    box-shadow: none;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .heroWrapper {
-    width: 100%;
-    max-width: 100%;
-    padding: 0;
-  }
-
-  .heroLeft {
-    width: 100%;
-    align-items: center;
-    text-align: center;
-    gap: 0;
-  }
-
-  .heroBadge {
     display: none !important;
   }
 
-  .title {
-    display: none !important;
-  }
-
-  .subtitle {
-    display: none !important;
-  }
-
-  .searchContainer {
-    flex-direction: row;
-    border-radius: 9999px;
-    padding: 4px 6px 4px 16px;
+  /* Sticky bar becomes truly sticky on mobile */
+  .stickySearchBar {
+    position: sticky;
+    top: 70px;
+    z-index: 200;
     background-color: var(--bg-surface);
-    border: 1.5px solid var(--border);
-    gap: 8px;
-    margin-top: 0px;
-    min-height: 52px;
-    width: 100%;
-    max-width: 100%;
-    box-shadow: var(--shadow-md);
-    box-sizing: border-box;
-  }
-  
-  .searchInputWrapper {
-    width: 100%;
-    padding: 0;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid var(--border);
+    margin-top: -70px; /* eat the main paddingTop gap left by hidden hero */
   }
 
-  .searchButton {
-    width: 42px;
-    height: 42px;
-    padding: 0;
-    border-radius: 50% !important;
-    flex-shrink: 0;
-  }
-
-  .btnIconOnly {
+  /* Show the mobile search row inside the sticky bar */
+  .mobileSearchRow {
     display: block;
   }
 
-  .btnText {
+  /* Tighter chips padding on mobile within sticky bar */
+  .chipsOuter {
+    padding: 6px 12px 10px;
+    border-bottom: none;
+    overflow-x: auto;
+    justify-content: flex-start;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .chipsOuter::-webkit-scrollbar {
     display: none;
   }
+
+  /* Reduce section padding on mobile */
+  .section {
+    padding: 28px 16px;
+  }
+
+  .listingsSection {
+    padding-top: 20px;
+    padding-bottom: 28px;
+  }
+
+  /* Single column grid on mobile */
+  .gridCards {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Remove the max-width cap on cards for mobile */
+  .propertyCard {
+    max-width: 100%;
+  }
+
+  .sectionHeaderRow {
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .sectionHeaderTitle {
+    font-size: 1.35rem;
+    margin-bottom: 2px;
+  }
+
+  .sectionHeaderSubtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .viewAllLink {
+    padding: 6px 14px !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    border-radius: 20px !important;
+  }
 }
+
+.sectionHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+
+.sectionHeaderTitle {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+.sectionHeaderSubtitle {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.viewAllLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 
 .section {
   padding: 70px 24px;
@@ -342,13 +377,69 @@
   margin-bottom: 44px;
 }
 
+/* Sticky search + chips bar — sticky on all sizes, sits below navbar */
+.stickySearchBar {
+  width: 100%;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 200;
+  position: sticky;
+  top: 70px;
+}
+
+/* Mobile search row — hidden on desktop */
+.mobileSearchRow {
+  display: none;
+}
+
+.mobileSearchForm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 0;
+}
+
+.mobileSearchInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  background-color: var(--bg-surface-secondary);
+  border: 1.5px solid var(--border);
+  border-radius: 9999px;
+  padding: 8px 16px;
+  min-height: 44px;
+  transition: border-color 0.2s ease;
+}
+
+.mobileSearchInputWrapper:focus-within {
+  border-color: var(--primary);
+}
+
+.mobileSearchBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.mobileSearchBtn:hover {
+  background-color: var(--primary-hover);
+}
+
 /* horizontal Category Chips scrollbar matching Flutter _typeChips */
 .chipsOuter {
   width: 100%;
   overflow: visible;
   padding: 8px 24px 16px;
-  background-color: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: center;
   z-index: 50;
@@ -399,16 +490,25 @@
 }
 
 .activeChip {
-  background-color: var(--primary);
-  color: #fff !important;
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
   font-weight: 700;
-  border-color: var(--primary);
+  border-color: var(--primary) !important;
   box-shadow: 0 4px 14px rgba(193, 18, 31, 0.3);
+}
+
+.activeChip:hover {
+  background-color: var(--primary-hover) !important;
+  color: #ffffff !important;
+  border-color: var(--primary-hover) !important;
+  box-shadow: 0 6px 18px rgba(193, 18, 31, 0.4);
+  transform: translateY(-1px);
 }
 
 /* Self-contained relative layering dropdown */
 .dropdownContainer {
   position: relative;
+  z-index: 500;
 }
 
 .dropdownMenu {
@@ -418,14 +518,27 @@
   background-color: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 16px -8px rgba(0, 0, 0, 0.06);
-  z-index: 100;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
   min-width: 230px;
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
   animation: dropdownFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 1024px) {
+  .dropdownMenu {
+    position: fixed;
+    top: 135px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    min-width: unset;
+    z-index: 9999;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+  }
 }
 
 .dropdownItem {
@@ -465,9 +578,10 @@
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
-  opacity: 0;
-  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   height: 100%;
   max-width: 360px;

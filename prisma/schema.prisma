@@ -55,6 +55,11 @@ model Property {
   bookings    Booking[]
   images      PropertyImage[]
   contactLogs ContactLog[]
+
+  @@index([status, isFeatured])
+  @@index([price])
+  @@index([ownerId])
+  @@index([createdAt])
 }
 
 model PropertyImage {
@@ -96,10 +101,16 @@ model ContactLog {
   createdAt     DateTime @default(now())
 
   property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  @@index([createdAt])
 }
 
 model PageVisit {
   id        Int      @id @default(autoincrement())
   path      String
   createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
 }
+

@@ -26,32 +26,44 @@
   z-index: 0;
 }
 
-/* Back to home button — fixed top-left, visible on all auth pages */
+/* Back to home button — premium glassmorphic pill top-left nav */
 .backBtn {
-  position: fixed;
-  top: 20px;
-  left: 20px;
+  position: absolute;
+  top: 24px;
+  left: 24px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-size: 0.875rem;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-secondary);
-  background: var(--bg-surface);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 50;
 }
 
 .backBtn:hover {
-  color: var(--text-primary);
-  background: var(--bg-surface-secondary);
+  color: var(--primary);
+  background: var(--bg-surface);
   border-color: var(--primary);
-  transform: translateX(-2px);
+  transform: translateX(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 640px) {
+  .backBtn {
+    top: 16px;
+    left: 16px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
 }
 
 

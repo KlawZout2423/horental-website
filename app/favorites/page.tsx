@@ -105,9 +105,17 @@ export default function FavoritesPage() {
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0', flexDirection: 'column', gap: '16px' }}>
-          <Loader size={36} className="animate-spin" style={{ color: 'var(--primary)' }} />
-          <p style={{ color: 'var(--text-secondary)' }}>Loading your saved properties...</p>
+        <div className={styles.grid}>
+          {[1, 2, 3].map((n) => (
+            <div key={n} className={styles.propertyCard} style={{ height: '360px', opacity: 0.6 }}>
+              <div className={styles.imageWrapper} style={{ background: 'var(--border)' }}></div>
+              <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ width: '40%', height: '18px', background: 'var(--border)', borderRadius: '4px' }}></div>
+                <div style={{ width: '80%', height: '22px', background: 'var(--border)', borderRadius: '4px' }}></div>
+                <div style={{ width: '60%', height: '14px', background: 'var(--border)', borderRadius: '4px' }}></div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : savedProperties.length === 0 ? (
         <div className={styles.emptyState}>
