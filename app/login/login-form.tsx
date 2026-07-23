@@ -94,14 +94,7 @@ export default function LoginForm() {
               type="text"
               placeholder="e.g. 0241234567 or admin"
               value={phone}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val.toLowerCase().startsWith('admin') || val.includes('@')) {
-                  setPhone(val);
-                } else {
-                  setPhone(val.replace(/[^0-9]/g, '').slice(0, 10));
-                }
-              }}
+              onChange={(e) => setPhone(e.target.value)}
               required
               autoComplete="username"
               className="form-control"
