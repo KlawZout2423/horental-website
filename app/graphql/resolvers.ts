@@ -52,35 +52,46 @@ export const resolvers = {
     },
 
     dashboardStats: async () => {
-      const totalProperties = await prisma.property.count();
-      const totalUsers = await prisma.user.count();
-      const availableProperties = await prisma.property.count({
-        where: { status: 'available' },
-      });
-      // Handle both Flutter 'taken' status and Next.js 'rented' status
-      const rentedProperties = await prisma.property.count({
-        where: { status: { in: ['taken', 'rented'] } },
-      });
+      try {
+        const totalProperties = await prisma.property.count();
+        const totalUsers = await prisma.user.count();
+        const availableProperties = await prisma.property.count({
+          where: { status: 'available' },
+        });
+        const rentedProperties = await prisma.property.count({
+          where: { status: { in: ['taken', 'rented'] } },
+        });
 
-      const totalPageVisits = await prisma.pageVisit.count();
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayPageVisits = await prisma.pageVisit.count({
-        where: {
-          createdAt: {
-            gte: todayStart
+        const totalPageVisits = await prisma.pageVisit.count().catch(() => 0);
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayPageVisits = await prisma.pageVisit.count({
+          where: {
+            createdAt: {
+              gte: todayStart
+            }
           }
-        }
-      });
+        }).catch(() => 0);
 
-      return { 
-        totalProperties, 
-        totalUsers, 
-        availableProperties, 
-        rentedProperties, 
-        totalPageVisits, 
-        todayPageVisits 
-      };
+        return { 
+          totalProperties, 
+          totalUsers, 
+          availableProperties, 
+          rentedProperties, 
+          totalPageVisits, 
+          todayPageVisits 
+        };
+      } catch (dbErr: any) {
+        console.warn('[DashboardStats] DB connection warning:', dbErr.message);
+        return {
+          totalProperties: 0,
+          totalUsers: 0,
+          availableProperties: 0,
+          rentedProperties: 0,
+          totalPageVisits: 0,
+          todayPageVisits: 0
+        };
+      }
     },
 
     myBookings: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
