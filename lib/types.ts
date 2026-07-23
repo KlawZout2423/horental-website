@@ -17,6 +17,20 @@ export interface Property {
   contact: string;
   imageUrl: string;
   isFeatured?: boolean;
+  createdAt?: string;
+}
+
+/**
+ * Checks if a property listing is considered "New" (uploaded within the last maxDays, default 7 days).
+ * After maxDays (e.g. 7 days), it automatically becomes a standard listing.
+ */
+export function isNewListing(createdAt?: string, maxDays: number = 7): boolean {
+  if (!createdAt) return false;
+  const createdDate = new Date(createdAt).getTime();
+  if (isNaN(createdDate)) return false;
+  const ageInMs = Date.now() - createdDate;
+  const maxAgeInMs = maxDays * 24 * 60 * 60 * 1000;
+  return ageInMs <= maxAgeInMs;
 }
 
 export interface RegisterInput {
