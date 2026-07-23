@@ -618,53 +618,55 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Render Stats Grid */}
-          {loadingData ? (
-            <div className={styles.statsGrid}>
-              {[1, 2, 3, 4].map((n) => (
-                <div key={n} className={styles.statCard} style={{ opacity: 0.6, height: '112px' }}>
-                  <div style={{ width: '40%', height: '14px', background: 'var(--border)', borderRadius: '4px' }}></div>
-                  <div style={{ width: '60%', height: '32px', background: 'var(--border)', borderRadius: '4px', marginTop: '12px' }}></div>
+          {/* Render Stats Grid ONLY on Overview Analytics tab */}
+          {activeTab === 'analytics' && (
+            loadingData ? (
+              <div className={styles.statsGrid}>
+                {[1, 2, 3, 4].map((n) => (
+                  <div key={n} className={styles.statCard} style={{ opacity: 0.6, height: '112px' }}>
+                    <div style={{ width: '40%', height: '14px', background: 'var(--border)', borderRadius: '4px' }}></div>
+                    <div style={{ width: '60%', height: '32px', background: 'var(--border)', borderRadius: '4px', marginTop: '12px' }}></div>
+                  </div>
+                ))}
+              </div>
+            ) : stats ? (
+              <div className={styles.statsGrid}>
+                
+                <div className={styles.statCard} style={{ borderLeft: '4px solid #3B82F6' }}>
+                  <span className={styles.statLabel}>User Registry</span>
+                  <span className={styles.statValue}>{stats.totalUsers}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Registered accounts</span>
                 </div>
-              ))}
-            </div>
-          ) : stats ? (
-            <div className={styles.statsGrid}>
-              
-              <div className={styles.statCard} style={{ borderLeft: '4px solid #3B82F6' }}>
-                <span className={styles.statLabel}>User Registry</span>
-                <span className={styles.statValue}>{stats.totalUsers}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Registered accounts</span>
+                
+                <div className={styles.statCard} style={{ borderLeft: '4px solid #8B5CF6' }}>
+                  <span className={styles.statLabel}>Inventory Listings</span>
+                  <span className={styles.statValue} style={{ color: '#8B5CF6' }}>{stats.totalProperties}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Active & pending properties</span>
+                </div>
+                
+                <div className={styles.statCard} style={{ borderLeft: '4px solid var(--primary)' }}>
+                  <span className={styles.statLabel}>Space Occupancy</span>
+                  <span className={styles.statValue} style={{ color: 'var(--primary)' }}>
+                    {stats.rentedProperties} / {stats.totalProperties}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    {stats.availableProperties} available space(s)
+                  </span>
+                </div>
+                
+                <div className={styles.statCard} style={{ borderLeft: '4px solid #06B6D4' }}>
+                  <span className={styles.statLabel}>Traffic Views</span>
+                  <span className={styles.statValue} style={{ color: '#06B6D4' }}>
+                    {stats.todayPageVisits || 0}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    {stats.totalPageVisits || 0} total cumulative views
+                  </span>
+                </div>
+                
               </div>
-              
-              <div className={styles.statCard} style={{ borderLeft: '4px solid #8B5CF6' }}>
-                <span className={styles.statLabel}>Inventory Listings</span>
-                <span className={styles.statValue} style={{ color: '#8B5CF6' }}>{stats.totalProperties}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Active & pending properties</span>
-              </div>
-              
-              <div className={styles.statCard} style={{ borderLeft: '4px solid var(--primary)' }}>
-                <span className={styles.statLabel}>Space Occupancy</span>
-                <span className={styles.statValue} style={{ color: 'var(--primary)' }}>
-                  {stats.rentedProperties} / {stats.totalProperties}
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  {stats.availableProperties} available space(s)
-                </span>
-              </div>
-              
-              <div className={styles.statCard} style={{ borderLeft: '4px solid #06B6D4' }}>
-                <span className={styles.statLabel}>Traffic Views</span>
-                <span className={styles.statValue} style={{ color: '#06B6D4' }}>
-                  {stats.todayPageVisits || 0}
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  {stats.totalPageVisits || 0} total cumulative views
-                </span>
-              </div>
-              
-            </div>
-          ) : null}
+            ) : null
+          )}
 
           {/* Render Tab Contents */}
           {loadingData ? (
