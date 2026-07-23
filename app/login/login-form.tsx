@@ -37,19 +37,19 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      let phoneInput = phone.trim().replace(/[^0-9]/g, '');
-      let emailOrPhone = phoneInput;
+      const rawInput = phone.trim();
+      let emailOrPhone = rawInput;
       
-      // If it doesn't look like an email, convert it to phone-email format
-      if (!emailOrPhone.includes('@')) {
-        if (emailOrPhone.toLowerCase() === 'admin') {
-          emailOrPhone = 'admin@horentals.com';
-        } else {
-          if (phoneInput.length !== 10) {
-            throw new Error('Please enter a valid 10-digit Ghanaian phone number (e.g. 0241234567).');
-          }
-          emailOrPhone = `${phoneInput}@horentals.com`;
+      if (rawInput.toLowerCase() === 'admin') {
+        emailOrPhone = 'admin@horentals.com';
+      } else if (rawInput.includes('@')) {
+        emailOrPhone = rawInput;
+      } else {
+        const cleanedPhone = rawInput.replace(/[^0-9]/g, '');
+        if (cleanedPhone.length !== 10) {
+          throw new Error('Please enter a valid 10-digit phone number (e.g. 0241234567) or "admin".');
         }
+        emailOrPhone = `${cleanedPhone}@horentals.com`;
       }
       await login(emailOrPhone, password);
     } catch (err: unknown) {
@@ -88,16 +88,22 @@ export default function LoginForm() {
 
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <div className="form-group">
-            <label htmlFor="phone">Phone Number (10 Digits)</label>
+            <label htmlFor="phone">Phone Number or Username</label>
             <input
               id="phone"
-              type="tel"
-              placeholder="e.g. 0241234567"
+              type="text"
+              placeholder="e.g. 0241234567 or admin"
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val.toLowerCase().startsWith('admin') || val.includes('@')) {
+                  setPhone(val);
+                } else {
+                  setPhone(val.replace(/[^0-9]/g, '').slice(0, 10));
+                }
+              }}
               required
-              maxLength={10}
-              autoComplete="tel"
+              autoComplete="username"
               className="form-control"
             />
           </div>

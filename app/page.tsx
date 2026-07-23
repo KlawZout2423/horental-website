@@ -512,7 +512,23 @@ export default function Home() {
                         const isFurniture = p.type?.toLowerCase().includes('furniture');
                         const isShop = p.type?.toLowerCase().includes('shop');
                         if (isLand || isFurniture || isShop) {
-                          return null;
+                          return (
+                            <p
+                              style={{
+                                fontSize: '0.82rem',
+                                color: 'var(--text-secondary)',
+                                margin: '6px 0 0',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                lineHeight: '1.35',
+                                minHeight: '2.4em'
+                              }}
+                            >
+                              {p.description || 'Verified listing — click to view full details.'}
+                            </p>
+                          );
                         }
 
                         const desc = p.description?.toLowerCase() || '';
