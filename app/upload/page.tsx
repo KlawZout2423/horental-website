@@ -308,29 +308,16 @@ export default function UploadPage({
                   value={pricePeriod}
                   onChange={(e) => setPricePeriod(e.target.value)}
                   className="form-control"
-                  style={{ width: '160px', backgroundColor: 'var(--bg-surface)' }}
+                  style={{ width: '180px', backgroundColor: 'var(--bg-surface)' }}
                 >
-                  {type === 'Lands' ? (
-                    <>
-                      <option value="plot">per plot</option>
-                      <option value="acre">per acre</option>
-                      <option value="outright sale">Outright Sale (Total)</option>
-                      <option value="year">per year (lease)</option>
-                    </>
-                  ) : type === 'Furnitures' ? (
-                    <>
-                      <option value="outright sale">Outright Sale</option>
-                      <option value="month">per month</option>
-                      <option value="item">per item</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="semester">per semester</option>
-                      <option value="academic year">per academic year</option>
-                      <option value="month">per month</option>
-                      <option value="year">per year</option>
-                    </>
-                  )}
+                  <option value="plot">per plot</option>
+                  <option value="acre">per acre</option>
+                  <option value="semester">per semester</option>
+                  <option value="academic year">per academic year</option>
+                  <option value="outright sale">Outright Sale (Total)</option>
+                  <option value="year">per year</option>
+                  <option value="month">per month</option>
+                  <option value="item">per item</option>
                 </select>
               </div>
             </div>
@@ -340,7 +327,15 @@ export default function UploadPage({
               <select
                 id="type"
                 value={type}
-                onChange={(e) => handleTypeChange(e.target.value)}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  setType(newType);
+                  if (newType === 'Lands' && pricePeriod !== 'acre') {
+                    setPricePeriod('plot');
+                  } else if (newType === 'Furnitures') {
+                    setPricePeriod('outright sale');
+                  }
+                }}
                 required
                 className="form-control"
                 style={{ backgroundColor: 'var(--bg-surface)' }}

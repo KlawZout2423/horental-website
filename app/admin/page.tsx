@@ -1078,10 +1078,15 @@ export default function AdminPage() {
                     <label>Price & Duration</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} required className="form-control" style={{ flex: 1 }} />
-                      <select value={editPricePeriod} onChange={(e) => setEditPricePeriod(e.target.value)} className="form-control" style={{ width: '130px', backgroundColor: 'var(--bg-surface)' }}>
+                      <select value={editPricePeriod} onChange={(e) => setEditPricePeriod(e.target.value)} className="form-control" style={{ width: '160px', backgroundColor: 'var(--bg-surface)' }}>
+                        <option value="plot">per plot</option>
+                        <option value="acre">per acre</option>
                         <option value="semester">per semester</option>
-                        <option value="month">per month</option>
+                        <option value="academic year">per academic year</option>
+                        <option value="outright sale">Outright Sale (Total)</option>
                         <option value="year">per year</option>
+                        <option value="month">per month</option>
+                        <option value="item">per item</option>
                       </select>
                     </div>
                   </div>
