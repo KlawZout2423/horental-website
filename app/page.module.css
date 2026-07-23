@@ -308,9 +308,37 @@
     gap: 16px;
   }
 
-  /* Remove the max-width cap on cards for mobile */
   .propertyCard {
     max-width: 100%;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .imageWrapper {
+    height: 180px !important;
+    min-height: 180px !important;
+    max-height: 180px !important;
+    flex-shrink: 0 !important;
+    position: relative;
+  }
+
+  .cardContent {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 14px 16px !important;
+    flex-grow: 1 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  .cardFooter {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 10px 16px !important;
+    border-top: 1px solid var(--border) !important;
   }
 
   .sectionHeaderRow {
