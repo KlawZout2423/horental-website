@@ -273,9 +273,23 @@ export function matchesAdvancedFilters(desc?: string, filters?: AdvancedFilters)
       if (aLower.includes('parking')) return text.includes('parking') || text.includes('car');
       return text.includes(aLower);
     });
-    if (!matchesAllAmenities) return false;
+    return matchesAllAmenities;
   }
 
   return true;
 }
 
+/**
+ * Transforms raw database, network, or server stack traces into clean, human-friendly error messages.
+ */
+export function getFriendlyErrorMessage(err: unknown, defaultMsg: string = 'An unexpected error occurred. Please try again.'): string {
+  if (!err) return defaultMsg;
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes("Can't reach database server") || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED') || msg.includes('Failed to fetch')) {
+    return '📶 Temporary network error: Unable to reach database server. Please check your internet connection and refresh.';
+  }
+  if (msg.includes('Prisma') || msg.includes('TURBOPACK') || msg.includes('invocation')) {
+    return '⚠️ Temporary server connection issue. Please refresh the page in a moment.';
+  }
+  return msg;
+}

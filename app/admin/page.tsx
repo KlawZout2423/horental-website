@@ -18,6 +18,7 @@ import {
 } from '../../lib/graphql';
 import { Trash2, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star } from 'lucide-react';
 import styles from './admin.module.css';
+import { getFriendlyErrorMessage } from '../../lib/types';
 
 interface DashboardStats {
   totalProperties: number;
@@ -148,7 +149,7 @@ export default function AdminPage() {
       if (logsData && logsData.contactLogs) setContactLogs(logsData.contactLogs);
     } catch (err: any) {
       console.error('Error loading admin data:', err);
-      setMessage({ text: err.message || 'Failed to fetch dashboard data.', isError: true });
+      setMessage({ text: getFriendlyErrorMessage(err, 'Failed to fetch dashboard data.'), isError: true });
     } finally {
       setLoadingData(false);
     }
