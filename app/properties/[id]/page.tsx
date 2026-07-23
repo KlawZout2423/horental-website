@@ -1129,7 +1129,8 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                 className={styles.lightboxCloseBtn}
                 aria-label="Close viewer"
               >
-                <X size={22} />
+                <X size={18} />
+                <span>Close (X)</span>
               </button>
             </div>
 
