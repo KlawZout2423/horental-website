@@ -237,42 +237,37 @@
     font-size: 1.05rem;
   }
 
+@media (max-width: 968px) {
+  /* Hide the desktop hero illustration on mobile */
   .heroRight {
     display: none;
   }
-}
 
-@media (max-width: 600px) {
-  /* Completely hide the hero on mobile — the sticky bar at the top replaces it */
-  .hero {
-    display: none !important;
-  }
-
-  /* Sticky bar becomes truly sticky on mobile */
+  /* Sticky bar sits directly below fixed 70px Navbar */
   .stickySearchBar {
     position: sticky;
     top: 70px;
-    z-index: 200;
+    z-index: 300;
     background-color: var(--bg-surface);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
     border-bottom: 1px solid var(--border);
-    margin-top: -70px; /* eat the main paddingTop gap left by hidden hero */
+    margin-top: 0;
   }
 
-  /* Show the mobile search row inside the sticky bar */
+  /* Show the mobile search bar row */
   .mobileSearchRow {
     display: block;
   }
 
-  /* Tighter chips padding on mobile within sticky bar */
   .chipsOuter {
-    padding: 6px 12px 10px;
+    padding: 6px 16px 12px;
     border-bottom: none;
     overflow-x: auto;
     justify-content: flex-start;
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+}
 
   .chipsOuter::-webkit-scrollbar {
     display: none;
