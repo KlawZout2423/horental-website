@@ -250,6 +250,10 @@
     margin-bottom: 10px;
   }
 
+  .sectionHeaderSubtitle {
+    display: none !important;
+  }
+
   .searchContainer {
     width: 100%;
     max-width: 100%;
