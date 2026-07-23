@@ -246,11 +246,6 @@ export default function Home() {
                   aria-label="Search location, hostel or property"
                 />
               </div>
-              <button type="submit" className={styles.searchButton}>
-                <Search size={16} />
-                <span className={styles.btnText}>Search</span>
-                <ArrowRight size={16} />
-              </button>
             </form>
           </div>
           
