@@ -12,6 +12,24 @@ import AuthPromptModal from '../../components/AuthPromptModal';
 import { Property, getPricePeriodLabel, matchesAdvancedFilters } from '../../lib/types';
 
 // All property type categories matching the Flutter app chips list
+const SELF_CONTAINED_OPTIONS = [
+  { label: 'All Self-Contained', type: 'self-contained' },
+  { label: 'Single Room SC', type: 'Single Room SC' },
+  { label: 'Chamber and Hall SC', type: 'Chamber and Hall SC' },
+  { label: 'Two Bedroom SC', type: 'Two Bedroom SC' },
+  { label: 'Three Bedroom SC', type: 'Three Bedroom SC' },
+  { label: 'Four Bedroom SC', type: 'Four Bedroom SC' }
+];
+
+const POPULAR_AREAS = [
+  { name: 'UHAS', icon: '🎓', label: 'UHAS Campus' },
+  { name: 'Ho Poly', icon: '🏫', label: 'Ho Poly / HTU' },
+  { name: 'SSNIT Flats', icon: '🏢', label: 'SSNIT Flats' },
+  { name: 'Bankoe', icon: '🏙️', label: 'Bankoe' },
+  { name: 'Sokode', icon: '🏡', label: 'Sokode' },
+  { name: 'Civic Centre', icon: '📍', label: 'Civic Centre' }
+];
+
 const PROPERTY_CATEGORIES = [
   'Student Hostel',
   'Single Room',
@@ -78,8 +96,12 @@ export default function PropertiesClient() {
   useEffect(() => {
     const search = searchParams.get('search') || '';
     const type = searchParams.get('type') || 'All';
+    const openFilters = searchParams.get('openFilters') === 'true';
     setSearchQuery(search);
     setPropertyType(type);
+    if (openFilters) {
+      setShowMobileFilters(true);
+    }
   }, [searchParams]);
 
   // Fetch properties from GraphQL backend
@@ -259,6 +281,29 @@ export default function PropertiesClient() {
     <div className={`${styles.container} animate-fade-in`}>
       <h1 className={styles.title}>Search Properties</h1>
       <p className={styles.subtitle}>Filter and browse rooms, apartments, hostels, shops and lands in Ho and the Volta Region</p>
+
+      {/* Popular Student Areas Bar */}
+      <div className={styles.chipsOuter} style={{ paddingTop: 0, paddingBottom: '10px' }}>
+        <div className={styles.chipsContainer}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Area:
+          </span>
+          {POPULAR_AREAS.map((area) => {
+            const isAreaSelected = searchQuery.toLowerCase().includes(area.name.toLowerCase());
+            return (
+              <button
+                key={area.name}
+                onClick={() => setSearchQuery(area.name)}
+                className={`${styles.chip} ${isAreaSelected ? styles.activeChip : ''}`}
+                style={{ fontSize: '0.8rem', padding: '6px 14px', gap: '4px' }}
+                title={`Filter rentals near ${area.label}`}
+              >
+                <span>{area.icon} {area.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Sticky Mobile Filter Toggle Bar */}
       <div className={styles.mobileFilterBar}>

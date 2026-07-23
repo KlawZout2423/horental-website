@@ -32,6 +32,15 @@ const SELF_CONTAINED_OPTIONS = [
   { label: 'Four Bedroom SC', type: 'Four Bedroom SC' }
 ];
 
+const POPULAR_AREAS = [
+  { name: 'UHAS', icon: '🎓', label: 'UHAS Campus' },
+  { name: 'Ho Poly', icon: '🏫', label: 'Ho Poly / HTU' },
+  { name: 'SSNIT Flats', icon: '🏢', label: 'SSNIT Flats' },
+  { name: 'Bankoe', icon: '🏙️', label: 'Bankoe' },
+  { name: 'Sokode', icon: '🏡', label: 'Sokode' },
+  { name: 'Civic Centre', icon: '📍', label: 'Civic Centre' }
+];
+
 // Testimonials data removed
 
 export default function Home() {
@@ -158,7 +167,7 @@ export default function Home() {
 
   const handleChipClick = (type: string) => {
     if (type === 'filters') {
-      router.push('/properties');
+      router.push('/properties?openFilters=true');
     } else if (type === 'self-contained') {
       setShowSelfContainedDropdown(!showSelfContainedDropdown);
     } else {
@@ -335,6 +344,26 @@ export default function Home() {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* Popular Student Areas Bar */}
+        <div className={styles.chipsOuter} style={{ paddingTop: 0, paddingBottom: '10px' }}>
+          <div className={styles.chipsContainer}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Area:
+            </span>
+            {POPULAR_AREAS.map((area) => (
+              <button
+                key={area.name}
+                onClick={() => router.push(`/properties?search=${encodeURIComponent(area.name)}`)}
+                className={styles.chip}
+                style={{ fontSize: '0.8rem', padding: '6px 14px', gap: '4px' }}
+                title={`Find rentals near ${area.label}`}
+              >
+                <span>{area.icon} {area.name}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
