@@ -5,6 +5,7 @@ import { AuthProvider } from "../lib/auth";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import SupportFAB from "../components/SupportFAB";
+import MustChangePasswordModal from "../components/MustChangePasswordModal";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -69,6 +70,7 @@ export default function RootLayout({
       </head>
       <body>
         <AuthProvider>
+          <MustChangePasswordModal />
           <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
             <Navbar />
             <main style={{ flexGrow: 1, paddingTop: '70px' }}>

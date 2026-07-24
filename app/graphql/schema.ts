@@ -34,6 +34,7 @@ export const typeDefs = `#graphql
         email: String!
         role: String!
         phone: String
+        mustChangePassword: Boolean
     }
 
     type Property {
@@ -160,6 +161,7 @@ export const typeDefs = `#graphql
         login(email: String!, password: String!): AuthPayload!
         submitPasswordResetRequest(name: String!, identifier: String!, message: String): BasicPayload!
         adminResetUserPassword(identifier: String!, newPassword: String!): BasicPayload!
+        changePassword(newPassword: String!): BasicPayload!
         resolvePasswordResetRequest(id: Int!): BasicPayload!
         addProperty(input: PropertyInput!): Property!
         updateProperty(id: Int!, input: PropertyInput!): Property!

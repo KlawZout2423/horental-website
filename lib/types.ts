@@ -4,6 +4,7 @@ export interface User {
   email: string;
   phone: string;
   role: 'admin' | 'user' | 'partner' | string;
+  mustChangePassword?: boolean;
 }
 
 export interface Property {

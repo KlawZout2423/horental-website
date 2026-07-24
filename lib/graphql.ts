@@ -69,6 +69,7 @@ export const LOGIN_MUTATION = `
         email
         phone
         role
+        mustChangePassword
       }
     }
   }
@@ -84,6 +85,7 @@ export const REGISTER_MUTATION = `
         email
         phone
         role
+        mustChangePassword
       }
     }
   }
@@ -239,6 +241,7 @@ export const GET_USERS = `
       email
       phone
       role
+      mustChangePassword
     }
   }
 `;
@@ -399,3 +402,13 @@ export const GET_PASSWORD_RESET_REQUESTS = `
     }
   }
 `;
+
+export const CHANGE_PASSWORD_MUTATION = `
+  mutation ChangePassword($newPassword: String!) {
+    changePassword(newPassword: $newPassword) {
+      success
+      message
+    }
+  }
+`;
+

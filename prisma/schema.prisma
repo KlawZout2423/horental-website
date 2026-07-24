@@ -7,16 +7,17 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("user")
-  phone            String?
-  resetOtpCode     String?
-  resetOtpExpires  DateTime?
-  companyId        Int?
-  createdAt DateTime @default(now())
+  id                 Int      @id @default(autoincrement())
+  name               String
+  email              String   @unique
+  password           String
+  role               String   @default("user")
+  phone              String?
+  resetOtpCode       String?
+  resetOtpExpires    DateTime?
+  mustChangePassword Boolean  @default(false)
+  companyId          Int?
+  createdAt          DateTime @default(now())
 
   bookings   Booking[]
   properties Property[]

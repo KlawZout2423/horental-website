@@ -18,13 +18,13 @@ export const resolvers = {
       if (!user) return null;
       return prisma.user.findUnique({
         where: { id: user.id },
-        select: { id: true, name: true, email: true, role: true, phone: true }
+        select: { id: true, name: true, email: true, role: true, phone: true, mustChangePassword: true }
       });
     },
 
     users: async () => {
       return prisma.user.findMany({
-        select: { id: true, name: true, email: true, role: true, phone: true },
+        select: { id: true, name: true, email: true, role: true, phone: true, mustChangePassword: true },
       });
     },
 
@@ -209,7 +209,7 @@ export const resolvers = {
       const hashed = await bcrypt.hash(newPassword, 10);
       await prisma.user.update({
         where: { id: targetUser.id },
-        data: { password: hashed },
+        data: { password: hashed, mustChangePassword: true },
       });
 
       console.log(`✅ [Admin Password Reset] Admin ${adminUser.email} reset password for user: ${targetUser.email} (${targetUser.phone || 'No Phone'})`);
@@ -217,6 +217,22 @@ export const resolvers = {
       return {
         success: true,
         message: `Password for ${targetUser.name} has been successfully reset.`,
+      };
+    },
+
+    changePassword: async (_: any, { newPassword }: { newPassword: string }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      if (!newPassword || newPassword.length < 6) {
+        throw new Error('New password must be at least 6 characters.');
+      }
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashed, mustChangePassword: false },
+      });
+      return {
+        success: true,
+        message: 'Your password has been changed successfully.',
       };
     },
 
