@@ -227,8 +227,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         setIsLoggingContact(false);
       }
     } else {
-      setConnectActionType(actionType);
-      setShowConnectModal(true);
+      setShowAuthPrompt(true);
     }
   };
 
