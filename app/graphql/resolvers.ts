@@ -171,6 +171,10 @@ export const resolvers = {
         data: {
           title: sanitizeInput(input.title),
           location: sanitizeInput(input.location),
+          digitalAddress: input.digitalAddress ? sanitizeInput(input.digitalAddress) : null,
+          landmarks: input.landmarks ? sanitizeInput(input.landmarks) : null,
+          latitude: input.latitude !== undefined && input.latitude !== null ? parseFloat(input.latitude) : null,
+          longitude: input.longitude !== undefined && input.longitude !== null ? parseFloat(input.longitude) : null,
           price: input.price,
           description: sanitizeInput(input.description),
           contact: formatGhanaPhone(input.contact),
@@ -205,6 +209,15 @@ export const resolvers = {
 
       // Update basic property fields (excluding gallery)
       const { gallery, ...updateData } = input;
+      if (updateData.title) updateData.title = sanitizeInput(updateData.title);
+      if (updateData.location) updateData.location = sanitizeInput(updateData.location);
+      if (updateData.digitalAddress) updateData.digitalAddress = sanitizeInput(updateData.digitalAddress);
+      if (updateData.landmarks) updateData.landmarks = sanitizeInput(updateData.landmarks);
+      if (updateData.description) updateData.description = sanitizeInput(updateData.description);
+      if (updateData.contact) updateData.contact = formatGhanaPhone(updateData.contact);
+      if (updateData.latitude !== undefined && updateData.latitude !== null) updateData.latitude = parseFloat(updateData.latitude);
+      if (updateData.longitude !== undefined && updateData.longitude !== null) updateData.longitude = parseFloat(updateData.longitude);
+
       await prisma.property.update({ where: { id }, data: updateData });
 
       // Update gallery images

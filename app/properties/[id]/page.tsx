@@ -4,7 +4,7 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth';
-import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2, Maximize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2, Maximize2, Navigation } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTY_BY_ID, UPDATE_PROPERTY } from '../../../lib/graphql';
 import styles from './detail.module.css';
 import AuthPromptModal from '../../../components/AuthPromptModal';
@@ -31,6 +31,10 @@ interface Property {
   status: string;
   price: number;
   location: string;
+  digitalAddress?: string;
+  landmarks?: string;
+  latitude?: number;
+  longitude?: number;
   description: string;
   contact: string;
   imageUrl: string;
@@ -677,6 +681,51 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                       )}
                     </div>
                   )}
+                  {/* Location & Directions Section */}
+                  <div style={{ marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                      <MapPin size={18} style={{ color: 'var(--primary)' }} /> Location & Directions Guide
+                    </h4>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: 'var(--bg-surface-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        <div>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Neighborhood / Area</span>
+                          <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{property.location}</p>
+                        </div>
+                        {property.digitalAddress && (
+                          <span style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary-dark)', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 800, border: '1px solid var(--primary-border)' }}>
+                            🇬🇭 {property.digitalAddress}
+                          </span>
+                        )}
+                      </div>
+
+                      {property.landmarks && (
+                        <div>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Landmarks / Directions</span>
+                          <p style={{ fontSize: '0.88rem', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{property.landmarks}</p>
+                        </div>
+                      )}
+
+                      {/* Google Maps Turn-by-Turn Directions Button */}
+                      <div style={{ marginTop: '8px' }}>
+                        <a
+                          href={
+                            property.latitude && property.longitude
+                              ? `https://www.google.com/maps/dir/?api=1&destination=${property.latitude},${property.longitude}`
+                              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(property.location + ', Ho, Ghana')}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline"
+                          style={{ padding: '8px 16px', fontSize: '0.85rem', fontWeight: 700, gap: '8px', width: '100%', justifyContent: 'center', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                        >
+                          <Navigation size={16} /> 🧭 Get Turn-by-Turn Directions in Google Maps
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Report Listing Button */}
                   <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Listing ID: #{property.id}</span>

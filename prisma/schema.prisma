@@ -45,6 +45,10 @@ model Property {
   status      String   @default("available")
   type        String?
   contact     String?
+  digitalAddress String?
+  landmarks   String?
+  latitude    Float?
+  longitude   Float?
   ownerId     Int
   companyId   Int
   isFeatured  Boolean  @default(false)

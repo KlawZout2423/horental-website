@@ -98,6 +98,10 @@ export const GET_PROPERTIES = `
       status
       price
       location
+      digitalAddress
+      landmarks
+      latitude
+      longitude
       description
       contact
       imageUrl
@@ -128,6 +132,10 @@ export const GET_PROPERTY_BY_ID = `
       id
       title
       location
+      digitalAddress
+      landmarks
+      latitude
+      longitude
       contact
       price
       description
@@ -157,6 +165,10 @@ export const CREATE_PROPERTY = `
       id
       title
       location
+      digitalAddress
+      landmarks
+      latitude
+      longitude
       price
       type
       status
@@ -175,6 +187,10 @@ export const UPDATE_PROPERTY = `
       id
       title
       location
+      digitalAddress
+      landmarks
+      latitude
+      longitude
       price
       description
       contact

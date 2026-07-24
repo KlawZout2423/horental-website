@@ -27,6 +27,10 @@ export default function UploadPage({
   const [status, setStatus] = useState('available');
   const [contact, setContact] = useState('');
   const [description, setDescription] = useState('');
+  const [digitalAddress, setDigitalAddress] = useState('');
+  const [landmarks, setLandmarks] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   
@@ -212,6 +216,10 @@ export default function UploadPage({
       const input = {
         title,
         location,
+        digitalAddress: digitalAddress.trim() || undefined,
+        landmarks: landmarks.trim() || undefined,
+        latitude: latitude !== null ? latitude : undefined,
+        longitude: longitude !== null ? longitude : undefined,
         price: parsedPrice,
         type,
         status,
@@ -280,15 +288,112 @@ export default function UploadPage({
 
             <div className="form-group">
               <label htmlFor="location">Location / Area</label>
+              <select
+                className="form-control"
+                style={{ marginBottom: '8px', backgroundColor: 'var(--bg-surface)', fontSize: '0.85rem' }}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setLocation(e.target.value);
+                    const HO_PRESET_LOCATIONS: Record<string, { lat: number; lng: number }> = {
+                      'Sokode (UHAS Main Campus)': { lat: 6.6080, lng: 0.4700 },
+                      'Dave (UHAS Dave Campus)': { lat: 6.6000, lng: 0.4680 },
+                      'HTU / Ho Poly Area': { lat: 6.6120, lng: 0.4750 },
+                      'Bankoe, Ho': { lat: 6.6100, lng: 0.4710 },
+                      'Civic Center, Ho': { lat: 6.6150, lng: 0.4730 },
+                      'Ahoe, Ho': { lat: 6.6135, lng: 0.4720 },
+                      'Kpaguri, Ho': { lat: 6.6050, lng: 0.4690 },
+                      'Heve, Ho': { lat: 6.6170, lng: 0.4740 },
+                      'Adaklu Road': { lat: 6.5800, lng: 0.4500 },
+                      'Kpotame': { lat: 6.6030, lng: 0.4650 },
+                    };
+                    if (HO_PRESET_LOCATIONS[e.target.value]) {
+                      setLatitude(HO_PRESET_LOCATIONS[e.target.value].lat);
+                      setLongitude(HO_PRESET_LOCATIONS[e.target.value].lng);
+                    }
+                  }
+                }}
+              >
+                <option value="">-- Quick Area Preset (Optional) --</option>
+                <option value="Sokode (UHAS Main Campus)">Sokode (UHAS Main Campus)</option>
+                <option value="Dave (UHAS Dave Campus)">Dave (UHAS Dave Campus)</option>
+                <option value="HTU / Ho Poly Area">HTU / Ho Poly Area</option>
+                <option value="Bankoe, Ho">Bankoe, Ho</option>
+                <option value="Civic Center, Ho">Civic Center, Ho</option>
+                <option value="Ahoe, Ho">Ahoe, Ho</option>
+                <option value="Kpaguri, Ho">Kpaguri, Ho</option>
+                <option value="Heve, Ho">Heve, Ho</option>
+                <option value="Adaklu Road">Adaklu Road</option>
+                <option value="Kpotame">Kpotame</option>
+              </select>
               <input
                 id="location"
                 type="text"
-                placeholder="e.g. Kwaprow, Cape Coast"
+                placeholder="e.g. Sokode (UHAS Main Campus)"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 required
                 className="form-control"
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="digitalAddress">Ghana Post Digital Address (Optional)</label>
+              <input
+                id="digitalAddress"
+                type="text"
+                placeholder="e.g. VH-0123-4567"
+                value={digitalAddress}
+                onChange={(e) => setDigitalAddress(e.target.value)}
+                className="form-control"
+              />
+            </div>
+
+            <div className={styles.fullWidth}>
+              <div className="form-group">
+                <label htmlFor="landmarks">Landmark & Directions Guide (Optional)</label>
+                <input
+                  id="landmarks"
+                  type="text"
+                  placeholder="e.g. 150m behind UHAS Sokode Gate, opposite Bright Pharmacy"
+                  value={landmarks}
+                  onChange={(e) => setLandmarks(e.target.value)}
+                  className="form-control"
+                />
+              </div>
+            </div>
+
+            <div className={styles.fullWidth}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-surface-secondary)', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', flexWrap: 'wrap', gap: '8px' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  {latitude && longitude
+                    ? `📍 GPS Coordinates Saved: (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`
+                    : '📍 No custom GPS set (defaults to selected Ho area)'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if ('geolocation' in navigator) {
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                          setLatitude(pos.coords.latitude);
+                          setLongitude(pos.coords.longitude);
+                          alert(`On-Site GPS Detected! Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)}`);
+                        },
+                        (err) => {
+                          console.error(err);
+                          alert('Could not detect GPS location. Please check your phone GPS settings or select an Area Preset.');
+                        }
+                      );
+                    } else {
+                      alert('Geolocation is not supported by your browser.');
+                    }
+                  }}
+                  className="btn btn-outline"
+                  style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                >
+                  📍 Use Live On-Site GPS
+                </button>
+              </div>
             </div>
 
             <div className="form-group">

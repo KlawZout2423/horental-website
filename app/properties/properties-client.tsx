@@ -681,11 +681,16 @@ export default function PropertiesClient() {
 
                       <h3 className={styles.cardTitle} style={{ marginTop: '2px', marginBottom: '6px', fontSize: '1.05rem', fontWeight: 700, textTransform: 'capitalize' }}>{p.title}</h3>
 
-                      <div className={styles.cardMetaRow} style={{ marginBottom: '8px' }}>
+                      <div className={styles.cardMetaRow} style={{ marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
                         <div className={styles.cardLocation} style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>
                           <MapPin size={13} style={{ color: 'var(--primary)' }} />
-                          <span>📍 {p.location.toLowerCase().includes('ho') ? p.location : `${p.location}, Ho`}</span>
+                          <span>{p.location.toLowerCase().includes('ho') ? p.location : `${p.location}, Ho`}</span>
                         </div>
+                        {p.digitalAddress && (
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--primary-dark)', backgroundColor: 'var(--primary-light)', padding: '2px 6px', borderRadius: '4px' }}>
+                            🇬🇭 {p.digitalAddress}
+                          </span>
+                        )}
                       </div>
 
                       {(() => {

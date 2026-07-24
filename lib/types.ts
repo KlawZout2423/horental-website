@@ -13,6 +13,10 @@ export interface Property {
   status: string;
   price: number;
   location: string;
+  digitalAddress?: string;
+  landmarks?: string;
+  latitude?: number;
+  longitude?: number;
   description: string;
   contact: string;
   imageUrl: string;

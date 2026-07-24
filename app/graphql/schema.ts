@@ -40,6 +40,10 @@ export const typeDefs = `#graphql
         id: ID!
         title: String!
         location: String!
+        digitalAddress: String
+        landmarks: String
+        latitude: Float
+        longitude: Float
         price: Float!
         description: String
         contact: String
@@ -87,6 +91,10 @@ export const typeDefs = `#graphql
     input PropertyInput {
         title: String!
         location: String!
+        digitalAddress: String
+        landmarks: String
+        latitude: Float
+        longitude: Float
         price: Float!
         description: String
         contact: String
