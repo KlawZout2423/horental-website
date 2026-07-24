@@ -17,9 +17,10 @@ import {
   TOGGLE_FEATURED,
   GET_REPORTS,
   UPDATE_REPORT_STATUS,
-  DELETE_REPORT
+  DELETE_REPORT,
+  ADMIN_RESET_USER_PASSWORD
 } from '../../lib/graphql';
-import { Trash2, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon } from 'lucide-react';
+import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon } from 'lucide-react';
 import styles from './admin.module.css';
 import { getFriendlyErrorMessage } from '../../lib/types';
 
@@ -395,6 +396,24 @@ export default function AdminPage() {
       setMessage({ text: 'User account deleted successfully.', isError: false });
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to delete user.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const DEFAULT_PASSWORD = 'HoRentals2025';
+  const handleResetUserPassword = async (userId: string, userName: string, userIdentifier: string) => {
+    if (!confirm(`Reset password for ${userName}?\n\nDefault password will be set to:\n"${DEFAULT_PASSWORD}"\n\nTell the user their new password after confirming.`)) return;
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      await graphqlRequest(ADMIN_RESET_USER_PASSWORD, {
+        identifier: userIdentifier,
+        newPassword: DEFAULT_PASSWORD,
+      });
+      setMessage({ text: `✅ Password for ${userName} reset to "${DEFAULT_PASSWORD}". Tell them to log in and change it.`, isError: false });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to reset password.', isError: true });
     } finally {
       setActionLoading(false);
     }
@@ -1414,7 +1433,16 @@ export default function AdminPage() {
                             </select>
                           </td>
                           <td>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                              <button
+                                onClick={() => handleResetUserPassword(u.id, u.name, u.email || u.phone || '')}
+                                disabled={actionLoading}
+                                className="btn btn-outline"
+                                title="Reset to default password"
+                                style={{ padding: '6px', height: '32px', width: '32px', color: '#F59E0B', borderColor: 'var(--border)' }}
+                              >
+                                <KeyRound size={15} />
+                              </button>
                               <button
                                 onClick={() => handleDeleteUser(u.id)}
                                 disabled={actionLoading || u.id === user.id}
