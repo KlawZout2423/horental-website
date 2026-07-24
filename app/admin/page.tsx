@@ -1435,7 +1435,7 @@ export default function AdminPage() {
                           <td>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                               <button
-                                onClick={() => handleResetUserPassword(u.id, u.name, u.email || u.phone || '')}
+                                onClick={() => handleResetUserPassword(u.id, u.name, String(u.id))}
                                 disabled={actionLoading}
                                 className="btn btn-outline"
                                 title="Reset to default password"

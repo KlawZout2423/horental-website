@@ -156,7 +156,11 @@ export const resolvers = {
     },
 
     login: async (_: any, { email, password }: any) => {
-      const user = await prisma.user.findUnique({ where: { email } });
+      const cleanInput = (email || '').trim();
+      let user = await prisma.user.findUnique({ where: { email: cleanInput } });
+      if (!user) {
+        user = await prisma.user.findFirst({ where: { phone: cleanInput } });
+      }
       if (!user) throw new Error('Invalid credentials');
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) throw new Error('Invalid credentials');
@@ -200,11 +204,18 @@ export const resolvers = {
         throw new Error('New password must be at least 6 characters.');
       }
 
-      let targetUser = await prisma.user.findUnique({ where: { email: identifier.trim() } });
-      if (!targetUser) {
-        targetUser = await prisma.user.findFirst({ where: { phone: identifier.trim() } });
+      const cleanId = (identifier || '').trim();
+      let targetUser = null;
+      if (!isNaN(Number(cleanId)) && Number(cleanId) > 0) {
+        targetUser = await prisma.user.findUnique({ where: { id: parseInt(cleanId) } });
       }
-      if (!targetUser) throw new Error('User not found with this email or phone number.');
+      if (!targetUser) {
+        targetUser = await prisma.user.findUnique({ where: { email: cleanId } });
+      }
+      if (!targetUser) {
+        targetUser = await prisma.user.findFirst({ where: { phone: cleanId } });
+      }
+      if (!targetUser) throw new Error('User not found.');
 
       const hashed = await bcrypt.hash(newPassword, 10);
       await prisma.user.update({

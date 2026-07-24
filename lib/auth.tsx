@@ -55,7 +55,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout();
       } else if (cookieUser) {
         setUser((prev) => {
-          if (prev && prev.id === cookieUser.id && prev.role === cookieUser.role && prev.name === cookieUser.name) {
+          if (
+            prev &&
+            prev.id === cookieUser.id &&
+            prev.role === cookieUser.role &&
+            prev.name === cookieUser.name &&
+            prev.mustChangePassword === cookieUser.mustChangePassword
+          ) {
             return prev;
           }
           return cookieUser;
@@ -187,8 +193,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   };
 
-  const updateUser = (updatedUser: User) => {
+  const updateUser = async (updatedUser: User) => {
     setUser(updatedUser);
+    try {
+      await fetch('/api/auth/set-cookie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: 'keep', user: updatedUser }),
+      });
+    } catch (e) {
+      console.error('Failed to update user_data cookie:', e);
+    }
   };
 
   return (
