@@ -51,7 +51,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!cookieUser && user) {
         logout();
       } else if (cookieUser) {
-        setUser(cookieUser);
+        setUser((prev) => {
+          if (prev && prev.id === cookieUser.id && prev.role === cookieUser.role && prev.name === cookieUser.name) {
+            return prev;
+          }
+          return cookieUser;
+        });
       } else {
         setUser(null);
       }

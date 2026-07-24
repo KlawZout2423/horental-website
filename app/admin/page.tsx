@@ -133,8 +133,10 @@ export default function AdminPage() {
     }
   }, [user]);
 
-  async function loadAdminDashboardData() {
-    setLoadingData(true);
+  async function loadAdminDashboardData(showSpinner = true) {
+    if (showSpinner && properties.length === 0) {
+      setLoadingData(true);
+    }
     try {
       const [statsData, usersData, propertiesData, logsData] = await Promise.all([
         graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS),
@@ -565,7 +567,7 @@ export default function AdminPage() {
               {isCleaningMedia ? 'Cleaning Storage...' : 'Clean Unused Media'}
             </button>
             <button 
-              onClick={loadAdminDashboardData} 
+              onClick={() => loadAdminDashboardData()} 
               disabled={loadingData}
               className="btn btn-outline" 
               style={{ padding: '8px 16px', fontSize: '0.85rem', height: '36px', gap: '6px' }}
