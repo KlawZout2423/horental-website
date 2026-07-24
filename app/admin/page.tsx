@@ -94,6 +94,8 @@ export default function AdminPage() {
   const [editLocation, setEditLocation] = useState('');
   const [editDigitalAddress, setEditDigitalAddress] = useState('');
   const [editLandmarks, setEditLandmarks] = useState('');
+  const [editLatitude, setEditLatitude] = useState<number | null>(null);
+  const [editLongitude, setEditLongitude] = useState<number | null>(null);
   const [editImageUrl, setEditImageUrl] = useState('');
   const [isUploadingEditImage, setIsUploadingEditImage] = useState(false);
   const [editPrice, setEditPrice] = useState('');
@@ -403,6 +405,8 @@ export default function AdminPage() {
     setEditLocation(p.location);
     setEditDigitalAddress(p.digitalAddress || '');
     setEditLandmarks(p.landmarks || '');
+    setEditLatitude(p.latitude ?? null);
+    setEditLongitude(p.longitude ?? null);
     setEditPrice(p.price.toString());
     setEditType(p.type || 'Student Hostel');
     setEditStatus(p.status || 'available');
@@ -551,6 +555,8 @@ export default function AdminPage() {
         location: editLocation,
         digitalAddress: editDigitalAddress.trim() || undefined,
         landmarks: editLandmarks.trim() || undefined,
+        latitude: editLatitude !== null ? editLatitude : undefined,
+        longitude: editLongitude !== null ? editLongitude : undefined,
         price: parsedPrice,
         type: editType,
         status: editStatus,
@@ -575,6 +581,8 @@ export default function AdminPage() {
                 location: editLocation, 
                 digitalAddress: editDigitalAddress.trim() || undefined,
                 landmarks: editLandmarks.trim() || undefined,
+                latitude: editLatitude !== null ? editLatitude : undefined,
+                longitude: editLongitude !== null ? editLongitude : undefined,
                 price: parsedPrice, 
                 type: editType, 
                 status: editStatus, 
@@ -1839,6 +1847,80 @@ export default function AdminPage() {
                     <label>Nearby Landmarks / Directions</label>
                     <input type="text" value={editLandmarks} onChange={(e) => setEditLandmarks(e.target.value)} className="form-control" placeholder="e.g. 3 mins from UHAS gate" />
                   </div>
+                </div>
+
+                {/* GPS Location Coordinates Picker */}
+                <div className="form-group" style={{ padding: '14px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                    <label style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <MapPin size={16} style={{ color: 'var(--primary)' }} /> GPS Map Location Coordinates
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if ('geolocation' in navigator) {
+                          navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                              setEditLatitude(pos.coords.latitude);
+                              setEditLongitude(pos.coords.longitude);
+                              setMessage({ text: `🎯 GPS location detected! (Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)})`, isError: false });
+                            },
+                            (err) => {
+                              setMessage({ text: `GPS error: ${err.message}. Please allow location access or type coordinates manually.`, isError: true });
+                            },
+                            { enableHighAccuracy: true }
+                          );
+                        } else {
+                          setMessage({ text: 'Geolocation is not supported by your browser.', isError: true });
+                        }
+                      }}
+                      className="btn btn-outline"
+                      style={{ padding: '4px 10px', fontSize: '0.78rem', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--primary)', borderColor: 'var(--primary)' }}
+                    >
+                      <MapPin size={12} /> Detect Current GPS Location
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Latitude</label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 6.6080"
+                        value={editLatitude !== null ? editLatitude : ''}
+                        onChange={(e) => setEditLatitude(e.target.value ? parseFloat(e.target.value) : null)}
+                        className="form-control"
+                        style={{ fontSize: '0.82rem', padding: '6px 10px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Longitude</label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 0.4700"
+                        value={editLongitude !== null ? editLongitude : ''}
+                        onChange={(e) => setEditLongitude(e.target.value ? parseFloat(e.target.value) : null)}
+                        className="form-control"
+                        style={{ fontSize: '0.82rem', padding: '6px 10px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {editLatitude !== null && editLongitude !== null && (
+                    <div style={{ marginTop: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span>📍 Pin Coordinates: ({editLatitude.toFixed(4)}, {editLongitude.toFixed(4)})</span>
+                      <a
+                        href={`https://www.google.com/maps?q=${editLatitude},${editLongitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}
+                      >
+                        Preview on Google Maps ↗
+                      </a>
+                    </div>
+                  )}
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
