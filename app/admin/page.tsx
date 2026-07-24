@@ -84,6 +84,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'moderation' | 'audits' | 'reports' | 'upload'>('analytics');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
+  const [auditFilter, setAuditFilter] = useState<'all' | 'call' | 'whatsapp' | 'book_viewing' | 'sms'>('all');
   const [loadingData, setLoadingData] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
@@ -1475,6 +1476,45 @@ export default function AdminPage() {
             </>
           ) : activeTab === 'audits' ? (
             <>
+              {/* Audit & Lead Category Filters */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setAuditFilter('all')}
+                  className={`btn ${auditFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '20px' }}
+                >
+                  All Logs ({contactLogs.length})
+                </button>
+                <button
+                  onClick={() => setAuditFilter('call')}
+                  className={`btn ${auditFilter === 'call' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '20px' }}
+                >
+                  📞 Direct Phone Calls ({contactLogs.filter((l) => l.actionType === 'call').length})
+                </button>
+                <button
+                  onClick={() => setAuditFilter('whatsapp')}
+                  className={`btn ${auditFilter === 'whatsapp' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '20px' }}
+                >
+                  💬 WhatsApp Inquiries ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})
+                </button>
+                <button
+                  onClick={() => setAuditFilter('book_viewing')}
+                  className={`btn ${auditFilter === 'book_viewing' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '20px' }}
+                >
+                  📅 Physical Viewings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})
+                </button>
+                <button
+                  onClick={() => setAuditFilter('sms')}
+                  className={`btn ${auditFilter === 'sms' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '20px' }}
+                >
+                  📱 SMS Leads ({contactLogs.filter((l) => l.actionType === 'sms').length})
+                </button>
+              </div>
+
               {/* Desktop Table View */}
               <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
                 <table className={styles.table}>
@@ -1483,41 +1523,55 @@ export default function AdminPage() {
                       <th>Timestamp</th>
                       <th>Customer Name</th>
                       <th>Customer Phone</th>
-                      <th>Action</th>
+                      <th>Action Type</th>
                       <th>Landlord Number</th>
                       <th>Property Title</th>
                       <th>Property Location</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {contactLogs.length === 0 ? (
+                    {contactLogs.filter((l) => auditFilter === 'all' || l.actionType === auditFilter).length === 0 ? (
                       <tr>
                         <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                          No contact inquiry audit records found in the database.
+                          No matching audit or SMS lead records found in database.
                         </td>
                       </tr>
                     ) : (
-                      contactLogs.map((log) => (
-                        <tr key={log.id}>
-                          <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
-                            {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                          </td>
-                          <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
-                          <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
-                          <td>
-                            <span className={`badge badge-${log.actionType === 'call' ? 'available' : 'primary'}`} style={{ fontSize: '0.7rem', padding: '4px 8px', textTransform: 'uppercase' }}>
-                              {log.actionType === 'call' ? '📞 Call' : '💬 WhatsApp'}
-                            </span>
-                          </td>
-                          <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
-                          <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                            {log.property ? log.property.title : 'N/A (Deleted)'}
-                          </td>
-                          <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                            {log.property ? log.property.location : 'N/A'}
-                          </td>
-                        </tr>
-                      ))
+                      contactLogs
+                        .filter((l) => auditFilter === 'all' || l.actionType === auditFilter)
+                        .map((log) => (
+                          <tr key={log.id}>
+                            <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
+                              {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                            </td>
+                            <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
+                            <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
+                            <td>
+                              <span className={`badge ${
+                                log.actionType === 'call'
+                                  ? 'badge-available'
+                                  : log.actionType === 'whatsapp'
+                                  ? 'badge-primary'
+                                  : log.actionType === 'book_viewing'
+                                  ? 'badge-primary'
+                                  : 'badge-available'
+                              }`} style={{ fontSize: '0.7rem', padding: '4px 8px', textTransform: 'capitalize' }}>
+                                {log.actionType === 'call' && '📞 Phone Call'}
+                                {log.actionType === 'whatsapp' && '💬 WhatsApp'}
+                                {log.actionType === 'book_viewing' && '📅 Physical Viewing'}
+                                {log.actionType === 'sms' && '📱 SMS Lead'}
+                                {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
+                              </span>
+                            </td>
+                            <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
+                            <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                              {log.property ? log.property.title : 'N/A (Deleted)'}
+                            </td>
+                            <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                              {log.property ? log.property.location : 'N/A'}
+                            </td>
+                          </tr>
+                        ))
                     )}
                   </tbody>
                 </table>
@@ -1525,28 +1579,34 @@ export default function AdminPage() {
 
               {/* Mobile Card List View */}
               <div className={styles.mobileCardList}>
-                {contactLogs.length === 0 ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No audit records found.</p>
+                {contactLogs.filter((l) => auditFilter === 'all' || l.actionType === auditFilter).length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No matching audit records found.</p>
                 ) : (
-                  contactLogs.map((log) => (
-                    <div key={log.id} className={styles.adminCardItem}>
-                      <div className={styles.adminCardHeader}>
-                        <div>
-                          <div className={styles.adminCardTitle}>{log.customerName} ({log.customerPhone})</div>
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                            {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                  contactLogs
+                    .filter((l) => auditFilter === 'all' || l.actionType === auditFilter)
+                    .map((log) => (
+                      <div key={log.id} className={styles.adminCardItem}>
+                        <div className={styles.adminCardHeader}>
+                          <div>
+                            <div className={styles.adminCardTitle}>{log.customerName} ({log.customerPhone})</div>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                              {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                            </span>
+                          </div>
+                          <span className="badge badge-primary" style={{ fontSize: '0.68rem' }}>
+                            {log.actionType === 'call' && '📞 Phone Call'}
+                            {log.actionType === 'whatsapp' && '💬 WhatsApp'}
+                            {log.actionType === 'book_viewing' && '📅 Physical Viewing'}
+                            {log.actionType === 'sms' && '📱 SMS Lead'}
+                            {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
                           </span>
                         </div>
-                        <span className={`badge badge-${log.actionType === 'call' ? 'available' : 'primary'}`} style={{ fontSize: '0.68rem' }}>
-                          {log.actionType === 'call' ? '📞 Call' : '💬 WhatsApp'}
-                        </span>
+                        <div className={styles.adminCardMeta}>
+                          <span><strong>Property:</strong> {log.property ? log.property.title : 'N/A'}</span>
+                          <span><strong>Landlord Contact:</strong> {log.landlordPhone}</span>
+                        </div>
                       </div>
-                      <div className={styles.adminCardMeta}>
-                        <span><strong>Property:</strong> {log.property ? log.property.title : 'N/A'}</span>
-                        <span><strong>Landlord Phone:</strong> {log.landlordPhone}</span>
-                      </div>
-                    </div>
-                  ))
+                    ))
                 )}
               </div>
             </>

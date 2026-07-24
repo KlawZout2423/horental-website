@@ -379,3 +379,21 @@ export const RESET_PASSWORD_WITH_OTP = `
   }
 `;
 
+export const GET_CONTACT_LOGS = `
+  query GetContactLogs {
+    contactLogs {
+      id
+      customerName
+      customerPhone
+      actionType
+      landlordPhone
+      createdAt
+      property {
+        id
+        title
+        location
+      }
+    }
+  }
+`;
+
