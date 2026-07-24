@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
-import { Eye, EyeOff, Loader, LogIn, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Loader, LogIn } from 'lucide-react';
 import styles from './login.module.css';
 
 export default function LoginForm() {
@@ -47,7 +47,7 @@ export default function LoginForm() {
       } else {
         const cleanedPhone = rawInput.replace(/[^0-9]/g, '');
         if (cleanedPhone.length !== 10) {
-          throw new Error('Please enter a valid 10-digit phone number (e.g. 0241234567) or "admin".');
+          throw new Error('Please enter a valid 10-digit phone number (e.g. 0241234567).');
         }
         emailOrPhone = `${cleanedPhone}@horentals.com`;
       }
@@ -62,11 +62,6 @@ export default function LoginForm() {
 
   return (
     <div className={styles.page}>
-      {/* Back to home */}
-      <Link href="/" className={styles.backBtn} aria-label="Back to home">
-        <ArrowLeft size={16} />
-        <span>Back to HO Rentals</span>
-      </Link>
       <div className={`${styles.card} animate-fade-in`}>
 
         {/* Brand mark */}
@@ -88,11 +83,11 @@ export default function LoginForm() {
 
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <div className="form-group">
-            <label htmlFor="phone">Phone Number or Username</label>
+            <label htmlFor="phone">Phone Number</label>
             <input
               id="phone"
               type="text"
-              placeholder="e.g. 0241234567 or admin"
+              placeholder="e.g. 0241234567"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required
