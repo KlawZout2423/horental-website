@@ -120,3 +120,14 @@ model PageVisit {
   @@index([path])
 }
 
+model PasswordResetRequest {
+  id          Int      @id @default(autoincrement())
+  name        String
+  identifier  String   // email or phone
+  message     String?
+  status      String   @default("pending") // pending | resolved
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+}

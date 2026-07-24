@@ -123,6 +123,16 @@ export const resolvers = {
         orderBy: { createdAt: 'desc' }
       });
     },
+
+    passwordResetRequests: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
+      return prisma.passwordResetRequest.findMany({
+        orderBy: { createdAt: 'desc' },
+      });
+    },
   },
 
   Mutation: {
@@ -156,86 +166,72 @@ export const resolvers = {
       return { token, user };
     },
 
-    requestPasswordReset: async (_: any, { identifier }: { identifier: string }) => {
-      const cleanIdentifier = identifier.trim();
-      if (!cleanIdentifier) throw new Error('Please enter your email or phone number.');
-
-      let user = await prisma.user.findUnique({ where: { email: cleanIdentifier } });
-      if (!user) {
-        user = await prisma.user.findFirst({ where: { phone: cleanIdentifier } });
+    // User submits a password reset request → saved to DB + console log for admin
+    submitPasswordResetRequest: async (_: any, { name, identifier, message }: any) => {
+      if (!name?.trim() || !identifier?.trim()) {
+        throw new Error('Name and email/phone are required.');
       }
 
-      if (!user) {
-        return {
-          success: true,
-          message: 'If an account matches this email or phone, a 6-digit verification code has been generated.',
-        };
-      }
-
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-      await prisma.user.update({
-        where: { id: user.id },
+      await prisma.passwordResetRequest.create({
         data: {
-          resetOtpCode: otpCode,
-          resetOtpExpires: expiresAt,
+          name: sanitizeInput(name.trim()),
+          identifier: identifier.trim(),
+          message: message ? sanitizeInput(message.trim()) : null,
+          status: 'pending',
         },
       });
 
-      console.log(`🔐 [Password Reset OTP] User: ${user.email} (${user.phone || 'No Phone'}), OTP Code: ${otpCode}`);
+      // Log for admin awareness
+      console.log(`🔑 [Password Reset Request] Name: ${name}, Contact: ${identifier}, Message: ${message || 'None'}`);
 
       return {
         success: true,
-        message: 'Verification code generated successfully.',
-        otpCode: otpCode,
+        message: 'Your password reset request has been submitted. Our admin team will contact you shortly via WhatsApp or phone to help you reset your password.',
       };
     },
 
-    resetPasswordWithOtp: async (_: any, { identifier, otpCode, newPassword }: any) => {
-      const cleanIdentifier = identifier.trim();
-      const cleanOtp = otpCode.trim();
+    // Admin resets a user's password directly
+    adminResetUserPassword: async (_: any, { identifier, newPassword }: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Only admins can reset user passwords.');
 
-      if (!cleanIdentifier || !cleanOtp || !newPassword) {
-        throw new Error('All fields (Email/Phone, OTP Code, New Password) are required.');
+      if (!newPassword || newPassword.length < 6) {
+        throw new Error('New password must be at least 6 characters.');
       }
 
-      if (newPassword.length < 6) {
-        throw new Error('Password must be at least 6 characters long.');
+      let targetUser = await prisma.user.findUnique({ where: { email: identifier.trim() } });
+      if (!targetUser) {
+        targetUser = await prisma.user.findFirst({ where: { phone: identifier.trim() } });
       }
-
-      let user = await prisma.user.findUnique({ where: { email: cleanIdentifier } });
-      if (!user) {
-        user = await prisma.user.findFirst({ where: { phone: cleanIdentifier } });
-      }
-
-      if (!user || !user.resetOtpCode || !user.resetOtpExpires) {
-        throw new Error('Invalid or expired password reset request. Please request a new code.');
-      }
-
-      if (user.resetOtpCode !== cleanOtp) {
-        throw new Error('Invalid 6-digit verification code. Please check and try again.');
-      }
-
-      if (new Date() > new Date(user.resetOtpExpires)) {
-        throw new Error('Verification code has expired. Please request a new code.');
-      }
+      if (!targetUser) throw new Error('User not found with this email or phone number.');
 
       const hashed = await bcrypt.hash(newPassword, 10);
-
       await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          password: hashed,
-          resetOtpCode: null,
-          resetOtpExpires: null,
-        },
+        where: { id: targetUser.id },
+        data: { password: hashed },
       });
+
+      console.log(`✅ [Admin Password Reset] Admin ${adminUser.email} reset password for user: ${targetUser.email} (${targetUser.phone || 'No Phone'})`);
 
       return {
         success: true,
-        message: 'Your password has been successfully reset! You can now log in with your new password.',
+        message: `Password for ${targetUser.name} has been successfully reset.`,
       };
+    },
+
+    // Admin marks a reset request as resolved
+    resolvePasswordResetRequest: async (_: any, { id }: { id: number }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Not authorized.');
+
+      await prisma.passwordResetRequest.update({
+        where: { id },
+        data: { status: 'resolved' },
+      });
+
+      return { success: true, message: 'Request marked as resolved.' };
     },
 
     addProperty: async (_: any, { input }: any, { user }: { user: { id: number } | null }) => {

@@ -128,6 +128,15 @@ export const typeDefs = `#graphql
         momoAccount: String
     }
 
+    type PasswordResetRequest {
+        id: Int!
+        name: String!
+        identifier: String!
+        message: String
+        status: String!
+        createdAt: String!
+    }
+
     type Query {
         me: User
         users: [User!]!
@@ -138,19 +147,20 @@ export const typeDefs = `#graphql
         company(id: Int!): Company
         dashboardStats: DashboardStats!
         contactLogs: [ContactLog!]!
+        passwordResetRequests: [PasswordResetRequest!]!
     }
 
-    type PasswordResetPayload {
+    type BasicPayload {
         success: Boolean!
         message: String!
-        otpCode: String
     }
 
     type Mutation {
         register(input: RegisterInput!): AuthPayload!
         login(email: String!, password: String!): AuthPayload!
-        requestPasswordReset(identifier: String!): PasswordResetPayload!
-        resetPasswordWithOtp(identifier: String!, otpCode: String!, newPassword: String!): PasswordResetPayload!
+        submitPasswordResetRequest(name: String!, identifier: String!, message: String): BasicPayload!
+        adminResetUserPassword(identifier: String!, newPassword: String!): BasicPayload!
+        resolvePasswordResetRequest(id: Int!): BasicPayload!
         addProperty(input: PropertyInput!): Property!
         updateProperty(id: Int!, input: PropertyInput!): Property!
         deleteProperty(id: Int!): Property!

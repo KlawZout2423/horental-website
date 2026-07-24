@@ -360,22 +360,42 @@ export const DELETE_REPORT = `
   }
 `;
 
-export const REQUEST_PASSWORD_RESET = `
-  mutation RequestPasswordReset($identifier: String!) {
-    requestPasswordReset(identifier: $identifier) {
-      success
-      message
-      otpCode
-    }
-  }
-`;
-
-export const RESET_PASSWORD_WITH_OTP = `
-  mutation ResetPasswordWithOtp($identifier: String!, $otpCode: String!, $newPassword: String!) {
-    resetPasswordWithOtp(identifier: $identifier, otpCode: $otpCode, newPassword: $newPassword) {
+export const SUBMIT_PASSWORD_RESET_REQUEST = `
+  mutation SubmitPasswordResetRequest($name: String!, $identifier: String!, $message: String) {
+    submitPasswordResetRequest(name: $name, identifier: $identifier, message: $message) {
       success
       message
     }
   }
 `;
 
+export const ADMIN_RESET_USER_PASSWORD = `
+  mutation AdminResetUserPassword($identifier: String!, $newPassword: String!) {
+    adminResetUserPassword(identifier: $identifier, newPassword: $newPassword) {
+      success
+      message
+    }
+  }
+`;
+
+export const RESOLVE_PASSWORD_RESET_REQUEST = `
+  mutation ResolvePasswordResetRequest($id: Int!) {
+    resolvePasswordResetRequest(id: $id) {
+      success
+      message
+    }
+  }
+`;
+
+export const GET_PASSWORD_RESET_REQUESTS = `
+  query GetPasswordResetRequests {
+    passwordResetRequests {
+      id
+      name
+      identifier
+      message
+      status
+      createdAt
+    }
+  }
+`;
