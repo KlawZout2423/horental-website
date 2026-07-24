@@ -16,7 +16,7 @@ import {
   GET_CONTACT_LOGS,
   TOGGLE_FEATURED
 } from '../../lib/graphql';
-import { Trash2, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star } from 'lucide-react';
+import { Trash2, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X } from 'lucide-react';
 import styles from './admin.module.css';
 import { getFriendlyErrorMessage } from '../../lib/types';
 
@@ -56,6 +56,7 @@ export default function AdminPage() {
   
   // Navigation & loaders
   const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'moderation' | 'audits' | 'upload'>('analytics');
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -541,7 +542,7 @@ export default function AdminPage() {
       {/* Main Workspace content area */}
       <main className={styles.mainContent}>
         
-        {/* Top Header bar with Breadcrumbs */}
+        {/* Top Header bar with Breadcrumbs & Mobile Hamburger */}
         <header className={styles.topHeader}>
           <div className={styles.breadcrumbs}>
             <span className={styles.breadcrumbRoot}>HO Rentals</span>
@@ -554,6 +555,14 @@ export default function AdminPage() {
               {activeTab === 'upload' && 'Upload Property'}
             </span>
           </div>
+
+          <button
+            onClick={() => setIsMobileDrawerOpen(true)}
+            className={styles.mobileHamburgerBtn}
+            aria-label="Open Admin Menu"
+          >
+            <Menu size={16} /> Admin Menu
+          </button>
           
           <div className={styles.headerActions}>
             <button 
@@ -578,56 +587,115 @@ export default function AdminPage() {
           </div>
         </header>
 
-        {/* Mobile Admin Horizontal Tab Navigation Bar */}
-        <div className={styles.mobileNavContainer}>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`${styles.mobileTabChip} ${activeTab === 'analytics' ? styles.activeMobileTabChip : ''}`}
-          >
-            <PieChart size={14} /> Analytics
-          </button>
-          <button
-            onClick={() => setActiveTab('properties')}
-            className={`${styles.mobileTabChip} ${activeTab === 'properties' ? styles.activeMobileTabChip : ''}`}
-          >
-            <Building size={14} /> Listings ({approvedProperties.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`${styles.mobileTabChip} ${activeTab === 'users' ? styles.activeMobileTabChip : ''}`}
-          >
-            <Users size={14} /> Users ({users.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('audits')}
-            className={`${styles.mobileTabChip} ${activeTab === 'audits' ? styles.activeMobileTabChip : ''}`}
-          >
-            <Activity size={14} /> Audits ({contactLogs.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('upload')}
-            className={`${styles.mobileTabChip} ${activeTab === 'upload' ? styles.activeMobileTabChip : ''}`}
-          >
-            <Plus size={14} /> Upload
-          </button>
-        </div>
+        {/* Mobile Slide-Over Admin Drawer Navigation */}
+        {isMobileDrawerOpen && (
+          <>
+            <div className={styles.mobileDrawerOverlay} onClick={() => setIsMobileDrawerOpen(false)} />
+            <div className={styles.mobileDrawerContent}>
+              <div className={styles.sidebarBrand} style={{ justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div className={styles.brandIcon}>
+                    <Building size={18} />
+                  </div>
+                  <span className={styles.brandName}>HO Rentals</span>
+                </div>
+                <button 
+                  onClick={() => setIsMobileDrawerOpen(false)} 
+                  style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}
+                  aria-label="Close Admin Menu"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className={styles.sidebarSection}>
+                <span className={styles.sidebarSectionTitle}>Navigation</span>
+                <nav className={styles.sidebarNav}>
+                  <button
+                    onClick={() => { setActiveTab('analytics'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'analytics' ? styles.activeNavItem : ''}`}
+                  >
+                    <PieChart size={16} /> Overview Analytics
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('properties'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'properties' ? styles.activeNavItem : ''}`}
+                  >
+                    <Building size={16} /> Active Listings ({approvedProperties.length})
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('users'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'users' ? styles.activeNavItem : ''}`}
+                  >
+                    <Users size={16} /> User Directory ({users.length})
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('audits'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'audits' ? styles.activeNavItem : ''}`}
+                  >
+                    <Activity size={16} /> Contact Audit Logs ({contactLogs.length})
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('upload'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'upload' ? styles.activeNavItem : ''}`}
+                    style={{ marginTop: '12px', borderTop: '1px solid #1E293B', paddingTop: '16px' }}
+                  >
+                    <Plus size={16} /> Upload Property
+                  </button>
+                </nav>
+
+                <div style={{ marginTop: '20px', borderTop: '1px solid #1E293B', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button 
+                    onClick={() => { handleRunStorageCleanup(); setIsMobileDrawerOpen(false); }} 
+                    disabled={isCleaningMedia}
+                    className={styles.sidebarHomeBtn}
+                    style={{ color: '#F59E0B', borderColor: '#F59E0B', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <Trash2 size={14} className={isCleaningMedia ? 'animate-spin' : ''} />
+                    {isCleaningMedia ? 'Cleaning Storage...' : 'Clean Unused Media'}
+                  </button>
+                  <button 
+                    onClick={() => { loadAdminDashboardData(); setIsMobileDrawerOpen(false); }} 
+                    disabled={loadingData}
+                    className={styles.sidebarHomeBtn}
+                    style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <RefreshCw size={14} className={loadingData ? 'animate-spin' : ''} />
+                    Refresh Data
+                  </button>
+                </div>
+              </div>
+
+              <div className={styles.sidebarFooter} style={{ marginTop: 'auto', paddingTop: '16px' }}>
+                <button onClick={() => { router.push('/'); setIsMobileDrawerOpen(false); }} className={styles.sidebarHomeBtn}>
+                  <Home size={14} style={{ marginRight: '8px', display: 'inline' }} /> Customer Site
+                </button>
+                <button onClick={logout} className={styles.sidebarLogoutBtn} style={{ marginTop: '8px' }}>
+                  <LogOut size={14} style={{ marginRight: '8px', display: 'inline' }} /> Logout
+                </button>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Content Body Container */}
         <div className={styles.contentBody}>
-          <h1 className={styles.pageTitle}>
-            {activeTab === 'analytics' && 'Overview Analytics'}
-            {activeTab === 'properties' && 'Property Listings'}
-            {activeTab === 'users' && 'Account Manager'}
-            {activeTab === 'audits' && 'Contact Inquiry Audits'}
-            {activeTab === 'upload' && 'List a New Property'}
-          </h1>
-          <p className={styles.pageSubtitle}>
-            {activeTab === 'analytics' && 'Overview statistics and performance distribution metrics.'}
-            {activeTab === 'properties' && 'View, search, edit availability, and delete published property listings.'}
-            {activeTab === 'users' && 'Manage registered accounts and adjust credentials and system roles.'}
-            {activeTab === 'audits' && 'Real-time record of customer call and WhatsApp inquiries to landlords.'}
-            {activeTab === 'upload' && 'Upload hostels, rooms, or self-contained flats directly into the system database.'}
-          </p>
+          {activeTab !== 'upload' && (
+            <>
+              <h1 className={styles.pageTitle}>
+                {activeTab === 'analytics' && 'Overview Analytics'}
+                {activeTab === 'properties' && 'Property Listings'}
+                {activeTab === 'users' && 'Account Manager'}
+                {activeTab === 'audits' && 'Contact Inquiry Audits'}
+              </h1>
+              <p className={styles.pageSubtitle}>
+                {activeTab === 'analytics' && 'Overview statistics and performance distribution metrics.'}
+                {activeTab === 'properties' && 'View, search, edit availability, and delete published property listings.'}
+                {activeTab === 'users' && 'Manage registered accounts and adjust credentials and system roles.'}
+                {activeTab === 'audits' && 'Real-time record of customer call and WhatsApp inquiries to landlords.'}
+              </p>
+            </>
+          )}
 
           {/* Action Alerts / Messages */}
           {message && (
@@ -879,213 +947,365 @@ export default function AdminPage() {
 
             </div>
           ) : activeTab === 'properties' ? (
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Listing Info</th>
-                    <th>Type</th>
-                    <th>Price (GH₵)</th>
-                    <th>Location</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {approvedProperties.length === 0 ? (
+            <>
+              {/* Desktop Table View */}
+              <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
+                <table className={styles.table}>
+                  <thead>
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                        No listings found in the database.
-                      </td>
+                      <th>Listing Info</th>
+                      <th>Type</th>
+                      <th>Price (GH₵)</th>
+                      <th>Location</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
-                  ) : (
-                    approvedProperties.map((p) => (
-                      <tr key={p.id}>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <img 
-                              src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'} 
-                              alt={p.title} 
-                              style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)', flexShrink: 0 }}
-                            />
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.title}</span>
-                              {p.isFeatured && (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 700, color: '#F59E0B' }}>
-                                  <Star size={10} fill="#F59E0B" /> Featured
-                                </span>
-                              )}
+                  </thead>
+                  <tbody>
+                    {approvedProperties.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                          No listings found in the database.
+                        </td>
+                      </tr>
+                    ) : (
+                      approvedProperties.map((p) => (
+                        <tr key={p.id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <img 
+                                src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'} 
+                                alt={p.title} 
+                                style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)', flexShrink: 0 }}
+                              />
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.title}</span>
+                                {p.isFeatured && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 700, color: '#F59E0B' }}>
+                                    <Star size={10} fill="#F59E0B" /> Featured
+                                  </span>
+                                )}
+                              </div>
                             </div>
+                          </td>
+                          <td style={{ textTransform: 'capitalize', fontWeight: 600, color: 'var(--text-secondary)' }}>{p.type}</td>
+                          <td style={{ fontWeight: 700 }}>{p.price.toLocaleString()}</td>
+                          <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{p.location}</td>
+                          <td>
+                            <span className={`badge badge-${p.status === 'available' ? 'available' : 'rented'}`}>
+                              {p.status}
+                            </span>
+                          </td>
+                          <td>
+                            <div className={styles.actionsCell} style={{ justifyContent: 'flex-end' }}>
+                              <button
+                                onClick={() => handleTogglePropertyStatus(p.id, p.status)}
+                                disabled={actionLoading}
+                                className={`btn ${p.status === 'available' ? 'btn-secondary' : 'btn-outline'}`}
+                                style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px' }}
+                              >
+                                {p.status === 'available' ? 'Mark Rented' : 'Mark Available'}
+                              </button>
+
+                              <button
+                                onClick={() => handleToggleFeatured(p.id, p.isFeatured ?? false)}
+                                disabled={actionLoading}
+                                title={p.isFeatured ? 'Remove from featured' : 'Feature on landing page'}
+                                className="btn btn-outline"
+                                style={{
+                                  padding: '6px',
+                                  height: '32px',
+                                  width: '32px',
+                                  color: p.isFeatured ? '#F59E0B' : 'var(--text-muted)',
+                                  borderColor: p.isFeatured ? '#F59E0B' : 'var(--border)',
+                                  backgroundColor: p.isFeatured ? 'rgba(245,158,11,0.08)' : 'transparent',
+                                }}
+                              >
+                                <Star size={14} fill={p.isFeatured ? '#F59E0B' : 'none'} />
+                              </button>
+
+                              <button
+                                onClick={() => handleStartEdit(p)}
+                                disabled={actionLoading}
+                                className="btn btn-outline"
+                                style={{ padding: '6px', height: '32px', width: '32px', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
+                              >
+                                <Edit size={14} />
+                              </button>
+                              
+                              <button
+                                onClick={() => handleDeleteProperty(p.id)}
+                                disabled={actionLoading}
+                                className="btn btn-outline"
+                                style={{ padding: '6px', height: '32px', width: '32px', color: 'var(--danger)', borderColor: 'var(--border)' }}
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card List View */}
+              <div className={styles.mobileCardList}>
+                {approvedProperties.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No listings found in the database.</p>
+                ) : (
+                  approvedProperties.map((p) => (
+                    <div key={p.id} className={styles.adminCardItem}>
+                      <div className={styles.adminCardHeader}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <img
+                            src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'}
+                            alt={p.title}
+                            style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}
+                          />
+                          <div>
+                            <div className={styles.adminCardTitle}>{p.title}</div>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textTransform: 'capitalize', fontWeight: 600 }}>{p.type} • {p.location}</span>
                           </div>
-                        </td>
-                        <td style={{ textTransform: 'capitalize', fontWeight: 600, color: 'var(--text-secondary)' }}>{p.type}</td>
-                        <td style={{ fontWeight: 700 }}>{p.price.toLocaleString()}</td>
-                        <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{p.location}</td>
-                        <td>
-                          <span className={`badge badge-${p.status === 'available' ? 'available' : 'rented'}`}>
-                            {p.status}
+                        </div>
+                        <span className={`badge badge-${p.status === 'available' ? 'available' : 'rented'}`}>
+                          {p.status}
+                        </span>
+                      </div>
+
+                      <div className={styles.adminCardMeta}>
+                        <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1rem' }}>GH₵ {p.price.toLocaleString()}</span>
+                        {p.isFeatured && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#F59E0B' }}>
+                            <Star size={12} fill="#F59E0B" /> Featured
                           </span>
-                        </td>
-                        <td>
-                          <div className={styles.actionsCell} style={{ justifyContent: 'flex-end' }}>
-                            <button
-                              onClick={() => handleTogglePropertyStatus(p.id, p.status)}
-                              disabled={actionLoading}
-                              className={`btn ${p.status === 'available' ? 'btn-secondary' : 'btn-outline'}`}
-                              style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px' }}
-                            >
-                              {p.status === 'available' ? 'Mark Rented' : 'Mark Available'}
-                            </button>
+                        )}
+                      </div>
 
-                            <button
-                              onClick={() => handleToggleFeatured(p.id, p.isFeatured ?? false)}
-                              disabled={actionLoading}
-                              title={p.isFeatured ? 'Remove from featured' : 'Feature on landing page'}
-                              className="btn btn-outline"
-                              style={{
-                                padding: '6px',
-                                height: '32px',
-                                width: '32px',
-                                color: p.isFeatured ? '#F59E0B' : 'var(--text-muted)',
-                                borderColor: p.isFeatured ? '#F59E0B' : 'var(--border)',
-                                backgroundColor: p.isFeatured ? 'rgba(245,158,11,0.08)' : 'transparent',
-                              }}
-                            >
-                              <Star size={14} fill={p.isFeatured ? '#F59E0B' : 'none'} />
-                            </button>
-
-                            <button
-                              onClick={() => handleStartEdit(p)}
-                              disabled={actionLoading}
-                              className="btn btn-outline"
-                              style={{ padding: '6px', height: '32px', width: '32px', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
-                            >
-                              <Edit size={14} />
-                            </button>
-                            
-                            <button
-                              onClick={() => handleDeleteProperty(p.id)}
-                              disabled={actionLoading}
-                              className="btn btn-outline"
-                              style={{ padding: '6px', height: '32px', width: '32px', color: 'var(--danger)', borderColor: 'var(--border)' }}
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                      <div className={styles.adminCardActions}>
+                        <button
+                          onClick={() => handleTogglePropertyStatus(p.id, p.status)}
+                          disabled={actionLoading}
+                          className={`btn ${p.status === 'available' ? 'btn-secondary' : 'btn-outline'}`}
+                          style={{ padding: '8px 12px', fontSize: '0.8rem' }}
+                        >
+                          {p.status === 'available' ? 'Mark Rented' : 'Mark Available'}
+                        </button>
+                        <button
+                          onClick={() => handleToggleFeatured(p.id, p.isFeatured ?? false)}
+                          disabled={actionLoading}
+                          className="btn btn-outline"
+                          style={{ padding: '8px 12px', fontSize: '0.8rem', color: p.isFeatured ? '#F59E0B' : 'var(--text-secondary)' }}
+                        >
+                          <Star size={14} fill={p.isFeatured ? '#F59E0B' : 'none'} /> {p.isFeatured ? 'Featured' : 'Feature'}
+                        </button>
+                        <button
+                          onClick={() => handleStartEdit(p)}
+                          disabled={actionLoading}
+                          className="btn btn-outline"
+                          style={{ padding: '8px', minWidth: '40px', flex: '0 0 auto' }}
+                          title="Edit Property"
+                        >
+                          <Edit size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProperty(p.id)}
+                          disabled={actionLoading}
+                          className="btn btn-outline"
+                          style={{ padding: '8px', minWidth: '40px', flex: '0 0 auto', color: 'var(--danger)' }}
+                          title="Delete Property"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           ) : activeTab === 'users' ? (
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email Address</th>
-                    <th>Phone Number</th>
-                    <th>System Role</th>
-                    <th>Modify Role</th>
-                    <th style={{ textAlign: 'right' }}>Remove</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.length === 0 ? (
+            <>
+              {/* Desktop Table View */}
+              <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
+                <table className={styles.table}>
+                  <thead>
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                        No users found in the database.
-                      </td>
+                      <th>Name</th>
+                      <th>Email Address</th>
+                      <th>Phone Number</th>
+                      <th>System Role</th>
+                      <th>Modify Role</th>
+                      <th style={{ textAlign: 'right' }}>Remove</th>
                     </tr>
-                  ) : (
-                    users.map((u) => (
-                      <tr key={u.id}>
-                        <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{u.name}</td>
-                        <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{u.email}</td>
-                        <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{u.phone || 'N/A'}</td>
-                        <td>
-                          <span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-available'}`} style={{ fontSize: '0.65rem' }}>
-                            {u.role}
-                          </span>
+                  </thead>
+                  <tbody>
+                    {users.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                          No users found in the database.
                         </td>
-                        <td>
-                          <select
-                            value={u.role}
-                            onChange={(e) => handleUpdateUserRole(u.id, e.target.value)}
-                            disabled={actionLoading || u.id === user.id}
-                            className={styles.selectRole}
-                          >
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <button
-                              onClick={() => handleDeleteUser(u.id)}
+                      </tr>
+                    ) : (
+                      users.map((u) => (
+                        <tr key={u.id}>
+                          <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{u.name}</td>
+                          <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{u.email}</td>
+                          <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{u.phone || 'N/A'}</td>
+                          <td>
+                            <span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-available'}`} style={{ fontSize: '0.65rem' }}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td>
+                            <select
+                              value={u.role}
+                              onChange={(e) => handleUpdateUserRole(u.id, e.target.value)}
                               disabled={actionLoading || u.id === user.id}
-                              className="btn btn-outline"
-                              style={{ padding: '6px', height: '32px', width: '32px', color: 'var(--danger)', borderColor: 'var(--border)' }}
+                              className={styles.selectRole}
                             >
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                              <option value="user">User</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                              <button
+                                onClick={() => handleDeleteUser(u.id)}
+                                disabled={actionLoading || u.id === user.id}
+                                className="btn btn-outline"
+                                style={{ padding: '6px', height: '32px', width: '32px', color: 'var(--danger)', borderColor: 'var(--border)' }}
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card List View */}
+              <div className={styles.mobileCardList}>
+                {users.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No users found in the database.</p>
+                ) : (
+                  users.map((u) => (
+                    <div key={u.id} className={styles.adminCardItem}>
+                      <div className={styles.adminCardHeader}>
+                        <div>
+                          <div className={styles.adminCardTitle}>{u.name}</div>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{u.phone || u.email}</span>
+                        </div>
+                        <span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-available'}`} style={{ fontSize: '0.68rem' }}>
+                          {u.role}
+                        </span>
+                      </div>
+
+                      <div className={styles.adminCardActions}>
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleUpdateUserRole(u.id, e.target.value)}
+                          disabled={actionLoading || u.id === user.id}
+                          className={styles.selectRole}
+                          style={{ flex: 1 }}
+                        >
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <button
+                          onClick={() => handleDeleteUser(u.id)}
+                          disabled={actionLoading || u.id === user.id}
+                          className="btn btn-outline"
+                          style={{ padding: '8px 12px', flex: '0 0 auto', color: 'var(--danger)' }}
+                        >
+                          <Trash2 size={15} /> Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           ) : activeTab === 'audits' ? (
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Timestamp</th>
-                    <th>Customer Name</th>
-                    <th>Customer Phone</th>
-                    <th>Action</th>
-                    <th>Landlord Number</th>
-                    <th>Property Title</th>
-                    <th>Property Location</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {contactLogs.length === 0 ? (
+            <>
+              {/* Desktop Table View */}
+              <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
+                <table className={styles.table}>
+                  <thead>
                     <tr>
-                      <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                        No contact inquiry audit records found in the database.
-                      </td>
+                      <th>Timestamp</th>
+                      <th>Customer Name</th>
+                      <th>Customer Phone</th>
+                      <th>Action</th>
+                      <th>Landlord Number</th>
+                      <th>Property Title</th>
+                      <th>Property Location</th>
                     </tr>
-                  ) : (
-                    contactLogs.map((log) => (
-                      <tr key={log.id}>
-                        <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
-                          {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                        </td>
-                        <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
-                        <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
-                        <td>
-                          <span className={`badge badge-${log.actionType === 'call' ? 'available' : 'primary'}`} style={{ fontSize: '0.7rem', padding: '4px 8px', textTransform: 'uppercase' }}>
-                            {log.actionType === 'call' ? '📞 Call' : '💬 WhatsApp'}
-                          </span>
-                        </td>
-                        <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
-                        <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {log.property ? log.property.title : 'N/A (Deleted)'}
-                        </td>
-                        <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                          {log.property ? log.property.location : 'N/A'}
+                  </thead>
+                  <tbody>
+                    {contactLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                          No contact inquiry audit records found in the database.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ) : (
+                      contactLogs.map((log) => (
+                        <tr key={log.id}>
+                          <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
+                            {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                          </td>
+                          <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
+                          <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
+                          <td>
+                            <span className={`badge badge-${log.actionType === 'call' ? 'available' : 'primary'}`} style={{ fontSize: '0.7rem', padding: '4px 8px', textTransform: 'uppercase' }}>
+                              {log.actionType === 'call' ? '📞 Call' : '💬 WhatsApp'}
+                            </span>
+                          </td>
+                          <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
+                          <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {log.property ? log.property.title : 'N/A (Deleted)'}
+                          </td>
+                          <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                            {log.property ? log.property.location : 'N/A'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card List View */}
+              <div className={styles.mobileCardList}>
+                {contactLogs.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No audit records found.</p>
+                ) : (
+                  contactLogs.map((log) => (
+                    <div key={log.id} className={styles.adminCardItem}>
+                      <div className={styles.adminCardHeader}>
+                        <div>
+                          <div className={styles.adminCardTitle}>{log.customerName} ({log.customerPhone})</div>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                            {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                          </span>
+                        </div>
+                        <span className={`badge badge-${log.actionType === 'call' ? 'available' : 'primary'}`} style={{ fontSize: '0.68rem' }}>
+                          {log.actionType === 'call' ? '📞 Call' : '💬 WhatsApp'}
+                        </span>
+                      </div>
+                      <div className={styles.adminCardMeta}>
+                        <span><strong>Property:</strong> {log.property ? log.property.title : 'N/A'}</span>
+                        <span><strong>Landlord Phone:</strong> {log.landlordPhone}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           ) : activeTab === 'upload' ? (
             <UploadPage isEmbedded={true} onSuccess={() => { setActiveTab('properties'); loadAdminDashboardData(); }} />
           ) : null}

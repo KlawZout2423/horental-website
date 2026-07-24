@@ -499,79 +499,169 @@
   to { opacity: 1; }
 }
 
+/* Desktop vs Mobile display utilities */
+@media (max-width: 768px) {
+  .desktopOnlyTable {
+    display: none !important;
+  }
+  .mobileCardList {
+    display: flex !important;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobileCardList {
+    display: none !important;
+  }
+}
+
+/* Mobile Card Items for Properties, Users, Audits */
+.adminCardItem {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.adminCardItem:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.adminCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.adminCardTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.adminCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.adminCardActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.adminCardActions button, .adminCardActions select {
+  flex: 1;
+  min-height: 38px;
+  justify-content: center;
+}
+
 @keyframes modalScaleUp {
   from { opacity: 0; transform: scale(0.95) translateY(12px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* Mobile Admin Navigation Strip & Responsive Fixes */
-.mobileNavContainer {
+/* Mobile Admin Navigation Drawer & Responsive Overlap Fixes */
+.mobileHamburgerBtn {
+  display: none;
+}
+
+.mobileDrawerOverlay {
   display: none;
 }
 
 @media (max-width: 992px) {
   .adminLayout {
     flex-direction: column;
-    margin-top: 0;
+    margin-top: 0 !important;
   }
 
   .mainContent {
-    padding: 16px 12px 100px;
-    width: 100%;
+    padding: 16px 16px 80px !important;
+    width: 100% !important;
   }
 
   .topHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px 0;
+    height: auto !important;
+    min-height: 56px;
+    padding: 12px 16px !important;
+    position: relative !important;
+    top: 0 !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background-color: var(--bg-surface) !important;
+    border-bottom: 1px solid var(--border) !important;
+    z-index: 5 !important;
   }
 
   .headerActions {
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
+    display: none !important;
+  }
+
+  .mobileHamburgerBtn {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 9999px;
+    background-color: #0F172A;
+    color: #F8FAFC;
+    border: 1px solid #1E293B;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+  }
+
+  .mobileDrawerOverlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(6px);
+    z-index: 10000;
+    animation: modalFadeIn 0.2s ease;
+  }
+
+  .mobileDrawerContent {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85%;
+    background-color: #0F172A;
+    color: #F8FAFC;
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 16px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .mobileNavContainer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    overflow-x: auto;
-    width: 100%;
-    padding: 8px 4px 12px;
-    margin-bottom: 16px;
-    border-bottom: 1px solid var(--border);
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .mobileNavContainer::-webkit-scrollbar {
-    display: none;
-  }
-
-  .mobileTabChip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border-radius: 9999px;
-    background-color: var(--bg-surface-secondary);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    font-size: 0.82rem;
-    font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .activeMobileTabChip {
-    background-color: var(--primary);
-    color: #FFFFFF;
-    border-color: var(--primary);
-    font-weight: 700;
-    box-shadow: 0 4px 12px rgba(193, 18, 31, 0.25);
+    display: none !important;
   }
 
   .tableContainer {
@@ -591,4 +681,9 @@
     padding: 20px 16px;
     margin: 0 12px;
   }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
