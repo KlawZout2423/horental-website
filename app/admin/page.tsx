@@ -461,10 +461,8 @@ export default function AdminPage() {
       {/* Side Navigation panel */}
       <aside className={styles.sidebar}>
         <div className={styles.sidebarBrand}>
-          <div className={styles.brandIcon}>
-            <Building size={18} />
-          </div>
-          <span className={styles.brandName}>HO Rentals</span>
+          <img src="/logo.png" alt="HO Rentals Logo" style={{ height: '30px', width: 'auto', objectFit: 'contain' }} />
+          <span className={styles.brandName}>HO<span style={{ color: 'var(--primary)' }}>Rentals</span></span>
         </div>
 
         <div className={styles.sidebarSection}>
@@ -544,7 +542,8 @@ export default function AdminPage() {
         
         {/* Top Header bar with Breadcrumbs & Mobile Hamburger */}
         <header className={styles.topHeader}>
-          <div className={styles.breadcrumbs}>
+          <div className={styles.breadcrumbs} style={{ display: 'flex', alignItems: 'center' }}>
+            <img src="/logo.png" alt="HO Rentals Logo" style={{ height: '24px', width: 'auto', objectFit: 'contain', marginRight: '8px' }} />
             <span className={styles.breadcrumbRoot}>HO Rentals</span>
             <span className={styles.breadcrumbSeparator}>/</span>
             <span className={styles.breadcrumbActive}>
@@ -594,10 +593,8 @@ export default function AdminPage() {
             <div className={styles.mobileDrawerContent}>
               <div className={styles.sidebarBrand} style={{ justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div className={styles.brandIcon}>
-                    <Building size={18} />
-                  </div>
-                  <span className={styles.brandName}>HO Rentals</span>
+                  <img src="/logo.png" alt="HO Rentals Logo" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} />
+                  <span className={styles.brandName}>HO<span style={{ color: 'var(--primary)' }}>Rentals</span></span>
                 </div>
                 <button 
                   onClick={() => setIsMobileDrawerOpen(false)} 
@@ -783,19 +780,19 @@ export default function AdminPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
               
               {/* Distribution Cards Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', width: '100%', maxWidth: '100%' }}>
                 
                 {/* Property Types mix grid list */}
-                <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div className="card glass" style={{ padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box', overflow: 'hidden' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                       <PieChart size={20} style={{ color: 'var(--primary)' }} />
                       <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Property Types Distribution</h3>
                     </div>
                     {Object.keys(typeCounts).length === 0 ? (
                       <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No inventory listings to compute.</p>
                     ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '10px' }}>
                         {Object.entries(typeCounts).map(([type, count], index) => {
                           const percentage = Math.round((count / properties.length) * 100);
                           const color = colorsList[index % colorsList.length];
@@ -836,8 +833,8 @@ export default function AdminPage() {
                 </div>
 
                 {/* Availability occupancy ratios circular ring card */}
-                <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
+                <div className="card glass" style={{ padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                     <BarChart3 size={20} style={{ color: 'var(--primary)' }} />
                     <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Occupancy & Ratios</h3>
                   </div>
