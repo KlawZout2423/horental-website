@@ -40,6 +40,8 @@ function readUserFromCookie(): User | null {
   }
 }
 
+const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour inactivity timeout
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,6 +76,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       document.removeEventListener('visibilitychange', verifySession);
     };
   }, []);
+
+  // Idle Inactivity Auto-Logout (1 Hour of no activity)
+  useEffect(() => {
+    if (!user) return;
+
+    let lastActivityTime = Date.now();
+
+    const resetActivityTimer = () => {
+      lastActivityTime = Date.now();
+    };
+
+    // Listen to user interactions across the app
+    const activityEvents = ['mousemove', 'keydown', 'touchstart', 'scroll', 'click'];
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetActivityTimer, { passive: true });
+    });
+
+    // Check for 1 hour idle inactivity every 30 seconds
+    const checkIdleInterval = setInterval(() => {
+      if (Date.now() - lastActivityTime >= IDLE_TIMEOUT_MS) {
+        console.warn('User session ended due to 1 hour of inactivity.');
+        clearInterval(checkIdleInterval);
+        activityEvents.forEach((event) => {
+          window.removeEventListener(event, resetActivityTimer);
+        });
+        logout();
+      }
+    }, 30000);
+
+    return () => {
+      clearInterval(checkIdleInterval);
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetActivityTimer);
+      });
+    };
+  }, [user]);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
