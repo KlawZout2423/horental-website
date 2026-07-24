@@ -510,7 +510,6 @@ export const resolvers = {
       const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
       if (fullUser?.role !== 'admin') throw new Error('Admin only');
 
-      return prisma.user.update({
       const updatedUser = await prisma.user.update({
         where: { id },
         data: { role },
