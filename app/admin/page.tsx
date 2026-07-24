@@ -786,55 +786,57 @@ export default function AdminPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '24px' }}>
                 
                 {/* Property Types mix grid list */}
-                <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
-                    <PieChart size={20} style={{ color: 'var(--primary)' }} />
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Property Types Distribution</h3>
-                  </div>
-                  {Object.keys(typeCounts).length === 0 ? (
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No inventory listings to compute.</p>
-                  ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
-                      {Object.entries(typeCounts).map(([type, count], index) => {
-                        const percentage = Math.round((count / properties.length) * 100);
-                        const color = colorsList[index % colorsList.length];
-                        return (
-                          <div 
-                            key={type} 
-                            style={{ 
-                              padding: '16px', 
-                              backgroundColor: 'var(--bg-surface-secondary)', 
-                              border: '1px solid var(--border)', 
-                              borderRadius: 'var(--radius-sm)', 
-                              display: 'flex', 
-                              flexDirection: 'column', 
-                              justifyContent: 'space-between', 
-                              gap: '12px', 
-                              minHeight: '100px',
-                              boxShadow: 'var(--shadow-xs)',
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.2 }}>
-                                {type}
-                              </span>
-                              <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', backgroundColor: 'var(--bg-surface)', border: `1px solid ${color}`, color: color, flexShrink: 0 }}>
-                                {percentage}%
-                              </span>
-                            </div>
-                            <div>
-                              <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)' }}>{count}</span>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '4px' }}>listings</span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
+                      <PieChart size={20} style={{ color: 'var(--primary)' }} />
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Property Types Distribution</h3>
                     </div>
-                  )}
+                    {Object.keys(typeCounts).length === 0 ? (
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No inventory listings to compute.</p>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
+                        {Object.entries(typeCounts).map(([type, count], index) => {
+                          const percentage = Math.round((count / properties.length) * 100);
+                          const color = colorsList[index % colorsList.length];
+                          return (
+                            <div 
+                              key={type} 
+                              style={{ 
+                                padding: '16px', 
+                                backgroundColor: 'var(--bg-surface-secondary)', 
+                                border: '1px solid var(--border)', 
+                                borderRadius: 'var(--radius-sm)', 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                justifyContent: 'space-between', 
+                                gap: '12px', 
+                                minHeight: '100px',
+                                boxShadow: 'var(--shadow-xs)',
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.2 }}>
+                                  {type}
+                                </span>
+                                <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', backgroundColor: 'var(--bg-surface)', border: `1px solid ${color}`, color: color, flexShrink: 0 }}>
+                                  {percentage}%
+                                </span>
+                              </div>
+                              <div>
+                                <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)' }}>{count}</span>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '4px' }}>listings</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Availability occupancy ratios circular ring card */}
-                <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
                     <BarChart3 size={20} style={{ color: 'var(--primary)' }} />
                     <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Occupancy & Ratios</h3>
