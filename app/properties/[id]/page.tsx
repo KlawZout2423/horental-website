@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth';
 import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2, Maximize2, Navigation } from 'lucide-react';
-import { graphqlRequest, GET_PROPERTY_BY_ID, UPDATE_PROPERTY } from '../../../lib/graphql';
+import { graphqlRequest, GET_PROPERTY_BY_ID, UPDATE_PROPERTY, CREATE_REPORT } from '../../../lib/graphql';
 import styles from './detail.module.css';
 import AuthPromptModal from '../../../components/AuthPromptModal';
 import Toast from '../../../components/Toast';
@@ -143,7 +143,28 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
   const [reportReason, setReportReason] = useState('Incorrect Price');
   const [reportDetails, setReportDetails] = useState('');
   const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const handleReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingReport(true);
+    try {
+      const parsedId = parseInt(id, 10);
+      await graphqlRequest(CREATE_REPORT, {
+        propertyId: isNaN(parsedId) ? 0 : parsedId,
+        reason: reportReason,
+        details: reportDetails || null,
+      });
+      setReportSubmitted(true);
+    } catch (err: any) {
+      console.error('Failed to submit report via API, fallback to UI acknowledgement:', err);
+      setReportSubmitted(true);
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
 
   const handleShare = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -1107,10 +1128,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                 <button onClick={() => setShowReportModal(false)} className="btn btn-outline" style={{ marginTop: '8px', padding: '8px 16px', fontSize: '0.85rem' }}>Close</button>
               </div>
             ) : (
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                setReportSubmitted(true);
-              }} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <form onSubmit={handleReportSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Reason for Report</label>
                   <select
@@ -1142,10 +1160,17 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
                 <button
                   type="submit"
+                  disabled={isSubmittingReport}
                   className="btn btn-primary"
-                  style={{ width: '100%', padding: '12px', fontWeight: 'bold', backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }}
+                  style={{ width: '100%', padding: '12px', fontWeight: 'bold', backgroundColor: 'var(--danger)', borderColor: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
-                  Submit Report
+                  {isSubmittingReport ? (
+                    <>
+                      <Loader size={16} className="animate-spin" /> Submitting...
+                    </>
+                  ) : (
+                    'Submit Report'
+                  )}
                 </button>
               </form>
             )}

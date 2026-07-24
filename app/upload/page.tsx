@@ -66,6 +66,44 @@ export default function UploadPage({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Quick Locations State (Volta Region Areas)
+  const [quickLocations, setQuickLocations] = useState<string[]>([
+    'Sokode (UHAS Main Campus), Volta Region',
+    'Dave (UHAS Dave Campus), Volta Region',
+    'HTU / Ho Poly Area, Volta Region',
+    'Bankoe, Ho, Volta Region',
+    'Civic Center, Ho, Volta Region',
+    'Ahoe, Ho, Volta Region',
+    'Kpaguri, Ho, Volta Region',
+    'Heve, Ho, Volta Region',
+    'Adaklu Road, Volta Region',
+    'Kpotame, Volta Region',
+    'Hohoe, Volta Region',
+    'Kpando, Volta Region',
+    'Denu / Aflao, Volta Region',
+    'Sogakope, Volta Region',
+    'Keta / Anloga, Volta Region',
+    'Akatsi, Volta Region',
+    'Peki, Volta Region',
+    'Jasikan, Volta Region',
+  ]);
+  const [showAddCustomLocation, setShowAddCustomLocation] = useState(false);
+  const [customAreaInput, setCustomAreaInput] = useState('');
+
+  const handleAddCustomQuickLocation = () => {
+    if (!customAreaInput.trim()) return;
+    let formatted = customAreaInput.trim();
+    if (!formatted.toLowerCase().includes('volta region')) {
+      formatted = `${formatted}, Volta Region`;
+    }
+    if (!quickLocations.includes(formatted)) {
+      setQuickLocations((prev) => [formatted, ...prev]);
+    }
+    setLocation(formatted);
+    setCustomAreaInput('');
+    setShowAddCustomLocation(false);
+  };
+
   const handleTypeChange = (newType: string) => {
     setType(newType);
     if (newType === 'Lands') {
@@ -287,48 +325,79 @@ export default function UploadPage({
             </div>
 
             <div className="form-group">
-              <label htmlFor="location">Location / Area</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label htmlFor="location" style={{ marginBottom: 0 }}>Location / Area Name</label>
+                <button
+                  type="button"
+                  onClick={() => setShowAddCustomLocation(!showAddCustomLocation)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--primary)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: 0
+                  }}
+                >
+                  {showAddCustomLocation ? '✕ Cancel' : '+ Add Quick Location'}
+                </button>
+              </div>
+
+              {/* Quick Area Preset Dropdown */}
               <select
                 className="form-control"
                 style={{ marginBottom: '8px', backgroundColor: 'var(--bg-surface)', fontSize: '0.85rem' }}
+                value={quickLocations.includes(location) ? location : ''}
                 onChange={(e) => {
                   if (e.target.value) {
                     setLocation(e.target.value);
-                    const HO_PRESET_LOCATIONS: Record<string, { lat: number; lng: number }> = {
-                      'Sokode (UHAS Main Campus)': { lat: 6.6080, lng: 0.4700 },
-                      'Dave (UHAS Dave Campus)': { lat: 6.6000, lng: 0.4680 },
-                      'HTU / Ho Poly Area': { lat: 6.6120, lng: 0.4750 },
-                      'Bankoe, Ho': { lat: 6.6100, lng: 0.4710 },
-                      'Civic Center, Ho': { lat: 6.6150, lng: 0.4730 },
-                      'Ahoe, Ho': { lat: 6.6135, lng: 0.4720 },
-                      'Kpaguri, Ho': { lat: 6.6050, lng: 0.4690 },
-                      'Heve, Ho': { lat: 6.6170, lng: 0.4740 },
-                      'Adaklu Road': { lat: 6.5800, lng: 0.4500 },
-                      'Kpotame': { lat: 6.6030, lng: 0.4650 },
-                    };
-                    if (HO_PRESET_LOCATIONS[e.target.value]) {
-                      setLatitude(HO_PRESET_LOCATIONS[e.target.value].lat);
-                      setLongitude(HO_PRESET_LOCATIONS[e.target.value].lng);
-                    }
                   }
                 }}
               >
-                <option value="">-- Quick Area Preset (Optional) --</option>
-                <option value="Sokode (UHAS Main Campus)">Sokode (UHAS Main Campus)</option>
-                <option value="Dave (UHAS Dave Campus)">Dave (UHAS Dave Campus)</option>
-                <option value="HTU / Ho Poly Area">HTU / Ho Poly Area</option>
-                <option value="Bankoe, Ho">Bankoe, Ho</option>
-                <option value="Civic Center, Ho">Civic Center, Ho</option>
-                <option value="Ahoe, Ho">Ahoe, Ho</option>
-                <option value="Kpaguri, Ho">Kpaguri, Ho</option>
-                <option value="Heve, Ho">Heve, Ho</option>
-                <option value="Adaklu Road">Adaklu Road</option>
-                <option value="Kpotame">Kpotame</option>
+                <option value="">-- Choose Quick Location (Volta Region) --</option>
+                {quickLocations.map((locOption) => (
+                  <option key={locOption} value={locOption}>
+                    📍 {locOption}
+                  </option>
+                ))}
               </select>
+
+              {/* Custom Location Adder Row */}
+              {showAddCustomLocation && (
+                <div style={{ padding: '10px 12px', backgroundColor: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 'var(--radius-sm)', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary-dark)' }}>
+                    Type Custom Area Name (automatically appended with ", Volta Region"):
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="e.g. Titrinu, Klefe, Abutia, Ziavi"
+                      value={customAreaInput}
+                      onChange={(e) => setCustomAreaInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomQuickLocation(); } }}
+                      className="form-control"
+                      style={{ fontSize: '0.85rem', flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomQuickLocation}
+                      className="btn btn-primary"
+                      style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 'bold' }}
+                    >
+                      + Add Location
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <input
                 id="location"
                 type="text"
-                placeholder="e.g. Sokode (UHAS Main Campus)"
+                placeholder="e.g. Sokode (UHAS Main Campus), Volta Region"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 required

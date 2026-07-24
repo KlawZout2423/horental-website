@@ -1166,4 +1166,50 @@
   .trustBannerDivider {
     display: none;
   }
+
+  .propertyCard {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  .cardContent {
+    padding: 10px 12px !important;
+    gap: 4px !important;
+  }
+
+  .cardTitle {
+    font-size: 0.95rem !important;
+    min-height: 0 !important;
+    line-height: 1.3 !important;
+    margin-top: 0 !important;
+    margin-bottom: 4px !important;
+  }
+
+  .cardLocation {
+    font-size: 0.78rem !important;
+    gap: 4px !important;
+  }
+
+  .amenitiesRow {
+    padding: 4px 0 !important;
+    margin-bottom: 4px !important;
+    gap: 6px !important;
+    font-size: 0.72rem !important;
+  }
+
+  .cardFooter {
+    padding: 8px 12px !important;
+    margin-top: 6px !important;
+  }
+
+  .cardPrice {
+    font-size: 1.05rem !important;
+  }
+
+  .viewDetailsBtn {
+    padding: 4px 10px !important;
+    font-size: 0.75rem !important;
+  }
 }
+

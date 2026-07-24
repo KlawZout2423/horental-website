@@ -303,3 +303,60 @@ export const GET_CONTACT_LOGS = `
     }
   }
 `;
+
+export const CREATE_REPORT = `
+  mutation CreateReport($propertyId: Int!, $reason: String!, $details: String) {
+    createReport(propertyId: $propertyId, reason: $reason, details: $details) {
+      id
+      propertyId
+      reason
+      details
+      status
+      createdAt
+    }
+  }
+`;
+
+export const GET_REPORTS = `
+  query GetReports {
+    reports {
+      id
+      propertyId
+      reason
+      details
+      status
+      createdAt
+      property {
+        id
+        title
+        location
+        price
+        imageUrl
+      }
+      reporter {
+        id
+        name
+        email
+        phone
+      }
+    }
+  }
+`;
+
+export const UPDATE_REPORT_STATUS = `
+  mutation UpdateReportStatus($id: Int!, $status: String!) {
+    updateReportStatus(id: $id, status: $status) {
+      id
+      status
+    }
+  }
+`;
+
+export const DELETE_REPORT = `
+  mutation DeleteReport($id: Int!) {
+    deleteReport(id: $id) {
+      id
+    }
+  }
+`;
+

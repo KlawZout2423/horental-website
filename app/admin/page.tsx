@@ -14,9 +14,12 @@ import {
   UPDATE_USER_ROLE, 
   UPDATE_PROPERTY,
   GET_CONTACT_LOGS,
-  TOGGLE_FEATURED
+  TOGGLE_FEATURED,
+  GET_REPORTS,
+  UPDATE_REPORT_STATUS,
+  DELETE_REPORT
 } from '../../lib/graphql';
-import { Trash2, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X } from 'lucide-react';
+import { Trash2, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon } from 'lucide-react';
 import styles from './admin.module.css';
 import { getFriendlyErrorMessage } from '../../lib/types';
 
@@ -45,6 +48,28 @@ interface ContactLogItem {
   };
 }
 
+interface ReportItem {
+  id: number;
+  propertyId: number;
+  reason: string;
+  details?: string;
+  status: string;
+  createdAt: string;
+  property?: {
+    id: string;
+    title: string;
+    location: string;
+    price: number;
+    imageUrl?: string;
+  };
+  reporter?: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+  };
+}
+
 export default function AdminPage() {
   const { user, loading: authLoading, logout } = useAuth();
   const router = useRouter();
@@ -53,9 +78,10 @@ export default function AdminPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [reports, setReports] = useState<ReportItem[]>([]);
   
   // Navigation & loaders
-  const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'moderation' | 'audits' | 'upload'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'moderation' | 'audits' | 'reports' | 'upload'>('analytics');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -66,6 +92,10 @@ export default function AdminPage() {
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editLocation, setEditLocation] = useState('');
+  const [editDigitalAddress, setEditDigitalAddress] = useState('');
+  const [editLandmarks, setEditLandmarks] = useState('');
+  const [editImageUrl, setEditImageUrl] = useState('');
+  const [isUploadingEditImage, setIsUploadingEditImage] = useState(false);
   const [editPrice, setEditPrice] = useState('');
   const [editType, setEditType] = useState('');
   const [editStatus, setEditStatus] = useState('');
@@ -89,7 +119,44 @@ export default function AdminPage() {
   const [editEcgPrepaid, setEditEcgPrepaid] = useState(false);
   const [editIsFeatured, setEditIsFeatured] = useState(false);
   const [editPricePeriod, setEditPricePeriod] = useState('semester');
+
+  // Lands Specific Edit States
+  const [editLandPlotSize, setEditLandPlotSize] = useState('');
+  const [editLandDocType, setEditLandDocType] = useState('Site Plan');
+  const [editLandZoning, setEditLandZoning] = useState('Residential');
+
+  // Furnitures Specific Edit States
+  const [editFurnitureCondition, setEditFurnitureCondition] = useState('Brand New');
+  const [editFurnitureCategory, setEditFurnitureCategory] = useState('Bed & Mattress');
+  const [editFurnitureDelivery, setEditFurnitureDelivery] = useState('Buyer Pick-Up');
+
   const [isCleaningMedia, setIsCleaningMedia] = useState(false);
+
+  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    setIsUploadingEditImage(true);
+    setMessage(null);
+    try {
+      const formData = new FormData();
+      formData.append('images', file);
+      const res = await fetch('/api/upload-multiple', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Image upload failed');
+      const data = await res.json();
+      const urls: string[] = data.imageUrls || data.images || [];
+      if (urls.length > 0) {
+        setEditImageUrl(urls[0]);
+        setMessage({ text: '📷 New property photo uploaded successfully.', isError: false });
+      }
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to upload image.', isError: true });
+    } finally {
+      setIsUploadingEditImage(false);
+    }
+  };
 
   const handleRunStorageCleanup = async () => {
     if (!confirm('Scan and delete all orphaned/unused images from Cloudinary storage and database?')) {
@@ -139,17 +206,19 @@ export default function AdminPage() {
       setLoadingData(true);
     }
     try {
-      const [statsData, usersData, propertiesData, logsData] = await Promise.all([
+      const [statsData, usersData, propertiesData, logsData, reportsData] = await Promise.all([
         graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS),
         graphqlRequest<{ users: User[] }>(GET_USERS),
         graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES),
-        graphqlRequest<{ contactLogs: ContactLogItem[] }>(GET_CONTACT_LOGS)
+        graphqlRequest<{ contactLogs: ContactLogItem[] }>(GET_CONTACT_LOGS),
+        graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] }))
       ]);
 
       if (statsData) setStats(statsData.dashboardStats);
       if (usersData) setUsers(usersData.users);
       if (propertiesData) setProperties(propertiesData.properties);
       if (logsData && logsData.contactLogs) setContactLogs(logsData.contactLogs);
+      if (reportsData && reportsData.reports) setReports(reportsData.reports);
     } catch (err: any) {
       console.error('Error loading admin data:', err);
       setMessage({ text: getFriendlyErrorMessage(err, 'Failed to fetch dashboard data.'), isError: true });
@@ -157,6 +226,37 @@ export default function AdminPage() {
       setLoadingData(false);
     }
   }
+
+  const handleUpdateReportStatus = async (reportId: number, newStatus: string) => {
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      await graphqlRequest(UPDATE_REPORT_STATUS, { id: reportId, status: newStatus });
+      setReports((prev) =>
+        prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r))
+      );
+      setMessage({ text: `Report marked as ${newStatus}.`, isError: false });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to update report status.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteReport = async (reportId: number) => {
+    if (!confirm('Remove this report log permanently?')) return;
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      await graphqlRequest(DELETE_REPORT, { id: reportId });
+      setReports((prev) => prev.filter((r) => r.id !== reportId));
+      setMessage({ text: 'Report record deleted.', isError: false });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to delete report.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // Analytics helper variables
   const typeCounts = properties.reduce<Record<string, number>>((acc, p) => {
@@ -301,48 +401,78 @@ export default function AdminPage() {
     setEditingProperty(p);
     setEditTitle(p.title);
     setEditLocation(p.location);
+    setEditDigitalAddress(p.digitalAddress || '');
+    setEditLandmarks(p.landmarks || '');
     setEditPrice(p.price.toString());
     setEditType(p.type || 'Student Hostel');
     setEditStatus(p.status || 'available');
     setEditContact(p.contact || '');
+    setEditImageUrl(p.imageUrl || '');
     setEditIsFeatured(p.isFeatured || false);
     
-    const desc = p.description?.toLowerCase() || '';
-    setEditHasWifi(desc.includes('wi-fi') || desc.includes('wifi'));
-    setEditHasCctv(desc.includes('cctv') || desc.includes('camera'));
-    setEditHasFurnished(desc.includes('furnished'));
-    setEditHasGatedFenced(desc.includes('gated') || desc.includes('fenced'));
-    setEditIsNewlyBuilt(desc.includes('newly built') || desc.includes('newly-built'));
-    setEditHasBed(desc.includes('bed'));
-    setEditHasStudyDesk(desc.includes('desk') || desc.includes('study desk'));
+    const desc = p.description || '';
+    const descLower = desc.toLowerCase();
+    
+    setEditHasWifi(descLower.includes('wi-fi') || descLower.includes('wifi'));
+    setEditHasCctv(descLower.includes('cctv') || descLower.includes('camera'));
+    setEditHasFurnished(descLower.includes('furnished'));
+    setEditHasGatedFenced(descLower.includes('gated') || descLower.includes('fenced'));
+    setEditIsNewlyBuilt(descLower.includes('newly built') || descLower.includes('newly-built'));
+    setEditHasBed(descLower.includes('bed'));
+    setEditHasStudyDesk(descLower.includes('desk') || descLower.includes('study desk'));
     
     // Parse detailed water supply options
-    setEditGhanaWaterShared(desc.includes('ghana water (shared)'));
-    setEditGhanaWaterSeparate(desc.includes('ghana water (separate)'));
-    setEditPolytank(desc.includes('polytank'));
-    setEditBorehole(desc.includes('borehole'));
-    setEditWell(desc.includes('well'));
+    setEditGhanaWaterShared(descLower.includes('ghana water (shared)'));
+    setEditGhanaWaterSeparate(descLower.includes('ghana water (separate)'));
+    setEditPolytank(descLower.includes('polytank'));
+    setEditBorehole(descLower.includes('borehole'));
+    setEditWell(descLower.includes('well'));
     
     // Parse detailed meter options
-    setEditEcgSharedMeter(desc.includes('ecg shared meter') || desc.includes('shared meter'));
-    setEditEcgSeparateMeter(desc.includes('ecg separate meter') || desc.includes('separate meter') || desc.includes('seprate meter'));
-    setEditEcgPostPaid(desc.includes('ecg post-paid') || desc.includes('post-paid') || desc.includes('postpaid'));
-    setEditEcgPrepaid(desc.includes('ecg prepaid') || desc.includes('prepaid'));
+    setEditEcgSharedMeter(descLower.includes('ecg shared meter') || descLower.includes('shared meter'));
+    setEditEcgSeparateMeter(descLower.includes('ecg separate meter') || descLower.includes('separate meter') || descLower.includes('seprate meter'));
+    setEditEcgPostPaid(descLower.includes('ecg post-paid') || descLower.includes('post-paid') || descLower.includes('postpaid'));
+    setEditEcgPrepaid(descLower.includes('ecg prepaid') || descLower.includes('prepaid'));
+
+    // Parse category specs
+    const plotMatch = desc.match(/Plot Size:\s*([^,|\n]+)/i);
+    setEditLandPlotSize(plotMatch ? plotMatch[1].trim() : '');
+    
+    const docMatch = desc.match(/Title\/Docs:\s*([^,|\n]+)/i);
+    setEditLandDocType(docMatch ? docMatch[1].trim() : 'Site Plan');
+
+    const zoningMatch = desc.match(/Zoning:\s*([^,|\n]+)/i);
+    setEditLandZoning(zoningMatch ? zoningMatch[1].trim() : 'Residential');
+
+    const condMatch = desc.match(/Condition:\s*([^,|\n]+)/i);
+    setEditFurnitureCondition(condMatch ? condMatch[1].trim() : 'Brand New');
+
+    const catMatch = desc.match(/Category:\s*([^,|\n]+)/i);
+    setEditFurnitureCategory(catMatch ? catMatch[1].trim() : 'Bed & Mattress');
+
+    const delivMatch = desc.match(/Delivery:\s*([^,|\n]+)/i);
+    setEditFurnitureDelivery(delivMatch ? delivMatch[1].trim() : 'Buyer Pick-Up');
 
     // Parse price period
-    if (desc.includes('priceperiod: per month') || desc.includes('priceperiod: month') || desc.includes('per month')) {
+    if (descLower.includes('priceperiod: per month') || descLower.includes('priceperiod: month') || descLower.includes('per month')) {
       setEditPricePeriod('month');
-    } else if (desc.includes('priceperiod: per year') || desc.includes('priceperiod: year') || desc.includes('per year')) {
+    } else if (descLower.includes('priceperiod: per year') || descLower.includes('priceperiod: year') || descLower.includes('per year')) {
       setEditPricePeriod('year');
+    } else if (descLower.includes('priceperiod: per plot') || descLower.includes('priceperiod: plot') || descLower.includes('per plot')) {
+      setEditPricePeriod('plot');
+    } else if (descLower.includes('priceperiod: per acre') || descLower.includes('priceperiod: acre') || descLower.includes('per acre')) {
+      setEditPricePeriod('acre');
+    } else if (descLower.includes('outright sale')) {
+      setEditPricePeriod('outright sale');
     } else {
       setEditPricePeriod('semester');
     }
 
-    const featuresIndex = p.description ? p.description.indexOf('\n\nFeatures:') : -1;
-    if (featuresIndex !== -1 && p.description) {
-      setEditDescription(p.description.substring(0, featuresIndex).trim());
+    const featuresIndex = desc.indexOf('\n\nFeatures:');
+    if (featuresIndex !== -1) {
+      setEditDescription(desc.substring(0, featuresIndex).trim());
     } else {
-      setEditDescription(p.description || '');
+      setEditDescription(desc);
     }
   };
 
@@ -359,37 +489,55 @@ export default function AdminPage() {
       let finalDescription = editDescription.trim();
       const amenitiesList: string[] = [];
       
-      const otherOptions: string[] = [];
-      if (editHasWifi) otherOptions.push('WiFi');
-      if (editHasCctv) otherOptions.push('CCTV Camera');
-      if (editHasFurnished) otherOptions.push('Furnished');
-      if (editHasGatedFenced) otherOptions.push('Gated & Fenced');
-      if (editIsNewlyBuilt) otherOptions.push('Newly Built');
-      if (editHasBed) otherOptions.push('Bed');
-      if (editHasStudyDesk) otherOptions.push('Study Desk');
-      if (otherOptions.length > 0) {
-        amenitiesList.push(`Amenities: ${otherOptions.join(', ')}`);
-      }
+      if (editType === 'Lands') {
+        const landSpecs: string[] = [];
+        if (editLandPlotSize.trim()) landSpecs.push(`Plot Size: ${editLandPlotSize.trim()}`);
+        if (editLandDocType) landSpecs.push(`Title/Docs: ${editLandDocType}`);
+        if (editLandZoning) landSpecs.push(`Zoning: ${editLandZoning}`);
+        if (landSpecs.length > 0) {
+          amenitiesList.push(`Land Specs: ${landSpecs.join(', ')}`);
+        }
+      } else if (editType === 'Furnitures') {
+        const furnSpecs: string[] = [];
+        if (editFurnitureCondition) furnSpecs.push(`Condition: ${editFurnitureCondition}`);
+        if (editFurnitureCategory) furnSpecs.push(`Category: ${editFurnitureCategory}`);
+        if (editFurnitureDelivery) furnSpecs.push(`Delivery: ${editFurnitureDelivery}`);
+        if (furnSpecs.length > 0) {
+          amenitiesList.push(`Furniture Specs: ${furnSpecs.join(', ')}`);
+        }
+      } else {
+        const otherOptions: string[] = [];
+        if (editHasWifi) otherOptions.push('WiFi');
+        if (editHasCctv) otherOptions.push('CCTV Camera');
+        if (editHasFurnished) otherOptions.push('Furnished');
+        if (editHasGatedFenced) otherOptions.push('Gated & Fenced');
+        if (editIsNewlyBuilt) otherOptions.push('Newly Built');
+        if (editHasBed) otherOptions.push('Bed');
+        if (editHasStudyDesk) otherOptions.push('Study Desk');
+        if (otherOptions.length > 0) {
+          amenitiesList.push(`Amenities: ${otherOptions.join(', ')}`);
+        }
 
-      // Compile detailed water options
-      const waterOptions: string[] = [];
-      if (editGhanaWaterShared) waterOptions.push('Ghana Water (Shared)');
-      if (editGhanaWaterSeparate) waterOptions.push('Ghana Water (Separate)');
-      if (editPolytank) waterOptions.push('Polytank');
-      if (editBorehole) waterOptions.push('Borehole');
-      if (editWell) waterOptions.push('Well');
-      if (waterOptions.length > 0) {
-        amenitiesList.push(`Water: ${waterOptions.join(', ')}`);
-      }
+        // Compile detailed water options
+        const waterOptions: string[] = [];
+        if (editGhanaWaterShared) waterOptions.push('Ghana Water (Shared)');
+        if (editGhanaWaterSeparate) waterOptions.push('Ghana Water (Separate)');
+        if (editPolytank) waterOptions.push('Polytank');
+        if (editBorehole) waterOptions.push('Borehole');
+        if (editWell) waterOptions.push('Well');
+        if (waterOptions.length > 0) {
+          amenitiesList.push(`Water: ${waterOptions.join(', ')}`);
+        }
 
-      // Compile detailed meter options
-      const meterOptions: string[] = [];
-      if (editEcgSharedMeter) meterOptions.push('ECG Shared Meter');
-      if (editEcgSeparateMeter) meterOptions.push('ECG Separate Meter');
-      if (editEcgPostPaid) meterOptions.push('ECG Post-paid');
-      if (editEcgPrepaid) meterOptions.push('ECG Prepaid');
-      if (meterOptions.length > 0) {
-        amenitiesList.push(`Electricity: ${meterOptions.join(', ')}`);
+        // Compile detailed meter options
+        const meterOptions: string[] = [];
+        if (editEcgSharedMeter) meterOptions.push('ECG Shared Meter');
+        if (editEcgSeparateMeter) meterOptions.push('ECG Separate Meter');
+        if (editEcgPostPaid) meterOptions.push('ECG Post-paid');
+        if (editEcgPrepaid) meterOptions.push('ECG Prepaid');
+        if (meterOptions.length > 0) {
+          amenitiesList.push(`Electricity: ${meterOptions.join(', ')}`);
+        }
       }
 
       if (amenitiesList.length > 0) {
@@ -401,12 +549,14 @@ export default function AdminPage() {
       const input = {
         title: editTitle,
         location: editLocation,
+        digitalAddress: editDigitalAddress.trim() || undefined,
+        landmarks: editLandmarks.trim() || undefined,
         price: parsedPrice,
         type: editType,
         status: editStatus,
         description: finalDescription,
         contact: editContact,
-        imageUrl: editingProperty.imageUrl || '',
+        imageUrl: editImageUrl.trim() || editingProperty.imageUrl || '',
         isFeatured: editIsFeatured,
       };
 
@@ -423,11 +573,14 @@ export default function AdminPage() {
                 ...p, 
                 title: editTitle, 
                 location: editLocation, 
+                digitalAddress: editDigitalAddress.trim() || undefined,
+                landmarks: editLandmarks.trim() || undefined,
                 price: parsedPrice, 
                 type: editType, 
                 status: editStatus, 
                 description: finalDescription, 
                 contact: editContact,
+                imageUrl: editImageUrl.trim() || editingProperty.imageUrl || '',
                 isFeatured: editIsFeatured,
               }
             : p
@@ -501,6 +654,27 @@ export default function AdminPage() {
               <span className={styles.navCountBadge}>{contactLogs.length}</span>
             </button>
 
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`${styles.navItem} ${activeTab === 'reports' ? styles.activeNavItem : ''}`}
+              style={{
+                borderLeft: reports.some((r) => r.status === 'pending') ? '3px solid #EF4444' : undefined,
+                backgroundColor: activeTab === 'reports' ? undefined : (reports.some((r) => r.status === 'pending') ? 'rgba(239, 68, 68, 0.08)' : undefined)
+              }}
+            >
+              <Flag size={16} style={{ color: reports.some((r) => r.status === 'pending') ? '#EF4444' : undefined }} />
+              <span style={{ fontWeight: reports.some((r) => r.status === 'pending') ? 700 : 500 }}>Property Reports</span>
+              <span 
+                className={styles.navCountBadge} 
+                style={{ 
+                  backgroundColor: reports.some((r) => r.status === 'pending') ? '#EF4444' : undefined, 
+                  color: reports.some((r) => r.status === 'pending') ? '#FFFFFF' : undefined 
+                }}
+              >
+                {reports.filter((r) => r.status === 'pending').length}
+              </span>
+            </button>
+
             {/* Standard Nav Item for Upload Action */}
             <button
               onClick={() => setActiveTab('upload')}
@@ -551,6 +725,7 @@ export default function AdminPage() {
               {activeTab === 'properties' && 'Properties'}
               {activeTab === 'users' && 'Users'}
               {activeTab === 'audits' && 'Audit Logs'}
+              {activeTab === 'reports' && 'Flagged Reports'}
               {activeTab === 'upload' && 'Upload Property'}
             </span>
           </div>
@@ -633,6 +808,12 @@ export default function AdminPage() {
                     <Activity size={16} /> Contact Audit Logs ({contactLogs.length})
                   </button>
                   <button
+                    onClick={() => { setActiveTab('reports'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'reports' ? styles.activeNavItem : ''}`}
+                  >
+                    <Flag size={16} /> Flagged Reports ({reports.filter((r) => r.status === 'pending').length})
+                  </button>
+                  <button
                     onClick={() => { setActiveTab('upload'); setIsMobileDrawerOpen(false); }}
                     className={`${styles.navItem} ${activeTab === 'upload' ? styles.activeNavItem : ''}`}
                     style={{ marginTop: '12px', borderTop: '1px solid #1E293B', paddingTop: '16px' }}
@@ -677,6 +858,7 @@ export default function AdminPage() {
 
         {/* Content Body Container */}
         <div className={styles.contentBody}>
+
           {activeTab !== 'upload' && (
             <>
               <h1 className={styles.pageTitle}>
@@ -684,14 +866,41 @@ export default function AdminPage() {
                 {activeTab === 'properties' && 'Property Listings'}
                 {activeTab === 'users' && 'Account Manager'}
                 {activeTab === 'audits' && 'Contact Inquiry Audits'}
+                {activeTab === 'reports' && 'Property Reports & Flagged Listings'}
               </h1>
               <p className={styles.pageSubtitle}>
-                {activeTab === 'analytics' && 'Overview statistics and performance distribution metrics.'}
+                {activeTab === 'analytics' && 'Overview statistics, inventory performance, and user-submitted listing flags.'}
                 {activeTab === 'properties' && 'View, search, edit availability, and delete published property listings.'}
                 {activeTab === 'users' && 'Manage registered accounts and adjust credentials and system roles.'}
                 {activeTab === 'audits' && 'Real-time record of customer call and WhatsApp inquiries to landlords.'}
+                {activeTab === 'reports' && 'Review user-flagged listings, reported scams, inaccurate photos, and manage property reports.'}
               </p>
             </>
+          )}
+
+          {/* Pending Reports Quick Banner Alert */}
+          {reports.some((r) => r.status === 'pending') && activeTab !== 'reports' && (
+            <div 
+              onClick={() => setActiveTab('reports')}
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid #EF4444',
+                color: '#DC2626',
+                padding: '12px 18px',
+                borderRadius: 'var(--radius-sm)',
+                marginBottom: '20px',
+                fontSize: '0.88rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxShadow: 'var(--shadow-sm)'
+              }}
+            >
+              <span>🚨 Attention Admin: You have <strong>{reports.filter((r) => r.status === 'pending').length} pending property report(s)</strong> requiring review.</span>
+              <span style={{ textDecoration: 'underline', fontSize: '0.82rem' }}>Review Reports &rarr;</span>
+            </div>
           )}
 
           {/* Action Alerts / Messages */}
@@ -724,7 +933,7 @@ export default function AdminPage() {
           {activeTab === 'analytics' && (
             loadingData ? (
               <div className={styles.statsGrid}>
-                {[1, 2, 3, 4].map((n) => (
+                {[1, 2, 3, 4, 5].map((n) => (
                   <div key={n} className={styles.statCard} style={{ opacity: 0.6, height: '112px' }}>
                     <div style={{ width: '40%', height: '14px', background: 'var(--border)', borderRadius: '4px' }}></div>
                     <div style={{ width: '60%', height: '32px', background: 'var(--border)', borderRadius: '4px', marginTop: '12px' }}></div>
@@ -763,6 +972,30 @@ export default function AdminPage() {
                   </span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
                     {stats.totalPageVisits || 0} total cumulative views
+                  </span>
+                </div>
+
+                <div 
+                  className={styles.statCard} 
+                  onClick={() => setActiveTab('reports')}
+                  style={{ 
+                    borderLeft: '4px solid #EF4444', 
+                    cursor: 'pointer',
+                    backgroundColor: reports.some((r) => r.status === 'pending') ? 'rgba(239, 68, 68, 0.05)' : undefined 
+                  }}
+                  title="Click to view all reported property listings"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className={styles.statLabel} style={{ color: '#EF4444', fontWeight: 700 }}>🚩 Property Reports</span>
+                    <span className="badge" style={{ backgroundColor: reports.some((r) => r.status === 'pending') ? '#EF4444' : 'var(--text-muted)', color: '#fff', fontSize: '0.7rem' }}>
+                      {reports.filter((r) => r.status === 'pending').length} Pending
+                    </span>
+                  </div>
+                  <span className={styles.statValue} style={{ color: '#EF4444', marginTop: '4px' }}>
+                    {reports.length}
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: '#EF4444', fontWeight: 700, textDecoration: 'underline', marginTop: '2px', display: 'inline-block' }}>
+                    Manage Reports &rarr;
                   </span>
                 </div>
                 
@@ -1309,6 +1542,212 @@ export default function AdminPage() {
                 )}
               </div>
             </>
+          ) : activeTab === 'reports' ? (
+            <>
+              {/* Desktop Table View */}
+              <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Report Reason</th>
+                      <th>Flagged Property</th>
+                      <th>Details</th>
+                      <th>Status</th>
+                      <th>Reporter</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reports.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                          No property reports submitted yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      reports.map((report) => (
+                        <tr key={report.id}>
+                          <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
+                            {new Date(isNaN(Number(report.createdAt)) ? report.createdAt : Number(report.createdAt)).toLocaleDateString()}
+                          </td>
+                          <td>
+                            <span style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '6px', 
+                              padding: '4px 10px', 
+                              borderRadius: '4px', 
+                              fontSize: '0.75rem', 
+                              fontWeight: 700, 
+                              backgroundColor: report.reason.includes('Scam') || report.reason.includes('Fake') ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)', 
+                              color: report.reason.includes('Scam') || report.reason.includes('Fake') ? 'var(--danger)' : '#D97706' 
+                            }}>
+                              <AlertTriangle size={12} /> {report.reason}
+                            </span>
+                          </td>
+                          <td>
+                            {report.property ? (
+                              <div>
+                                <a 
+                                  href={`/properties/${report.property.id}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  style={{ fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}
+                                >
+                                  {report.property.title} (#{report.property.id})
+                                </a>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{report.property.location}</div>
+                              </div>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Property ID #{report.propertyId} (Deleted)</span>
+                            )}
+                          </td>
+                          <td style={{ maxWidth: '240px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                            {report.details || <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No additional details</span>}
+                          </td>
+                          <td>
+                            <span className={`badge ${
+                              report.status === 'resolved' ? 'badge-available' : report.status === 'dismissed' ? 'badge-rented' : 'badge-primary'
+                            }`} style={{ fontSize: '0.7rem', padding: '4px 8px', textTransform: 'capitalize' }}>
+                              {report.status}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                            {report.reporter ? (
+                              <div>
+                                <strong>{report.reporter.name}</strong>
+                                <div style={{ fontSize: '0.75rem' }}>{report.reporter.phone || report.reporter.email}</div>
+                              </div>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)' }}>Guest User</span>
+                            )}
+                          </td>
+                          <td>
+                            <div className={styles.actionsCell} style={{ justifyContent: 'flex-end', gap: '6px' }}>
+                              {report.status !== 'resolved' && (
+                                <button
+                                  onClick={() => handleUpdateReportStatus(report.id, 'resolved')}
+                                  disabled={actionLoading}
+                                  className="btn btn-secondary"
+                                  style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
+                                >
+                                  Resolve
+                                </button>
+                              )}
+                              {report.status !== 'dismissed' && (
+                                <button
+                                  onClick={() => handleUpdateReportStatus(report.id, 'dismissed')}
+                                  disabled={actionLoading}
+                                  className="btn btn-outline"
+                                  style={{ padding: '4px 10px', fontSize: '0.75rem', height: '28px' }}
+                                >
+                                  Dismiss
+                                </button>
+                              )}
+                              {report.property && (
+                                <button
+                                  onClick={() => handleDeleteProperty(report.property!.id)}
+                                  disabled={actionLoading}
+                                  className="btn btn-outline"
+                                  title="Delete flagged property listing from platform"
+                                  style={{ padding: '4px 8px', fontSize: '0.75rem', height: '28px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                                >
+                                  Delete Listing
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteReport(report.id)}
+                                disabled={actionLoading}
+                                className="btn btn-outline"
+                                title="Remove report log"
+                                style={{ padding: '4px 8px', height: '28px', width: '28px', color: 'var(--text-muted)' }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card List View */}
+              <div className={styles.mobileCardList}>
+                {reports.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No property reports.</p>
+                ) : (
+                  reports.map((report) => (
+                    <div key={report.id} className={styles.adminCardItem}>
+                      <div className={styles.adminCardHeader}>
+                        <div>
+                          <span style={{ 
+                            fontSize: '0.75rem', 
+                            fontWeight: 700, 
+                            color: report.reason.includes('Scam') || report.reason.includes('Fake') ? 'var(--danger)' : '#D97706',
+                            display: 'block' 
+                          }}>
+                            🚨 {report.reason}
+                          </span>
+                          <div className={styles.adminCardTitle} style={{ fontSize: '0.9rem', marginTop: '2px' }}>
+                            {report.property ? report.property.title : `Property #${report.propertyId}`}
+                          </div>
+                        </div>
+                        <span className={`badge ${
+                          report.status === 'resolved' ? 'badge-available' : report.status === 'dismissed' ? 'badge-rented' : 'badge-primary'
+                        }`} style={{ fontSize: '0.68rem' }}>
+                          {report.status}
+                        </span>
+                      </div>
+
+                      {report.details && (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '8px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: '4px', margin: '8px 0' }}>
+                          "{report.details}"
+                        </div>
+                      )}
+
+                      <div className={styles.adminCardMeta} style={{ fontSize: '0.78rem' }}>
+                        <span><strong>Reporter:</strong> {report.reporter ? report.reporter.name : 'Guest User'}</span>
+                        <span><strong>Date:</strong> {new Date(isNaN(Number(report.createdAt)) ? report.createdAt : Number(report.createdAt)).toLocaleDateString()}</span>
+                      </div>
+
+                      <div className={styles.adminCardActions} style={{ marginTop: '10px', flexWrap: 'wrap' }}>
+                        {report.status !== 'resolved' && (
+                          <button
+                            onClick={() => handleUpdateReportStatus(report.id, 'resolved')}
+                            disabled={actionLoading}
+                            className="btn btn-secondary"
+                            style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                          >
+                            Resolve
+                          </button>
+                        )}
+                        {report.status !== 'dismissed' && (
+                          <button
+                            onClick={() => handleUpdateReportStatus(report.id, 'dismissed')}
+                            disabled={actionLoading}
+                            className="btn btn-outline"
+                            style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                          >
+                            Dismiss
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteReport(report.id)}
+                          disabled={actionLoading}
+                          className="btn btn-outline"
+                          style={{ padding: '6px 12px', fontSize: '0.75rem', color: 'var(--danger)' }}
+                        >
+                          <Trash2 size={13} /> Delete Log
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           ) : activeTab === 'upload' ? (
             <UploadPage isEmbedded={true} onSuccess={() => { setActiveTab('properties'); loadAdminDashboardData(); }} />
           ) : null}
@@ -1325,6 +1764,42 @@ export default function AdminPage() {
             
             <form onSubmit={handleSaveEdit} className={styles.editForm}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                {/* Main Image Upload & Preview Section */}
+                <div className="form-group" style={{ padding: '14px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                  <label style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ImageIcon size={16} style={{ color: 'var(--primary)' }} /> Main Property Image & Cover Photo
+                  </label>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {editImageUrl ? (
+                      <img 
+                        src={editImageUrl} 
+                        alt="Property Thumbnail" 
+                        style={{ width: '88px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }} 
+                      />
+                    ) : (
+                      <div style={{ width: '88px', height: '64px', borderRadius: '8px', backgroundColor: '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', color: '#64748B' }}>
+                        No image
+                      </div>
+                    )}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '220px' }}>
+                      <label className="btn btn-outline" style={{ cursor: 'pointer', padding: '8px 14px', fontSize: '0.82rem', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start' }}>
+                        <UploadCloud size={14} />
+                        {isUploadingEditImage ? 'Uploading new photo...' : 'Change / Upload New Photo File'}
+                        <input type="file" accept="image/*" onChange={handleEditImageUpload} disabled={isUploadingEditImage} style={{ display: 'none' }} />
+                      </label>
+                      <input 
+                        type="text" 
+                        placeholder="Or paste image URL (e.g. https://...)" 
+                        value={editImageUrl} 
+                        onChange={(e) => setEditImageUrl(e.target.value)} 
+                        className="form-control" 
+                        style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="form-group">
                   <label>Title</label>
                   <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required className="form-control" />
@@ -1332,8 +1807,8 @@ export default function AdminPage() {
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label>Location</label>
-                    <input type="text" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} required className="form-control" />
+                    <label>Location / Area</label>
+                    <input type="text" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} required className="form-control" placeholder="e.g. Bankoe, Ho" />
                   </div>
                   
                   <div className="form-group">
@@ -1351,6 +1826,18 @@ export default function AdminPage() {
                         <option value="item">per item</option>
                       </select>
                     </div>
+                  </div>
+                </div>
+
+                {/* Digital Address & Landmarks */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div className="form-group">
+                    <label>Ghana Digital Address (GhanaPostGPS)</label>
+                    <input type="text" value={editDigitalAddress} onChange={(e) => setEditDigitalAddress(e.target.value)} className="form-control" placeholder="e.g. VH-0123-4567" />
+                  </div>
+                  <div className="form-group">
+                    <label>Nearby Landmarks / Directions</label>
+                    <input type="text" value={editLandmarks} onChange={(e) => setEditLandmarks(e.target.value)} className="form-control" placeholder="e.g. 3 mins from UHAS gate" />
                   </div>
                 </div>
                 
@@ -1381,6 +1868,70 @@ export default function AdminPage() {
                     </select>
                   </div>
                 </div>
+
+                {/* Category-Specific Specifications */}
+                {editType === 'Lands' && (
+                  <div style={{ padding: '14px', backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(245,158,11,0.3)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Plot Size</label>
+                      <input type="text" value={editLandPlotSize} onChange={(e) => setEditLandPlotSize(e.target.value)} placeholder="e.g. 70 x 100 ft" className="form-control" style={{ fontSize: '0.85rem' }} />
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Documents / Title</label>
+                      <select value={editLandDocType} onChange={(e) => setEditLandDocType(e.target.value)} className="form-control" style={{ fontSize: '0.85rem' }}>
+                        <option value="Site Plan">Site Plan</option>
+                        <option value="Indenture">Indenture</option>
+                        <option value="Land Title Certificate">Land Title Certificate</option>
+                        <option value="Leasehold Document">Leasehold Document</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Zoning</label>
+                      <select value={editLandZoning} onChange={(e) => setEditLandZoning(e.target.value)} className="form-control" style={{ fontSize: '0.85rem' }}>
+                        <option value="Residential">Residential</option>
+                        <option value="Commercial">Commercial</option>
+                        <option value="Agricultural">Agricultural</option>
+                        <option value="Mixed-Use">Mixed-Use</option>
+                        <option value="Industrial">Industrial</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {editType === 'Furnitures' && (
+                  <div style={{ padding: '14px', backgroundColor: 'rgba(59,130,246,0.08)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(59,130,246,0.3)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Condition</label>
+                      <select value={editFurnitureCondition} onChange={(e) => setEditFurnitureCondition(e.target.value)} className="form-control" style={{ fontSize: '0.85rem' }}>
+                        <option value="Brand New">Brand New</option>
+                        <option value="Fairly Used / Like New">Fairly Used / Like New</option>
+                        <option value="Used - Good">Used - Good</option>
+                        <option value="Needs Minor Repair">Needs Minor Repair</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Category</label>
+                      <select value={editFurnitureCategory} onChange={(e) => setEditFurnitureCategory(e.target.value)} className="form-control" style={{ fontSize: '0.85rem' }}>
+                        <option value="Bed & Mattress">Bed & Mattress</option>
+                        <option value="Sofa / Couch">Sofa / Couch</option>
+                        <option value="Study Desk & Chair">Study Desk & Chair</option>
+                        <option value="Wardrobe / Storage">Wardrobe / Storage</option>
+                        <option value="TV & Electronics">TV & Electronics</option>
+                        <option value="Kitchen Appliances">Kitchen Appliances</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Delivery Option</label>
+                      <select value={editFurnitureDelivery} onChange={(e) => setEditFurnitureDelivery(e.target.value)} className="form-control" style={{ fontSize: '0.85rem' }}>
+                        <option value="Buyer Pick-Up">Buyer Pick-Up</option>
+                        <option value="Free Local Delivery">Free Local Delivery</option>
+                        <option value="Paid Delivery Available">Paid Delivery Available</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label>Landlord Contact Number</label>

@@ -511,27 +511,28 @@ export default function Home() {
                         const isLand = p.type?.toLowerCase().includes('land');
                         const isFurniture = p.type?.toLowerCase().includes('furniture');
                         const isShop = p.type?.toLowerCase().includes('shop');
+                        const rawDesc = p.description || '';
+
                         if (isLand || isFurniture || isShop) {
                           return (
                             <p
                               style={{
-                                fontSize: '0.82rem',
+                                fontSize: '0.8rem',
                                 color: 'var(--text-secondary)',
-                                margin: '6px 0 0',
+                                margin: '4px 0 0',
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical',
                                 overflow: 'hidden',
-                                lineHeight: '1.35',
-                                minHeight: '2.4em'
+                                lineHeight: '1.35'
                               }}
                             >
-                              {p.description || 'Verified listing — click to view full details.'}
+                              {rawDesc || 'Verified listing — click to view full details.'}
                             </p>
                           );
                         }
 
-                        const desc = p.description?.toLowerCase() || '';
+                        const desc = rawDesc.toLowerCase();
                         let showWifi = desc.includes('wi-fi') || desc.includes('wifi');
                         let showWater = desc.includes('water');
                         let showPrepaid = desc.includes('prepaid') || desc.includes('meter');
@@ -545,12 +546,30 @@ export default function Home() {
                         }
 
                         return (
-                          <div className={styles.amenitiesRow}>
-                            {showBed && <span className={styles.amenity}>🛏️ Bed/Room</span>}
-                            {showWater && <span className={styles.amenity}>💧 Water</span>}
-                            {showPrepaid && <span className={styles.amenity}>⚡ Prepaid</span>}
-                            {showWifi && <span className={styles.amenity}>📶 WiFi</span>}
-                            {showParking && <span className={styles.amenity}>🚗 Parking</span>}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div className={styles.amenitiesRow}>
+                              {showBed && <span className={styles.amenity}>🛏️ Bed/Room</span>}
+                              {showWater && <span className={styles.amenity}>💧 Water</span>}
+                              {showPrepaid && <span className={styles.amenity}>⚡ Prepaid</span>}
+                              {showWifi && <span className={styles.amenity}>📶 WiFi</span>}
+                              {showParking && <span className={styles.amenity}>🚗 Parking</span>}
+                            </div>
+                            {rawDesc && (
+                              <p
+                                style={{
+                                  fontSize: '0.78rem',
+                                  color: 'var(--text-muted)',
+                                  margin: '2px 0 0',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  lineHeight: '1.3'
+                                }}
+                              >
+                                {rawDesc}
+                              </p>
+                            )}
                           </div>
                         );
                       })()}

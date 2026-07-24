@@ -707,17 +707,27 @@
   .cardContent {
     display: flex !important;
     flex-direction: column !important;
-    padding: 14px 16px !important;
+    padding: 10px 12px !important;
+    gap: 4px !important;
     flex-grow: 1 !important;
     opacity: 1 !important;
     visibility: visible !important;
+  }
+
+  .cardTitle {
+    font-size: 0.95rem !important;
+    min-height: 0 !important;
+    line-height: 1.3 !important;
+    margin-top: 0 !important;
+    margin-bottom: 4px !important;
   }
 
   .cardFooter {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    padding: 10px 16px !important;
+    padding: 8px 12px !important;
+    margin-top: 4px !important;
     border-top: 1px solid var(--border) !important;
   }
 
