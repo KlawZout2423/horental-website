@@ -13,7 +13,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState<string | null>(null);
 
   const ADMIN_WA = '233557922593';
-  const waMsg = encodeURIComponent(`Hi HO Rentals, I need help resetting my password.\nName: ${name}\nContact: ${identifier}`);
+  const waMsg = encodeURIComponent(`Hi HO Rentals Admin, I need help resetting my account password.\n\nName: ${name}\nContact: ${identifier}\n\nPlease assist me. Thank you!`);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,12 +27,17 @@ export default function ForgotPasswordPage() {
         message: null,
       });
       setSubmitted(true);
+      // Auto-open WhatsApp so admin gets notified instantly
+      setTimeout(() => {
+        window.open(`https://wa.me/${ADMIN_WA}?text=${waMsg}`, '_blank');
+      }, 500);
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div style={{
