@@ -18,7 +18,9 @@ import {
   GET_REPORTS,
   UPDATE_REPORT_STATUS,
   DELETE_REPORT,
-  ADMIN_RESET_USER_PASSWORD
+  ADMIN_RESET_USER_PASSWORD,
+  GET_AUDIT_LOGS,
+  DELETE_OLD_AUDIT_LOGS
 } from '../../lib/graphql';
 import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon } from 'lucide-react';
 import styles from './admin.module.css';
@@ -47,6 +49,14 @@ interface ContactLogItem {
     title: string;
     location: string;
   };
+}
+
+interface AuditLogItem {
+  id: number;
+  action: string;
+  details: string;
+  userEmail?: string;
+  createdAt: string;
 }
 
 interface ReportItem {
@@ -85,6 +95,8 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'moderation' | 'audits' | 'reports' | 'upload'>('analytics');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [auditLogView, setAuditLogView] = useState<'all' | 'system' | 'contacts'>('all');
   const [auditFilter, setAuditFilter] = useState<'all' | 'call' | 'whatsapp' | 'book_viewing' | 'sms'>('all');
   const [loadingData, setLoadingData] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -210,19 +222,21 @@ export default function AdminPage() {
       setLoadingData(true);
     }
     try {
-      const [statsData, usersData, propertiesData, logsData, reportsData] = await Promise.all([
+      const [statsData, usersData, propertiesData, logsData, reportsData, auditLogsData] = await Promise.all([
         graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS),
         graphqlRequest<{ users: User[] }>(GET_USERS),
         graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES),
         graphqlRequest<{ contactLogs: ContactLogItem[] }>(GET_CONTACT_LOGS),
-        graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] }))
+        graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] })),
+        graphqlRequest<{ auditLogs: AuditLogItem[] }>(GET_AUDIT_LOGS).catch(() => ({ auditLogs: [] }))
       ]);
 
       if (statsData) setStats(statsData.dashboardStats);
       if (usersData) setUsers(usersData.users);
       if (propertiesData) setProperties(propertiesData.properties);
-      if (logsData && logsData.contactLogs) setContactLogs(logsData.contactLogs);
-      if (reportsData && reportsData.reports) setReports(reportsData.reports);
+      if (logsData) setContactLogs(logsData.contactLogs);
+      if (reportsData) setReports(reportsData.reports);
+      if (auditLogsData) setAuditLogs(auditLogsData.auditLogs || []);
     } catch (err: any) {
       console.error('Error loading admin data:', err);
       setMessage({ text: getFriendlyErrorMessage(err, 'Failed to fetch dashboard data.'), isError: true });
@@ -414,6 +428,25 @@ export default function AdminPage() {
       setMessage({ text: `✅ Password for ${userName} reset to "${DEFAULT_PASSWORD}". Tell them to log in and change it.`, isError: false });
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to reset password.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteOldAuditLogs = async (days: number) => {
+    const label = days === 0 ? 'ALL system audit logs' : `logs older than ${days} days`;
+    if (!confirm(`Clear ${label}? This cannot be undone.`)) return;
+    setActionLoading(true);
+    try {
+      const res = await graphqlRequest<{ deleteOldAuditLogs: { success: boolean; message: string } }>(
+        DELETE_OLD_AUDIT_LOGS,
+        { days }
+      );
+      setMessage({ text: res.deleteOldAuditLogs.message, isError: false });
+      const freshLogs = await graphqlRequest<{ auditLogs: AuditLogItem[] }>(GET_AUDIT_LOGS);
+      if (freshLogs) setAuditLogs(freshLogs.auditLogs || []);
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to cleanup audit logs.', isError: true });
     } finally {
       setActionLoading(false);
     }
@@ -1504,139 +1537,257 @@ export default function AdminPage() {
             </>
           ) : activeTab === 'audits' ? (
             <>
-              {/* Audit & Lead Category Filters */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => setAuditFilter('all')}
-                  className={`btn ${auditFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
-                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '20px' }}
-                >
-                  All Logs ({contactLogs.length})
-                </button>
-                <button
-                  onClick={() => setAuditFilter('call')}
-                  className={`btn ${auditFilter === 'call' ? 'btn-primary' : 'btn-outline'}`}
-                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '20px' }}
-                >
-                  📞 Direct Phone Calls ({contactLogs.filter((l) => l.actionType === 'call').length})
-                </button>
-                <button
-                  onClick={() => setAuditFilter('whatsapp')}
-                  className={`btn ${auditFilter === 'whatsapp' ? 'btn-primary' : 'btn-outline'}`}
-                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '20px' }}
-                >
-                  💬 WhatsApp Inquiries ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})
-                </button>
-                <button
-                  onClick={() => setAuditFilter('book_viewing')}
-                  className={`btn ${auditFilter === 'book_viewing' ? 'btn-primary' : 'btn-outline'}`}
-                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '20px' }}
-                >
-                  📅 Physical Viewings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})
-                </button>
-                <button
-                  onClick={() => setAuditFilter('sms')}
-                  className={`btn ${auditFilter === 'sms' ? 'btn-primary' : 'btn-outline'}`}
-                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '20px' }}
-                >
-                  📱 SMS Leads ({contactLogs.filter((l) => l.actionType === 'sms').length})
-                </button>
+              {/* Category selector & Cleanup Bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setAuditLogView('all')}
+                    className={`btn ${auditLogView === 'all' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 700, borderRadius: '20px' }}
+                  >
+                    All Logs ({auditLogs.length + contactLogs.length})
+                  </button>
+                  <button
+                    onClick={() => setAuditLogView('system')}
+                    className={`btn ${auditLogView === 'system' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 700, borderRadius: '20px' }}
+                  >
+                    🛡️ System Security Audits ({auditLogs.length})
+                  </button>
+                  <button
+                    onClick={() => setAuditLogView('contacts')}
+                    className={`btn ${auditLogView === 'contacts' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 700, borderRadius: '20px' }}
+                  >
+                    📞 Landlord Contacts ({contactLogs.length})
+                  </button>
+                </div>
+
+                {/* Log Cleanup Action Buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-surface-secondary, #F1F5F9)', padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Clean Audit History:</span>
+                  <button
+                    onClick={() => handleDeleteOldAuditLogs(7)}
+                    disabled={actionLoading}
+                    className="btn btn-outline"
+                    style={{ padding: '4px 8px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '6px', color: 'var(--text-primary)' }}
+                  >
+                    &gt; 7 Days
+                  </button>
+                  <button
+                    onClick={() => handleDeleteOldAuditLogs(30)}
+                    disabled={actionLoading}
+                    className="btn btn-outline"
+                    style={{ padding: '4px 8px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '6px', color: 'var(--text-primary)' }}
+                  >
+                    &gt; 30 Days
+                  </button>
+                  <button
+                    onClick={() => handleDeleteOldAuditLogs(0)}
+                    disabled={actionLoading}
+                    className="btn btn-outline"
+                    style={{ padding: '4px 8px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '6px', color: 'var(--danger)' }}
+                  >
+                    Clear All
+                  </button>
+                </div>
               </div>
 
-              {/* Desktop Table View */}
-              <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Timestamp</th>
-                      <th>Customer Name</th>
-                      <th>Customer Phone</th>
-                      <th>Action Type</th>
-                      <th>Landlord Number</th>
-                      <th>Property Title</th>
-                      <th>Property Location</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              {/* System Security Audit Logs Section */}
+              {(auditLogView === 'all' || auditLogView === 'system') && (
+                <div style={{ marginBottom: '32px' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    🛡️ System & Account Security Audit Trail
+                  </h3>
+                  <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th>Timestamp</th>
+                          <th>Action</th>
+                          <th>Details</th>
+                          <th>User / Email</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {auditLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                              No security audit logs recorded yet. Crucial actions (logins, password resets, role updates) will appear here.
+                            </td>
+                          </tr>
+                        ) : (
+                          auditLogs.map((log) => (
+                            <tr key={log.id}>
+                              <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                                {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                              </td>
+                              <td>
+                                <span className={`badge ${
+                                  log.action.includes('RESET') ? 'badge-primary' :
+                                  log.action.includes('LOGIN') ? 'badge-available' :
+                                  log.action.includes('ROLE') ? 'badge-primary' : 'badge-available'
+                                }`} style={{ fontSize: '0.68rem', padding: '3px 8px', fontWeight: 700 }}>
+                                  {log.action}
+                                </span>
+                              </td>
+                              <td style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
+                                {log.details}
+                              </td>
+                              <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
+                                {log.userEmail || 'System'}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Security Audit Cards */}
+                  <div className={styles.mobileCardList}>
+                    {auditLogs.length === 0 ? (
+                      <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>No security audit logs recorded yet.</p>
+                    ) : (
+                      auditLogs.map((log) => (
+                        <div key={log.id} className={styles.adminCardItem}>
+                          <div className={styles.adminCardHeader}>
+                            <div>
+                              <div className={styles.adminCardTitle} style={{ fontSize: '0.9rem' }}>{log.details}</div>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                              </span>
+                            </div>
+                            <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>{log.action}</span>
+                          </div>
+                          {log.userEmail && (
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                              User: {log.userEmail}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Landlord Contacts Section */}
+              {(auditLogView === 'all' || auditLogView === 'contacts') && (
+                <div>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    📞 Landlord Inquiries & Contact Logs
+                  </h3>
+                  
+                  {/* Lead Filters */}
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => setAuditFilter('all')}
+                      className={`btn ${auditFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
+                      style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                    >
+                      All Leads ({contactLogs.length})
+                    </button>
+                    <button
+                      onClick={() => setAuditFilter('call')}
+                      className={`btn ${auditFilter === 'call' ? 'btn-primary' : 'btn-outline'}`}
+                      style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                    >
+                      📞 Calls ({contactLogs.filter((l) => l.actionType === 'call').length})
+                    </button>
+                    <button
+                      onClick={() => setAuditFilter('whatsapp')}
+                      className={`btn ${auditFilter === 'whatsapp' ? 'btn-primary' : 'btn-outline'}`}
+                      style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                    >
+                      💬 WhatsApp ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})
+                    </button>
+                    <button
+                      onClick={() => setAuditFilter('book_viewing')}
+                      className={`btn ${auditFilter === 'book_viewing' ? 'btn-primary' : 'btn-outline'}`}
+                      style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                    >
+                      📅 Viewings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})
+                    </button>
+                  </div>
+
+                  <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th>Timestamp</th>
+                          <th>Customer Name</th>
+                          <th>Customer Phone</th>
+                          <th>Action Type</th>
+                          <th>Landlord Number</th>
+                          <th>Property Title</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {contactLogs.filter((l) => auditFilter === 'all' || l.actionType === auditFilter).length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                              No matching contact lead records found.
+                            </td>
+                          </tr>
+                        ) : (
+                          contactLogs
+                            .filter((l) => auditFilter === 'all' || l.actionType === auditFilter)
+                            .map((log) => (
+                              <tr key={log.id}>
+                                <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                                  {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                </td>
+                                <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
+                                <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
+                                <td>
+                                  <span className="badge badge-available" style={{ fontSize: '0.68rem', padding: '3px 8px', textTransform: 'capitalize' }}>
+                                    {log.actionType === 'call' && '📞 Phone Call'}
+                                    {log.actionType === 'whatsapp' && '💬 WhatsApp'}
+                                    {log.actionType === 'book_viewing' && '📅 Viewing'}
+                                    {log.actionType === 'sms' && '📱 SMS Lead'}
+                                    {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
+                                  </span>
+                                </td>
+                                <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
+                                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                  {log.property ? log.property.title : 'N/A'}
+                                </td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Contact Cards */}
+                  <div className={styles.mobileCardList}>
                     {contactLogs.filter((l) => auditFilter === 'all' || l.actionType === auditFilter).length === 0 ? (
-                      <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                          No matching audit or SMS lead records found in database.
-                        </td>
-                      </tr>
+                      <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>No matching contact records.</p>
                     ) : (
                       contactLogs
                         .filter((l) => auditFilter === 'all' || l.actionType === auditFilter)
                         .map((log) => (
-                          <tr key={log.id}>
-                            <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
-                              {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                            </td>
-                            <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
-                            <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
-                            <td>
-                              <span className={`badge ${
-                                log.actionType === 'call'
-                                  ? 'badge-available'
-                                  : log.actionType === 'whatsapp'
-                                  ? 'badge-primary'
-                                  : log.actionType === 'book_viewing'
-                                  ? 'badge-primary'
-                                  : 'badge-available'
-                              }`} style={{ fontSize: '0.7rem', padding: '4px 8px', textTransform: 'capitalize' }}>
-                                {log.actionType === 'call' && '📞 Phone Call'}
-                                {log.actionType === 'whatsapp' && '💬 WhatsApp'}
-                                {log.actionType === 'book_viewing' && '📅 Physical Viewing'}
-                                {log.actionType === 'sms' && '📱 SMS Lead'}
-                                {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
-                              </span>
-                            </td>
-                            <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
-                            <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                              {log.property ? log.property.title : 'N/A (Deleted)'}
-                            </td>
-                            <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                              {log.property ? log.property.location : 'N/A'}
-                            </td>
-                          </tr>
+                          <div key={log.id} className={styles.adminCardItem}>
+                            <div className={styles.adminCardHeader}>
+                              <div>
+                                <div className={styles.adminCardTitle}>{log.customerName} ({log.customerPhone})</div>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                  {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                </span>
+                              </div>
+                              <span className="badge badge-available" style={{ fontSize: '0.65rem' }}>{log.actionType}</span>
+                            </div>
+                            <div className={styles.adminCardMeta}>
+                              <span><strong>Property:</strong> {log.property ? log.property.title : 'N/A'}</span>
+                              <span><strong>Landlord Contact:</strong> {log.landlordPhone}</span>
+                            </div>
+                          </div>
                         ))
                     )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile Card List View */}
-              <div className={styles.mobileCardList}>
-                {contactLogs.filter((l) => auditFilter === 'all' || l.actionType === auditFilter).length === 0 ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No matching audit records found.</p>
-                ) : (
-                  contactLogs
-                    .filter((l) => auditFilter === 'all' || l.actionType === auditFilter)
-                    .map((log) => (
-                      <div key={log.id} className={styles.adminCardItem}>
-                        <div className={styles.adminCardHeader}>
-                          <div>
-                            <div className={styles.adminCardTitle}>{log.customerName} ({log.customerPhone})</div>
-                            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                              {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                            </span>
-                          </div>
-                          <span className="badge badge-primary" style={{ fontSize: '0.68rem' }}>
-                            {log.actionType === 'call' && '📞 Phone Call'}
-                            {log.actionType === 'whatsapp' && '💬 WhatsApp'}
-                            {log.actionType === 'book_viewing' && '📅 Physical Viewing'}
-                            {log.actionType === 'sms' && '📱 SMS Lead'}
-                            {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
-                          </span>
-                        </div>
-                        <div className={styles.adminCardMeta}>
-                          <span><strong>Property:</strong> {log.property ? log.property.title : 'N/A'}</span>
-                          <span><strong>Landlord Contact:</strong> {log.landlordPhone}</span>
-                        </div>
-                      </div>
-                    ))
-                )}
-              </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : activeTab === 'reports' ? (
             <>

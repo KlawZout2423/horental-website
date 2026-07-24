@@ -138,6 +138,14 @@ export const typeDefs = `#graphql
         createdAt: String!
     }
 
+    type AuditLog {
+        id: Int!
+        action: String!
+        details: String!
+        userEmail: String
+        createdAt: String!
+    }
+
     type Query {
         me: User
         users: [User!]!
@@ -149,6 +157,7 @@ export const typeDefs = `#graphql
         dashboardStats: DashboardStats!
         contactLogs: [ContactLog!]!
         passwordResetRequests: [PasswordResetRequest!]!
+        auditLogs: [AuditLog!]!
     }
 
     type BasicPayload {
@@ -174,5 +183,6 @@ export const typeDefs = `#graphql
         updateUserRole(id: Int!, role: String!): User!
         createContactLog(customerName: String!, customerPhone: String!, actionType: String!, propertyId: Int!, landlordPhone: String!): ContactLog!
         recordPageVisit(path: String!): Boolean!
+        deleteOldAuditLogs(days: Int!): BasicPayload!
     }
 `;

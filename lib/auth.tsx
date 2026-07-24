@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { graphqlRequest, LOGIN_MUTATION, REGISTER_MUTATION } from './graphql';
+import { graphqlRequest, LOGIN_MUTATION, REGISTER_MUTATION, ME_QUERY } from './graphql';
 
 import { User, RegisterInput } from './types';
 
@@ -49,23 +49,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const verifySession = () => {
+    const verifySession = async () => {
       const cookieUser = readUserFromCookie();
-      if (!cookieUser && user) {
-        logout();
-      } else if (cookieUser) {
-        setUser((prev) => {
-          if (
-            prev &&
-            prev.id === cookieUser.id &&
-            prev.role === cookieUser.role &&
-            prev.name === cookieUser.name &&
-            prev.mustChangePassword === cookieUser.mustChangePassword
-          ) {
-            return prev;
+      if (cookieUser) {
+        setUser(cookieUser);
+        // Sync fresh user state from PostgreSQL in background
+        try {
+          const freshData = await graphqlRequest<{ me: User | null }>(ME_QUERY);
+          if (freshData && freshData.me) {
+            const dbUser = freshData.me;
+            setUser(dbUser);
+            fetch('/api/auth/set-cookie', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: 'keep', user: dbUser }),
+            }).catch(() => {});
           }
-          return cookieUser;
-        });
+        } catch {
+          // If me query fails (e.g. invalid cookie), logout
+        }
       } else {
         setUser(null);
       }

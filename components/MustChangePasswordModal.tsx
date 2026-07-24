@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Lock, ShieldAlert, Loader, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Lock, ShieldAlert, Loader, CheckCircle2, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { graphqlRequest, CHANGE_PASSWORD_MUTATION } from '../lib/graphql';
 
@@ -9,11 +9,13 @@ export default function MustChangePasswordModal() {
   const { user, updateUser } = useAuth();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  if (!user || !user.mustChangePassword) {
+  if (!user || !Boolean(user.mustChangePassword)) {
     return null;
   }
 
@@ -120,7 +122,7 @@ export default function MustChangePasswordModal() {
                 <div style={{ position: 'relative' }}>
                   <Lock size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
                   <input
-                    type="password"
+                    type={showNewPassword ? 'text' : 'password'}
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
@@ -129,7 +131,7 @@ export default function MustChangePasswordModal() {
                       width: '100%',
                       height: '48px',
                       paddingLeft: '42px',
-                      paddingRight: '14px',
+                      paddingRight: '44px',
                       borderRadius: '12px',
                       border: '1.5px solid #CBD5E1',
                       backgroundColor: '#F8FAFC',
@@ -143,6 +145,16 @@ export default function MustChangePasswordModal() {
                     onFocus={(e) => { e.target.style.borderColor = '#C1121F'; e.target.style.backgroundColor = '#FFFFFF'; }}
                     onBlur={(e) => { e.target.style.borderColor = '#CBD5E1'; e.target.style.backgroundColor = '#F8FAFC'; }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    style={{
+                      position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: '#64748B'
+                    }}
+                  >
+                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 
@@ -153,7 +165,7 @@ export default function MustChangePasswordModal() {
                 <div style={{ position: 'relative' }}>
                   <Lock size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
                   <input
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -162,7 +174,7 @@ export default function MustChangePasswordModal() {
                       width: '100%',
                       height: '48px',
                       paddingLeft: '42px',
-                      paddingRight: '14px',
+                      paddingRight: '44px',
                       borderRadius: '12px',
                       border: '1.5px solid #CBD5E1',
                       backgroundColor: '#F8FAFC',
@@ -176,6 +188,16 @@ export default function MustChangePasswordModal() {
                     onFocus={(e) => { e.target.style.borderColor = '#C1121F'; e.target.style.backgroundColor = '#FFFFFF'; }}
                     onBlur={(e) => { e.target.style.borderColor = '#CBD5E1'; e.target.style.backgroundColor = '#F8FAFC'; }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{
+                      position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: '#64748B'
+                    }}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 

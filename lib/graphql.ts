@@ -59,6 +59,19 @@ export async function graphqlRequest<T = any>(
 
 // Queries and Mutations
 
+export const ME_QUERY = `
+  query Me {
+    me {
+      id
+      name
+      email
+      phone
+      role
+      mustChangePassword
+    }
+  }
+`;
+
 export const LOGIN_MUTATION = `
   mutation Login($email: String!, $password: String!) {
     login(email: $email, password: $password) {
@@ -403,6 +416,27 @@ export const GET_PASSWORD_RESET_REQUESTS = `
   }
 `;
 
+export const GET_AUDIT_LOGS = `
+  query GetAuditLogs {
+    auditLogs {
+      id
+      action
+      details
+      userEmail
+      createdAt
+    }
+  }
+`;
+
+export const DELETE_OLD_AUDIT_LOGS = `
+  mutation DeleteOldAuditLogs($days: Int!) {
+    deleteOldAuditLogs(days: $days) {
+      success
+      message
+    }
+  }
+`;
+
 export const CHANGE_PASSWORD_MUTATION = `
   mutation ChangePassword($newPassword: String!) {
     changePassword(newPassword: $newPassword) {
@@ -411,4 +445,5 @@ export const CHANGE_PASSWORD_MUTATION = `
     }
   }
 `;
+
 

@@ -132,3 +132,16 @@ model PasswordResetRequest {
   @@index([createdAt])
   @@index([status])
 }
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  details   String
+  userEmail String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action])
+}
+

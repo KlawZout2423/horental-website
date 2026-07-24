@@ -12,6 +12,21 @@ async function collectPayment(phone: string, amount: number, transactionId: stri
   return true;
 }
 
+// Helper to record audit logs for crucial system events
+async function createAuditLog(action: string, details: string, userEmail?: string | null) {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        action,
+        details,
+        userEmail: userEmail || null,
+      },
+    });
+  } catch (e) {
+    console.error('AuditLog error:', e);
+  }
+}
+
 export const resolvers = {
   Query: {
     me: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
@@ -133,6 +148,17 @@ export const resolvers = {
         orderBy: { createdAt: 'desc' },
       });
     },
+
+    auditLogs: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
+      return prisma.auditLog.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 500,
+      });
+    },
   },
 
   Mutation: {
@@ -167,6 +193,7 @@ export const resolvers = {
 
       const JWT_SECRET = process.env.JWT_SECRET || 'horentals-super-secret-jwt-key-2026';
       const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
+      createAuditLog('USER_LOGIN', `User ${user.name} (${user.email}) logged in`, user.email);
       return { token, user };
     },
 
@@ -224,6 +251,7 @@ export const resolvers = {
       });
 
       console.log(`✅ [Admin Password Reset] Admin ${adminUser.email} reset password for user: ${targetUser.email} (${targetUser.phone || 'No Phone'})`);
+      createAuditLog('ADMIN_RESET_PASSWORD', `Admin reset password for user ${targetUser.name} (${targetUser.email || targetUser.phone})`, targetUser.email || adminUser.email);
 
       return {
         success: true,
@@ -237,10 +265,11 @@ export const resolvers = {
         throw new Error('New password must be at least 6 characters.');
       }
       const hashed = await bcrypt.hash(newPassword, 10);
-      await prisma.user.update({
+      const updatedUser = await prisma.user.update({
         where: { id: user.id },
         data: { password: hashed, mustChangePassword: false },
       });
+      createAuditLog('PASSWORD_CHANGED', `User ${updatedUser.name} (${updatedUser.email}) updated their password`, updatedUser.email);
       return {
         success: true,
         message: 'Your password has been changed successfully.',
@@ -482,22 +511,48 @@ export const resolvers = {
       if (fullUser?.role !== 'admin') throw new Error('Admin only');
 
       return prisma.user.update({
+      const updatedUser = await prisma.user.update({
         where: { id },
         data: { role },
       });
+      createAuditLog('ROLE_UPDATED', `Admin ${fullUser.email} updated user ${updatedUser.email} to role ${role}`, fullUser.email);
+      return updatedUser;
     },
 
-    createContactLog: async (_: any, args: { customerName: string; customerPhone: string; actionType: string; propertyId: number; landlordPhone: string }) => {
-      return prisma.contactLog.create({
+    createContactLog: async (_: any, { customerName, customerPhone, actionType, propertyId, landlordPhone }: any) => {
+      const log = await prisma.contactLog.create({
         data: {
-          customerName: sanitizeInput(args.customerName),
-          customerPhone: formatGhanaPhone(args.customerPhone),
-          actionType: sanitizeInput(args.actionType),
-          propertyId: args.propertyId,
-          landlordPhone: formatGhanaPhone(args.landlordPhone),
+          customerName: sanitizeInput(customerName),
+          customerPhone: formatGhanaPhone(customerPhone),
+          actionType: sanitizeInput(actionType),
+          propertyId,
+          landlordPhone: formatGhanaPhone(landlordPhone),
         },
         include: { property: true }
       });
+      createAuditLog('LANDLORD_CONTACTED', `Customer ${customerName} (${customerPhone}) initiated ${actionType} for property #${propertyId} (Landlord: ${landlordPhone})`, customerPhone);
+      return log;
+    },
+
+    deleteOldAuditLogs: async (_: any, { days }: { days: number }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Only admins can delete audit logs.');
+
+      let deletedCount = 0;
+      if (days === 0) {
+        const res = await prisma.auditLog.deleteMany({});
+        deletedCount = res.count;
+      } else {
+        const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+        const res = await prisma.auditLog.deleteMany({
+          where: { createdAt: { lt: cutoff } }
+        });
+        deletedCount = res.count;
+      }
+
+      createAuditLog('CLEARED_AUDIT_LOGS', `Admin ${adminUser.name} deleted audit logs older than ${days === 0 ? 'all' : days + ' days'} (${deletedCount} removed)`, adminUser.email);
+      return { success: true, message: `Successfully deleted ${deletedCount} audit log(s).` };
     },
 
     recordPageVisit: async (_: any, { path }: { path: string }) => {
