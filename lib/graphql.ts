@@ -360,3 +360,22 @@ export const DELETE_REPORT = `
   }
 `;
 
+export const REQUEST_PASSWORD_RESET = `
+  mutation RequestPasswordReset($identifier: String!) {
+    requestPasswordReset(identifier: $identifier) {
+      success
+      message
+      otpCode
+    }
+  }
+`;
+
+export const RESET_PASSWORD_WITH_OTP = `
+  mutation ResetPasswordWithOtp($identifier: String!, $otpCode: String!, $newPassword: String!) {
+    resetPasswordWithOtp(identifier: $identifier, otpCode: $otpCode, newPassword: $newPassword) {
+      success
+      message
+    }
+  }
+`;
+
