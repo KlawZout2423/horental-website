@@ -140,9 +140,17 @@ export const typeDefs = `#graphql
         contactLogs: [ContactLog!]!
     }
 
+    type PasswordResetPayload {
+        success: Boolean!
+        message: String!
+        otpCode: String
+    }
+
     type Mutation {
         register(input: RegisterInput!): AuthPayload!
         login(email: String!, password: String!): AuthPayload!
+        requestPasswordReset(identifier: String!): PasswordResetPayload!
+        resetPasswordWithOtp(identifier: String!, otpCode: String!, newPassword: String!): PasswordResetPayload!
         addProperty(input: PropertyInput!): Property!
         updateProperty(id: Int!, input: PropertyInput!): Property!
         deleteProperty(id: Int!): Property!

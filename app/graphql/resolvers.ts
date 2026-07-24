@@ -156,6 +156,88 @@ export const resolvers = {
       return { token, user };
     },
 
+    requestPasswordReset: async (_: any, { identifier }: { identifier: string }) => {
+      const cleanIdentifier = identifier.trim();
+      if (!cleanIdentifier) throw new Error('Please enter your email or phone number.');
+
+      let user = await prisma.user.findUnique({ where: { email: cleanIdentifier } });
+      if (!user) {
+        user = await prisma.user.findFirst({ where: { phone: cleanIdentifier } });
+      }
+
+      if (!user) {
+        return {
+          success: true,
+          message: 'If an account matches this email or phone, a 6-digit verification code has been generated.',
+        };
+      }
+
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetOtpCode: otpCode,
+          resetOtpExpires: expiresAt,
+        },
+      });
+
+      console.log(`🔐 [Password Reset OTP] User: ${user.email} (${user.phone || 'No Phone'}), OTP Code: ${otpCode}`);
+
+      return {
+        success: true,
+        message: 'Verification code generated successfully.',
+        otpCode: otpCode,
+      };
+    },
+
+    resetPasswordWithOtp: async (_: any, { identifier, otpCode, newPassword }: any) => {
+      const cleanIdentifier = identifier.trim();
+      const cleanOtp = otpCode.trim();
+
+      if (!cleanIdentifier || !cleanOtp || !newPassword) {
+        throw new Error('All fields (Email/Phone, OTP Code, New Password) are required.');
+      }
+
+      if (newPassword.length < 6) {
+        throw new Error('Password must be at least 6 characters long.');
+      }
+
+      let user = await prisma.user.findUnique({ where: { email: cleanIdentifier } });
+      if (!user) {
+        user = await prisma.user.findFirst({ where: { phone: cleanIdentifier } });
+      }
+
+      if (!user || !user.resetOtpCode || !user.resetOtpExpires) {
+        throw new Error('Invalid or expired password reset request. Please request a new code.');
+      }
+
+      if (user.resetOtpCode !== cleanOtp) {
+        throw new Error('Invalid 6-digit verification code. Please check and try again.');
+      }
+
+      if (new Date() > new Date(user.resetOtpExpires)) {
+        throw new Error('Verification code has expired. Please request a new code.');
+      }
+
+      const hashed = await bcrypt.hash(newPassword, 10);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashed,
+          resetOtpCode: null,
+          resetOtpExpires: null,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Your password has been successfully reset! You can now log in with your new password.',
+      };
+    },
+
     addProperty: async (_: any, { input }: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
 
