@@ -652,10 +652,11 @@ export default function PropertiesClient() {
                   >
                     <div className={styles.imageWrapper}>
                       <img
-                        src={getOptimizedImageUrl(p.imageUrl || getFallbackImage(p.type), 600)}
+                        src={getOptimizedImageUrl(p.imageUrl || getFallbackImage(p.type), 500)}
                         alt={p.title}
                         className={styles.propertyImage}
-                        loading="lazy"
+                        loading={index < 2 ? "eager" : "lazy"}
+                        fetchPriority={index < 2 ? "high" : "low"}
                         decoding="async"
                       />
 

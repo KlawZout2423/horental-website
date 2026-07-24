@@ -779,11 +779,11 @@ export default function AdminPage() {
           ) : activeTab === 'analytics' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
               
-              {/* Distribution Cards Row */}
+              {/* Distribution & Regional Analytics Cards Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', width: '100%', maxWidth: '100%' }}>
                 
                 {/* Property Types mix grid list */}
-                <div className="card glass" style={{ padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box', overflow: 'hidden' }}>
+                <div className="card glass" style={{ padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box', overflow: 'hidden' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                       <PieChart size={20} style={{ color: 'var(--primary)' }} />
@@ -800,28 +800,28 @@ export default function AdminPage() {
                             <div 
                               key={type} 
                               style={{ 
-                                padding: '16px', 
+                                padding: '14px 12px', 
                                 backgroundColor: 'var(--bg-surface-secondary)', 
                                 border: '1px solid var(--border)', 
                                 borderRadius: 'var(--radius-sm)', 
                                 display: 'flex', 
                                 flexDirection: 'column', 
                                 justifyContent: 'space-between', 
-                                gap: '12px', 
-                                minHeight: '100px',
+                                gap: '10px', 
+                                minHeight: '90px',
                                 boxShadow: 'var(--shadow-xs)',
                               }}
                             >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.2 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '4px' }}>
+                                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.2 }}>
                                   {type}
                                 </span>
-                                <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', backgroundColor: 'var(--bg-surface)', border: `1px solid ${color}`, color: color, flexShrink: 0 }}>
+                                <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '2px 5px', borderRadius: '4px', backgroundColor: 'var(--bg-surface)', border: `1px solid ${color}`, color: color, flexShrink: 0 }}>
                                   {percentage}%
                                 </span>
                               </div>
                               <div>
-                                <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)' }}>{count}</span>
+                                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>{count}</span>
                                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '4px' }}>listings</span>
                               </div>
                             </div>
@@ -833,117 +833,121 @@ export default function AdminPage() {
                 </div>
 
                 {/* Availability occupancy ratios circular ring card */}
-                <div className="card glass" style={{ padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                    <BarChart3 size={20} style={{ color: 'var(--primary)' }} />
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Occupancy & Ratios</h3>
-                  </div>
-                  {stats && (() => {
-                    const total = stats.totalProperties || 0;
-                    const available = stats.availableProperties || 0;
-                    const rented = stats.rentedProperties || 0;
-                    const occupancyRate = total ? Math.round((rented / total) * 100) : 0;
-                    const availableRate = total ? Math.round((available / total) * 100) : 0;
+                <div className="card glass" style={{ padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box', overflow: 'hidden' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                      <BarChart3 size={20} style={{ color: 'var(--primary)' }} />
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Occupancy & Ratios</h3>
+                    </div>
+                    {stats && (() => {
+                      const total = stats.totalProperties || 0;
+                      const available = stats.availableProperties || 0;
+                      const rented = stats.rentedProperties || 0;
+                      const occupancyRate = total ? Math.round((rented / total) * 100) : 0;
+                      const availableRate = total ? Math.round((available / total) * 100) : 0;
 
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '28px', justifyContent: 'center', minHeight: '180px', flexWrap: 'wrap' }}>
-                        {/* SVG Donut Chart */}
-                        <div style={{ position: 'relative', width: '130px', height: '130px', flexShrink: 0 }}>
-                          <svg width="130" height="130" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                            {/* Background ring */}
-                            <path
-                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                              fill="none"
-                              stroke="var(--border)"
-                              strokeWidth="3"
-                            />
-                            {/* Rented slice (Primary color) */}
-                            <path
-                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                              fill="none"
-                              stroke="var(--primary)"
-                              strokeWidth="3.2"
-                              strokeDasharray={`${occupancyRate}, 100`}
-                            />
-                            {/* Available slice (Accent color) */}
-                            <path
-                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                              fill="none"
-                              stroke="var(--accent)"
-                              strokeWidth="3.2"
-                              strokeDasharray={`${availableRate}, 100`}
-                              strokeDashoffset={`-${occupancyRate}`}
-                            />
-                          </svg>
-                          {/* Center text showing percentage */}
-                          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                            <span style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{occupancyRate}%</span>
-                            <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>Rented</span>
-                          </div>
-                        </div>
-                        
-                        {/* Legend details */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flexGrow: 1, minWidth: '160px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '12px', height: '12px', borderRadius: '4px', backgroundColor: 'var(--primary)', flexShrink: 0 }} />
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Occupied / Rented</span>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{rented} listings ({occupancyRate}%)</span>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '12px', height: '12px', borderRadius: '4px', backgroundColor: 'var(--accent)', flexShrink: 0 }} />
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Available Space</span>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{available} listings ({availableRate}%)</span>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '4px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Total Capacity</span>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>{total} published properties</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              {/* Regional metrics map pin locations */}
-              <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
-                  <MapPin size={20} style={{ color: 'var(--primary)' }} />
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Top Regional Hubs</h3>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {sortedLocations.length === 0 ? (
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No regional location data available.</p>
-                  ) : (
-                    sortedLocations.map(([loc, count], index) => {
-                      const percentage = properties.length ? Math.round((count / properties.length) * 100) : 0;
                       return (
-                        <div key={loc} style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-sm)', alignItems: 'center', gap: '20px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexGrow: 1 }}>
-                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 800 }}>
-                              #{index + 1}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', justifyContent: 'center', minHeight: '140px', flexWrap: 'wrap' }}>
+                          {/* SVG Donut Chart */}
+                          <div style={{ position: 'relative', width: '120px', height: '120px', flexShrink: 0 }}>
+                            <svg width="120" height="120" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                              {/* Background ring */}
+                              <path
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="var(--border)"
+                                strokeWidth="3"
+                              />
+                              {/* Rented slice */}
+                              <path
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="var(--primary)"
+                                strokeWidth="3.2"
+                                strokeDasharray={`${occupancyRate}, 100`}
+                              />
+                              {/* Available slice */}
+                              <path
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="var(--accent)"
+                                strokeWidth="3.2"
+                                strokeDasharray={`${availableRate}, 100`}
+                                strokeDashoffset={`-${occupancyRate}`}
+                              />
+                            </svg>
+                            {/* Center text showing percentage */}
+                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                              <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{occupancyRate}%</span>
+                              <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>Rented</span>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexGrow: 1 }}>
-                              <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{loc}</span>
-                              <div style={{ width: '100%', maxWidth: '240px', height: '4px', backgroundColor: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
-                                <div style={{ width: `${percentage}%`, height: '100%', backgroundColor: 'var(--primary)' }} />
+                          </div>
+                          
+                          {/* Legend details */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flexGrow: 1, minWidth: '140px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: 'var(--primary)', flexShrink: 0 }} />
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>Occupied / Rented</span>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{rented} listings ({occupancyRate}%)</span>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: 'var(--accent)', flexShrink: 0 }} />
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>Available Space</span>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{available} listings ({availableRate}%)</span>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid var(--border)', paddingTop: '8px', marginTop: '2px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Total Capacity</span>
+                                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>{total} published properties</span>
                               </div>
                             </div>
                           </div>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{count} Properties</span>
                         </div>
                       );
-                    })
-                  )}
+                    })()}
+                  </div>
                 </div>
-              </div>
 
+                {/* Regional metrics map pin locations */}
+                <div className="card glass" style={{ padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box', overflow: 'hidden' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                      <MapPin size={20} style={{ color: 'var(--primary)' }} />
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Top Regional Hubs</h3>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {sortedLocations.length === 0 ? (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No regional location data available.</p>
+                      ) : (
+                        sortedLocations.map(([loc, count], index) => {
+                          const percentage = properties.length ? Math.round((count / properties.length) * 100) : 0;
+                          return (
+                            <div key={loc} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-sm)', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexGrow: 1 }}>
+                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800, flexShrink: 0 }}>
+                                  #{index + 1}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flexGrow: 1 }}>
+                                  <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>{loc}</span>
+                                  <div style={{ width: '100%', maxWidth: '180px', height: '4px', backgroundColor: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${percentage}%`, height: '100%', backgroundColor: 'var(--primary)' }} />
+                                  </div>
+                                </div>
+                              </div>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)' }}>{count} Properties</span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
             </div>
           ) : activeTab === 'properties' ? (
             <>

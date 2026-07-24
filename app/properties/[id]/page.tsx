@@ -461,6 +461,8 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                   src={getOptimizedImageUrl(slides[activeImageIndex], 1000)}
                   alt={`${property.title} - Image ${activeImageIndex + 1}`}
                   className={styles.slide}
+                  loading="eager"
+                  fetchPriority="high"
                   decoding="async"
                 />
 
