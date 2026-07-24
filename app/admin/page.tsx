@@ -578,6 +578,40 @@ export default function AdminPage() {
           </div>
         </header>
 
+        {/* Mobile Admin Horizontal Tab Navigation Bar */}
+        <div className={styles.mobileNavContainer}>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`${styles.mobileTabChip} ${activeTab === 'analytics' ? styles.activeMobileTabChip : ''}`}
+          >
+            <PieChart size={14} /> Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab('properties')}
+            className={`${styles.mobileTabChip} ${activeTab === 'properties' ? styles.activeMobileTabChip : ''}`}
+          >
+            <Building size={14} /> Listings ({approvedProperties.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`${styles.mobileTabChip} ${activeTab === 'users' ? styles.activeMobileTabChip : ''}`}
+          >
+            <Users size={14} /> Users ({users.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('audits')}
+            className={`${styles.mobileTabChip} ${activeTab === 'audits' ? styles.activeMobileTabChip : ''}`}
+          >
+            <Activity size={14} /> Audits ({contactLogs.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('upload')}
+            className={`${styles.mobileTabChip} ${activeTab === 'upload' ? styles.activeMobileTabChip : ''}`}
+          >
+            <Plus size={14} /> Upload
+          </button>
+        </div>
+
         {/* Content Body Container */}
         <div className={styles.contentBody}>
           <h1 className={styles.pageTitle}>
