@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../lib/auth';
-import { Home, Search, PlusCircle, Shield, LogOut, Menu, X, User, Heart, Sun, Moon } from 'lucide-react';
+import { Home, Search, PlusCircle, Shield, LogOut, Menu, X, User, Heart, Sun, Moon, Info } from 'lucide-react';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
@@ -178,6 +178,9 @@ export default function Navbar() {
           </Link>
           <Link href="/properties" className={isActive('/properties')} onClick={toggleMobileMenu}>
             <Search size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Search Rentals
+          </Link>
+          <Link href="/about" className={isActive('/about')} onClick={toggleMobileMenu}>
+            <Info size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> About Us
           </Link>
           <Link href="/favorites" className={isActive('/favorites')} onClick={toggleMobileMenu}>
             <Heart size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Favorites
