@@ -589,6 +589,8 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               const water: string[] = [];
               const electricity: string[] = [];
               const amenities: string[] = [];
+              const landSpecs: string[] = [];
+              const furnSpecs: string[] = [];
               const other: string[] = [];
 
               if (featuresIdx !== -1) {
@@ -609,6 +611,12 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                   } else if (trimmedSeg.startsWith('Amenities:')) {
                     const items = trimmedSeg.replace('Amenities:', '').split(',');
                     items.forEach((i) => { if (i.trim()) amenities.push(i.trim()); });
+                  } else if (trimmedSeg.startsWith('Land Specs:')) {
+                    const items = trimmedSeg.replace('Land Specs:', '').split(',');
+                    items.forEach((i) => { if (i.trim()) landSpecs.push(i.trim()); });
+                  } else if (trimmedSeg.startsWith('Furniture Specs:')) {
+                    const items = trimmedSeg.replace('Furniture Specs:', '').split(',');
+                    items.forEach((i) => { if (i.trim()) furnSpecs.push(i.trim()); });
                   } else if (!trimmedSeg.toLowerCase().includes('priceperiod')) {
                     const items = trimmedSeg.includes(':') ? trimmedSeg.split(':')[1]?.split(',') || [trimmedSeg] : [trimmedSeg];
                     items.forEach((i) => { if (i.trim()) other.push(i.trim()); });
@@ -617,7 +625,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               }
 
               // Fallback keyword detection if no structured features block
-              if (water.length === 0 && electricity.length === 0 && amenities.length === 0 && other.length === 0) {
+              if (water.length === 0 && electricity.length === 0 && amenities.length === 0 && landSpecs.length === 0 && furnSpecs.length === 0 && other.length === 0) {
                 const lower = rawDesc.toLowerCase();
                 if (lower.includes('wifi') || lower.includes('wi-fi')) amenities.push('High-Speed WiFi');
                 if (lower.includes('cctv')) amenities.push('CCTV Camera');
@@ -637,7 +645,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                 if (lower.includes('shared meter')) electricity.push('ECG Shared Meter');
               }
 
-              const hasAnyFeatures = water.length > 0 || electricity.length > 0 || amenities.length > 0 || other.length > 0;
+              const hasAnyFeatures = water.length > 0 || electricity.length > 0 || amenities.length > 0 || landSpecs.length > 0 || furnSpecs.length > 0 || other.length > 0;
 
               return (
                 <>
@@ -650,8 +658,25 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
                   {hasAnyFeatures && (
                     <div className={styles.descriptionBox} style={{ borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
-                      <h3 className={styles.sectionTitle} style={{ marginBottom: '16px' }}>Key Features & Amenities</h3>
+                      <h3 className={styles.sectionTitle} style={{ marginBottom: '16px' }}>Key Features & Specifications</h3>
                       
+                      {/* Category Specifications (Lands / Furnitures / Shops) */}
+                      {(landSpecs.length > 0 || furnSpecs.length > 0) && (
+                        <div style={{ marginBottom: '20px' }}>
+                          <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                            📋 Category Specifications & Details
+                          </h4>
+                          <div className={styles.featuresGrid}>
+                            {[...landSpecs, ...furnSpecs].map((item, idx) => (
+                              <div key={idx} className={styles.featureCard} style={{ backgroundColor: 'var(--bg-surface-secondary)', border: '1px solid var(--border)' }}>
+                                <CheckCircle2 size={16} className={styles.featureIcon} style={{ color: '#F59E0B' }} />
+                                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Water Supply */}
                       {water.length > 0 && (
                         <div style={{ marginBottom: '20px' }}>
