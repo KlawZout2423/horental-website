@@ -300,6 +300,17 @@ export default function PropertiesClient() {
     return 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80';
   };
 
+  const activeFiltersCount = [
+    searchQuery ? 1 : 0,
+    propertyType !== 'All' ? 1 : 0,
+    minPrice ? 1 : 0,
+    maxPrice ? 1 : 0,
+    availability !== 'All' ? 1 : 0,
+    selectedWaterTypes.length,
+    selectedMeterTypes.length,
+    selectedAmenities.length,
+  ].reduce((a, b) => a + b, 0);
+
   return (
     <div className={`${styles.container} animate-fade-in`}>
       <h1 className={styles.title} style={{ marginBottom: '20px' }}>Filter &amp; Search Properties</h1>
@@ -312,11 +323,11 @@ export default function PropertiesClient() {
           aria-label="Filter Listings"
         >
           <SlidersHorizontal size={14} />
-          <span>{showMobileFilters ? 'Hide Filters' : 'Filter Listings'}</span>
+          <span>{showMobileFilters ? 'Hide Filters' : `Filter Listings ${activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}`}</span>
         </button>
-        {(searchQuery || propertyType !== 'All' || minPrice || maxPrice || availability !== 'All') && (
+        {activeFiltersCount > 0 && (
           <button onClick={handleResetFilters} className={styles.mobileResetBtn}>
-            Clear Filters
+            Clear Filters ({activeFiltersCount})
           </button>
         )}
       </div>
@@ -361,9 +372,30 @@ export default function PropertiesClient() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="form-control"
-                style={{ paddingLeft: '36px' }}
+                style={{ paddingLeft: '36px', paddingRight: searchQuery ? '36px' : '12px' }}
               />
-              <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)' }} />
+              <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '2px',
+                  }}
+                  aria-label="Clear search keyword"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
           </div>
 
