@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
@@ -17,10 +17,81 @@ import {
   Check,
   Smartphone,
   Mail,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
 import { graphqlRequest, REQUEST_PASSWORD_RESET, RESET_PASSWORD_WITH_OTP } from '../../lib/graphql';
 import styles from '../login/login.module.css';
+
+// 6-Digit Interactive OTP Box Component
+const OtpDigitBoxes = ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
+  const digits = value.padEnd(6, '').split('').slice(0, 6);
+
+  const handleDigitChange = (index: number, char: string) => {
+    const clean = char.replace(/[^0-9]/g, '');
+    
+    if (clean.length > 1) {
+      // Pasted full 6-digit code
+      onChange(clean.slice(0, 6));
+      return;
+    }
+
+    const newDigits = [...digits];
+    newDigits[index] = clean;
+    const combined = newDigits.join('');
+    onChange(combined);
+
+    // Auto-focus next box
+    if (clean && index < 5) {
+      const nextInput = document.getElementById(`otp-digit-${index + 1}`);
+      if (nextInput) nextInput.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !digits[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-digit-${index - 1}`);
+      if (prevInput) prevInput.focus();
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', margin: '16px 0' }}>
+      {[0, 1, 2, 3, 4, 5].map((idx) => (
+        <input
+          key={idx}
+          id={`otp-digit-${idx}`}
+          type="text"
+          maxLength={1}
+          inputMode="numeric"
+          value={digits[idx]?.trim() || ''}
+          onChange={(e) => handleDigitChange(idx, e.target.value)}
+          onKeyDown={(e) => handleKeyDown(idx, e)}
+          onPaste={(e) => {
+            e.preventDefault();
+            const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+            if (pasted) onChange(pasted);
+          }}
+          style={{
+            width: '46px',
+            height: '54px',
+            borderRadius: '12px',
+            border: digits[idx]?.trim() ? '2px solid #2563EB' : '1.5px solid #CBD5E1',
+            backgroundColor: digits[idx]?.trim() ? '#EFF6FF' : '#F8FAFC',
+            color: '#0F172A',
+            fontSize: '1.35rem',
+            fontWeight: 800,
+            textAlign: 'center',
+            boxShadow: digits[idx]?.trim() ? '0 0 0 4px rgba(37, 99, 235, 0.12)' : '0 2px 4px rgba(0,0,0,0.02)',
+            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            outline: 'none'
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -67,7 +138,7 @@ export default function ForgotPasswordPage() {
         setStep(2);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to request verification code. Please check your connection.');
+      setError(err.message || 'Failed to request verification code. Please check your network connection.');
     } finally {
       setLoading(false);
     }
@@ -84,7 +155,7 @@ export default function ForgotPasswordPage() {
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match. Please re-enter your new password.');
+      setError('Passwords do not match. Please verify your password entry.');
       return;
     }
 
@@ -105,26 +176,65 @@ export default function ForgotPasswordPage() {
         setStep(3);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to reset password. Please check your verification code.');
+      setError(err.message || 'Failed to reset password. Please check your 6-digit verification code.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className={styles.page} style={{ background: 'radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.08) 0%, var(--bg) 70%)' }}>
+    <div 
+      className={styles.page} 
+      style={{ 
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '32px 16px',
+        background: 'radial-gradient(ellipse at 50% -20%, #1E1B4B 0%, #0F172A 45%, #020617 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Decorative Floating Light Orbs */}
+      <div style={{ position: 'absolute', top: '10%', left: '15%', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(0,0,0,0) 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+      <div style={{ position: 'absolute', bottom: '10%', right: '15%', width: '350px', height: '350px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0,0,0,0) 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+
       {/* Top Left Navigation Pill */}
-      <Link href="/login" className={styles.backBtn}>
+      <Link 
+        href="/login" 
+        className={styles.backBtn}
+        style={{
+          color: '#E2E8F0',
+          background: 'rgba(255, 255, 255, 0.08)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+        }}
+      >
         <ArrowLeft size={16} /> Back to Sign In
       </Link>
 
-      <div className={styles.card} style={{ maxWidth: '460px', padding: '36px 32px', position: 'relative' }}>
-        
-        {/* Step Wizard Progress Bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', position: 'relative' }}>
-          
-          {/* Background Track Line */}
-          <div style={{ position: 'absolute', top: '16px', left: '16%', right: '16%', height: '3px', backgroundColor: 'var(--border)', zIndex: 0 }} />
+      {/* Main Glassmorphic Card */}
+      <div 
+        style={{ 
+          width: '100%', 
+          maxWidth: '460px', 
+          backgroundColor: 'rgba(255, 255, 255, 0.98)', 
+          backdropFilter: 'blur(24px)', 
+          WebkitBackdropFilter: 'blur(24px)', 
+          borderRadius: '24px', 
+          border: '1px solid rgba(255, 255, 255, 0.8)', 
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.2)', 
+          padding: '40px 32px', 
+          position: 'relative', 
+          zIndex: 10 
+        }}
+      >
+        {/* Step Progress Indicator Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', position: 'relative' }}>
+          {/* Progress Track Line */}
+          <div style={{ position: 'absolute', top: '16px', left: '16%', right: '16%', height: '3px', backgroundColor: '#E2E8F0', zIndex: 0 }} />
           <div 
             style={{ 
               position: 'absolute', 
@@ -132,8 +242,8 @@ export default function ForgotPasswordPage() {
               left: '16%', 
               width: step === 1 ? '0%' : step === 2 ? '50%' : '68%', 
               height: '3px', 
-              backgroundColor: 'var(--primary)', 
-              transition: 'width 0.4s ease', 
+              background: 'linear-gradient(90deg, #2563EB, #4F46E5)', 
+              transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)', 
               zIndex: 0 
             }} 
           />
@@ -144,19 +254,19 @@ export default function ForgotPasswordPage() {
               width: '34px',
               height: '34px',
               borderRadius: '50%',
-              backgroundColor: step >= 1 ? 'var(--primary)' : 'var(--bg-surface-secondary)',
-              color: step >= 1 ? '#FFF' : 'var(--text-muted)',
+              background: step >= 1 ? 'linear-gradient(135deg, #2563EB, #4F46E5)' : '#F1F5F9',
+              color: step >= 1 ? '#FFFFFF' : '#94A3B8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 800,
               fontSize: '0.85rem',
-              boxShadow: step >= 1 ? '0 0 12px rgba(37, 99, 235, 0.4)' : 'none',
+              boxShadow: step >= 1 ? '0 0 12px rgba(37, 99, 235, 0.35)' : 'none',
               transition: 'all 0.3s ease'
             }}>
               {step > 1 ? <Check size={16} /> : '1'}
             </div>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: step >= 1 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: step >= 1 ? '#0F172A' : '#94A3B8' }}>
               Account
             </span>
           </div>
@@ -167,21 +277,20 @@ export default function ForgotPasswordPage() {
               width: '34px',
               height: '34px',
               borderRadius: '50%',
-              backgroundColor: step >= 2 ? 'var(--primary)' : 'var(--bg-surface-secondary)',
-              color: step >= 2 ? '#FFF' : 'var(--text-muted)',
-              border: step === 2 ? '2px solid var(--primary)' : 'none',
+              background: step >= 2 ? 'linear-gradient(135deg, #2563EB, #4F46E5)' : '#F1F5F9',
+              color: step >= 2 ? '#FFFFFF' : '#94A3B8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 800,
               fontSize: '0.85rem',
-              boxShadow: step >= 2 ? '0 0 12px rgba(37, 99, 235, 0.4)' : 'none',
+              boxShadow: step >= 2 ? '0 0 12px rgba(37, 99, 235, 0.35)' : 'none',
               transition: 'all 0.3s ease'
             }}>
               {step > 2 ? <Check size={16} /> : '2'}
             </div>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: step >= 2 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-              Verify & Reset
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: step >= 2 ? '#0F172A' : '#94A3B8' }}>
+              Verify Code
             </span>
           </div>
 
@@ -191,82 +300,114 @@ export default function ForgotPasswordPage() {
               width: '34px',
               height: '34px',
               borderRadius: '50%',
-              backgroundColor: step === 3 ? '#10B981' : 'var(--bg-surface-secondary)',
-              color: step === 3 ? '#FFF' : 'var(--text-muted)',
+              background: step === 3 ? 'linear-gradient(135deg, #10B981, #059669)' : '#F1F5F9',
+              color: step === 3 ? '#FFFFFF' : '#94A3B8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 800,
               fontSize: '0.85rem',
-              boxShadow: step === 3 ? '0 0 12px rgba(16, 185, 129, 0.4)' : 'none',
+              boxShadow: step === 3 ? '0 0 12px rgba(16, 185, 129, 0.35)' : 'none',
               transition: 'all 0.3s ease'
             }}>
               {step === 3 ? <Check size={16} /> : '3'}
             </div>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: step === 3 ? '#10B981' : 'var(--text-muted)' }}>
-              Done
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: step === 3 ? '#10B981' : '#94A3B8' }}>
+              Complete
             </span>
           </div>
         </div>
 
-        {/* Header Hero Icon */}
-        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+        {/* Hero Badge Header */}
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <div style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '20px',
+            width: '68px',
+            height: '68px',
+            borderRadius: '22px',
             background: step === 3 
-              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.25))' 
-              : 'linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(79, 70, 229, 0.25))',
-            color: step === 3 ? '#10B981' : 'var(--primary)',
+              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.2))' 
+              : 'linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(79, 70, 229, 0.2))',
+            color: step === 3 ? '#10B981' : '#2563EB',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: '14px',
             border: step === 3 ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(37, 99, 235, 0.3)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.04)'
           }}>
-            {step === 1 && <Shield size={30} />}
-            {step === 2 && <KeyRound size={30} />}
-            {step === 3 && <CheckCircle2 size={32} />}
+            {step === 1 && <Shield size={32} />}
+            {step === 2 && <KeyRound size={32} />}
+            {step === 3 && <CheckCircle2 size={36} />}
           </div>
-          <h1 className={styles.title} style={{ fontSize: '1.5rem', fontWeight: 800 }}>
+          <h1 style={{ fontSize: '1.55rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', margin: 0 }}>
             {step === 1 && 'Reset Your Password'}
-            {step === 2 && 'Verification & New Password'}
-            {step === 3 && 'Password Reset Complete!'}
+            {step === 2 && 'Security Verification'}
+            {step === 3 && 'Password Updated!'}
           </h1>
-          <p className={styles.subtitle} style={{ fontSize: '0.85rem', marginTop: '4px', color: 'var(--text-secondary)' }}>
-            {step === 1 && 'Enter your registered email or phone number to receive a 6-digit verification code.'}
-            {step === 2 && `Enter the 6-digit code sent for ${emailOrPhone} along with your new password.`}
+          <p style={{ fontSize: '0.86rem', marginTop: '6px', color: '#64748B', lineHeight: 1.5 }}>
+            {step === 1 && 'Enter your account email or phone number to receive a 6-digit verification code.'}
+            {step === 2 && `Enter the 6-digit verification code sent for ${emailOrPhone} and set your new password.`}
             {step === 3 && 'Your account security credentials have been updated successfully.'}
           </p>
         </div>
 
         {/* Error Alert Banner */}
         {error && (
-          <div className={styles.errorBanner} style={{ margin: '8px 0 16px 0', borderRadius: 'var(--radius-sm)' }}>
-            <span>{error}</span>
+          <div style={{
+            padding: '12px 16px',
+            backgroundColor: '#FEF2F2',
+            border: '1px solid #FCA5A5',
+            color: '#DC2626',
+            borderRadius: '12px',
+            marginBottom: '20px',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            lineHeight: 1.5
+          }}>
+            ⚠️ {error}
           </div>
         )}
 
         {/* STEP 1: ACCOUNT IDENTIFIER FORM */}
         {step === 1 && (
-          <form onSubmit={handleRequestOtp} className={styles.form}>
-            <div className={styles.inputGroup}>
-              <label htmlFor="emailOrPhone" className={styles.label}>
+          <form onSubmit={handleRequestOtp} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                 Email Address or Phone Number
               </label>
               <div style={{ position: 'relative' }}>
-                <Smartphone size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <Smartphone size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
                 <input
-                  id="emailOrPhone"
                   type="text"
                   required
                   value={emailOrPhone}
                   onChange={(e) => setEmailOrPhone(e.target.value)}
-                  placeholder="e.g. 0557922593 or tenant@gmail.com"
-                  className={styles.input}
-                  style={{ paddingLeft: '42px', fontSize: '0.92rem' }}
+                  placeholder="e.g. 0557922593 or user@gmail.com"
+                  style={{
+                    width: '100%',
+                    height: '52px',
+                    paddingLeft: '46px',
+                    paddingRight: '16px',
+                    borderRadius: '14px',
+                    border: '1.5px solid #CBD5E1',
+                    backgroundColor: '#F8FAFC',
+                    color: '#0F172A',
+                    fontSize: '0.92rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    transition: 'all 0.2s ease',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563EB';
+                    e.target.style.backgroundColor = '#FFFFFF';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#CBD5E1';
+                    e.target.style.backgroundColor = '#F8FAFC';
+                    e.target.style.boxShadow = 'none';
+                  }}
                 />
               </div>
             </div>
@@ -274,25 +415,33 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className={styles.button}
               style={{
-                background: 'linear-gradient(135deg, var(--primary) 0%, #3B82F6 100%)',
-                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
+                width: '100%',
+                height: '52px',
+                borderRadius: '14px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)',
+                color: '#FFFFFF',
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                marginTop: '8px'
+                boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.4)',
+                transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                marginTop: '4px'
               }}
             >
               {loading ? (
                 <>
-                  <Loader size={18} className="animate-spin" />
+                  <Loader size={20} className="animate-spin" />
                   Generating Code...
                 </>
               ) : (
                 <>
-                  Get 6-Digit Code &rarr;
+                  Get 6-Digit Code <ArrowRight size={18} />
                 </>
               )}
             </button>
@@ -301,33 +450,45 @@ export default function ForgotPasswordPage() {
 
         {/* STEP 2: VERIFY OTP & NEW PASSWORD FORM */}
         {step === 2 && (
-          <form onSubmit={handleResetPassword} className={styles.form}>
+          <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
             {/* Generated Code Highlight Card */}
             {generatedOtp && (
               <div style={{
                 padding: '14px 18px',
-                background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(59, 130, 246, 0.12) 100%)',
-                border: '1px solid rgba(37, 99, 235, 0.3)',
-                borderRadius: 'var(--radius-md)',
+                background: 'linear-gradient(135deg, #EFF6FF 0%, #EEF2FF 100%)',
+                border: '1px solid #BFDBFE',
+                borderRadius: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                marginBottom: '16px'
+                marginBottom: '4px'
               }}>
                 <div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block' }}>
-                    🔑 6-Digit Verification Code
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1D4ED8', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block' }}>
+                    🔑 Verification Code
                   </span>
-                  <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '4px', fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1E3A8A', letterSpacing: '4px', fontFamily: 'monospace' }}>
                     {generatedOtp}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleCopyCode}
-                  className="btn btn-outline"
-                  style={{ padding: '6px 12px', fontSize: '0.78rem', height: 'auto', gap: '4px', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #2563EB',
+                    backgroundColor: '#FFFFFF',
+                    color: '#2563EB',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.1)'
+                  }}
                 >
                   {copiedOtp ? <Check size={14} /> : <Copy size={14} />}
                   {copiedOtp ? 'Copied!' : 'Copy Code'}
@@ -335,55 +496,46 @@ export default function ForgotPasswordPage() {
               </div>
             )}
 
-            {/* 6-Digit Code Input */}
-            <div className={styles.inputGroup}>
-              <label htmlFor="otpCode" className={styles.label}>
-                Enter 6-Digit Code
+            {/* Interactive 6-Digit OTP Box Grid */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', textAlign: 'center' }}>
+                Enter 6-Digit Verification Code
               </label>
-              <div style={{ position: 'relative' }}>
-                <KeyRound size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--primary)' }} />
-                <input
-                  id="otpCode"
-                  type="text"
-                  required
-                  maxLength={6}
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                  placeholder="e.g. 482915"
-                  className={styles.input}
-                  style={{
-                    paddingLeft: '42px',
-                    letterSpacing: '6px',
-                    fontSize: '1.15rem',
-                    fontWeight: 800,
-                    textAlign: 'center',
-                    fontFamily: 'monospace'
-                  }}
-                />
-              </div>
+              <OtpDigitBoxes value={otpCode} onChange={setOtpCode} />
             </div>
 
             {/* New Password */}
-            <div className={styles.inputGroup}>
-              <label htmlFor="newPassword" className={styles.label}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                 New Password
               </label>
               <div style={{ position: 'relative' }}>
-                <Lock size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <Lock size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
                 <input
-                  id="newPassword"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 6 characters"
-                  className={styles.input}
-                  style={{ paddingLeft: '42px', paddingRight: '42px', fontSize: '0.92rem' }}
+                  style={{
+                    width: '100%',
+                    height: '50px',
+                    paddingLeft: '46px',
+                    paddingRight: '46px',
+                    borderRadius: '14px',
+                    border: '1.5px solid #CBD5E1',
+                    backgroundColor: '#F8FAFC',
+                    color: '#0F172A',
+                    fontSize: '0.92rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}
+                  style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', display: 'flex' }}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -391,21 +543,32 @@ export default function ForgotPasswordPage() {
             </div>
 
             {/* Confirm New Password */}
-            <div className={styles.inputGroup}>
-              <label htmlFor="confirmPassword" className={styles.label}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                 Confirm New Password
               </label>
               <div style={{ position: 'relative' }}>
-                <Lock size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <Lock size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
                 <input
-                  id="confirmPassword"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat new password"
-                  className={styles.input}
-                  style={{ paddingLeft: '42px', fontSize: '0.92rem' }}
+                  style={{
+                    width: '100%',
+                    height: '50px',
+                    paddingLeft: '46px',
+                    paddingRight: '16px',
+                    borderRadius: '14px',
+                    border: '1.5px solid #CBD5E1',
+                    backgroundColor: '#F8FAFC',
+                    color: '#0F172A',
+                    fontSize: '0.92rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
                 />
               </div>
             </div>
@@ -413,20 +576,27 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className={styles.button}
               style={{
-                background: 'linear-gradient(135deg, var(--primary) 0%, #3B82F6 100%)',
-                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
+                width: '100%',
+                height: '52px',
+                borderRadius: '14px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)',
+                color: '#FFFFFF',
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
+                boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.4)',
                 marginTop: '6px'
               }}
             >
               {loading ? (
                 <>
-                  <Loader size={18} className="animate-spin" />
+                  <Loader size={20} className="animate-spin" />
                   Updating Password...
                 </>
               ) : (
@@ -437,7 +607,7 @@ export default function ForgotPasswordPage() {
             <button
               type="button"
               onClick={() => { setStep(1); setError(null); }}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer', textAlign: 'center', marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+              style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '4px' }}
             >
               <RefreshCw size={12} /> Change email / phone number
             </button>
@@ -449,35 +619,44 @@ export default function ForgotPasswordPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', textAlign: 'center' }}>
             <div style={{
               padding: '20px 24px',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.15) 100%)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: 'var(--radius-md)',
+              background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
+              border: '1px solid #A7F3D0',
+              borderRadius: '16px',
               color: '#065F46',
               fontSize: '0.92rem',
               fontWeight: 600,
               lineHeight: 1.5
             }}>
-              🎉 <strong>Success!</strong> Your password has been reset. You can now sign in with your new security credentials.
+              🎉 <strong>Password Updated Successfully!</strong> You can now sign into your account using your new credentials.
             </div>
 
             <button
               type="button"
               onClick={() => router.push('/login')}
-              className={styles.button}
               style={{
                 width: '100%',
+                height: '52px',
+                borderRadius: '14px',
+                border: 'none',
                 background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
-                fontWeight: 700
+                color: '#FFFFFF',
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 8px 20px -4px rgba(16, 185, 129, 0.4)'
               }}
             >
-              Sign In to Your Account &rarr;
+              Sign In to Your Account <ArrowRight size={18} />
             </button>
           </div>
         )}
 
         {/* WhatsApp Support Direct Button */}
-        <div style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid var(--border)', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+        <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid #E2E8F0', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
           <a
             href={`https://wa.me/233557922593?text=Hi%20HO%20Rentals,%20I%20need%20assistance%20resetting%20my%20account%20password.`}
             target="_blank"
@@ -488,7 +667,7 @@ export default function ForgotPasswordPage() {
               border: '1px solid rgba(37, 211, 102, 0.3)',
               borderRadius: '20px',
               color: '#15803D',
-              fontSize: '0.8rem',
+              fontSize: '0.82rem',
               fontWeight: 700,
               display: 'inline-flex',
               alignItems: 'center',
