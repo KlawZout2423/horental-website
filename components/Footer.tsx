@@ -1,15 +1,18 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../lib/auth';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import styles from './Footer.module.css';
 
 export default function Footer() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const [servicesOpen, setServicesOpen] = useState(false);
+  const [companyOpen, setCompanyOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +43,13 @@ export default function Footer() {
           </div>
 
           {/* Quick Links */}
-          <div>
-            <h4 className={styles.title}>Services</h4>
+          <div className={`${styles.column} ${servicesOpen ? styles.open : ''}`}>
+            <h4 className={styles.title} onClick={() => setServicesOpen(!servicesOpen)}>
+              Services
+              <span className={styles.toggleIcon}>
+                {servicesOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </span>
+            </h4>
             <div className={styles.links}>
               <Link href="/properties" className={styles.link}>Browse Rentals</Link>
               {user && (user.role === 'admin' || user.role === 'partner') && (
@@ -51,8 +59,13 @@ export default function Footer() {
           </div>
 
           {/* About */}
-          <div>
-            <h4 className={styles.title}>Company</h4>
+          <div className={`${styles.column} ${companyOpen ? styles.open : ''}`}>
+            <h4 className={styles.title} onClick={() => setCompanyOpen(!companyOpen)}>
+              Company
+              <span className={styles.toggleIcon}>
+                {companyOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </span>
+            </h4>
             <div className={styles.links}>
               <Link href="/about" className={styles.link}>About Us</Link>
               <a href="mailto:thehorentals@gmail.com" className={styles.link}>Contact Support</a>

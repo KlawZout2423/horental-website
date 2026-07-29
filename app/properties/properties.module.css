@@ -148,6 +148,7 @@
 @media (max-width: 768px) {
   .layout {
     grid-template-columns: 1fr;
+    margin-bottom: 40px;
   }
 }
 
@@ -732,7 +733,7 @@
   }
 
   .container {
-    padding: 24px 16px;
+    padding: 24px 16px 40px;
   }
 
   .title {
