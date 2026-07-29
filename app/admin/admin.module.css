@@ -691,3 +691,21 @@
   from { transform: translateX(-100%); }
   to { transform: translateX(0); }
 }
+
+/* Responsive Filters Visibility utilities */
+.desktopFilters {
+  display: flex !important;
+}
+
+.mobileFilters {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .desktopFilters {
+    display: none !important;
+  }
+  .mobileFilters {
+    display: block !important;
+  }
+}

@@ -1540,7 +1540,8 @@ export default function AdminPage() {
             <>
               {/* Category selector & Cleanup Bar */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {/* Desktop Buttons Filter */}
+                <div className={styles.desktopFilters} style={{ gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     onClick={() => setAuditLogView('all')}
                     className={`btn ${auditLogView === 'all' ? 'btn-primary' : 'btn-outline'}`}
@@ -1562,6 +1563,21 @@ export default function AdminPage() {
                   >
                     📞 Landlord Contacts ({contactLogs.length})
                   </button>
+                </div>
+
+                {/* Mobile Dropdown Select Filter */}
+                <div className={styles.mobileFilters} style={{ flex: 1, minWidth: '200px' }}>
+                  <select
+                    value={auditLogView}
+                    onChange={(e) => setAuditLogView(e.target.value as 'all' | 'system' | 'contacts')}
+                    className="form-control"
+                    style={{ fontSize: '0.85rem', fontWeight: 700, padding: '10px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-surface)' }}
+                    aria-label="Filter Audit Logs"
+                  >
+                    <option value="all">📁 All Logs ({auditLogs.length + contactLogs.length})</option>
+                    <option value="system">🛡️ System Security Audits ({auditLogs.length})</option>
+                    <option value="contacts">📞 Landlord Contacts ({contactLogs.length})</option>
+                  </select>
                 </div>
 
                 {/* Log Cleanup Action Buttons */}
@@ -1681,7 +1697,8 @@ export default function AdminPage() {
                   </h3>
                   
                   {/* Lead Filters */}
-                  <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                  {/* Desktop Lead Buttons */}
+                  <div className={styles.desktopFilters} style={{ gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
                     <button
                       onClick={() => setAuditFilter('all')}
                       className={`btn ${auditFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
@@ -1710,6 +1727,22 @@ export default function AdminPage() {
                     >
                       📅 Viewings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})
                     </button>
+                  </div>
+
+                  {/* Mobile Lead Select Dropdown */}
+                  <div className={styles.mobileFilters} style={{ marginBottom: '12px' }}>
+                    <select
+                      value={auditFilter}
+                      onChange={(e) => setAuditFilter(e.target.value as 'all' | 'call' | 'whatsapp' | 'book_viewing')}
+                      className="form-control"
+                      style={{ fontSize: '0.85rem', fontWeight: 700, padding: '8px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-surface)' }}
+                      aria-label="Filter Leads"
+                    >
+                      <option value="all">🔍 All Inquiry Leads ({contactLogs.length})</option>
+                      <option value="call">📞 Phone Calls ({contactLogs.filter((l) => l.actionType === 'call').length})</option>
+                      <option value="whatsapp">💬 WhatsApp Inquiries ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})</option>
+                      <option value="book_viewing">📅 Viewing Bookings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})</option>
+                    </select>
                   </div>
 
                   <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
