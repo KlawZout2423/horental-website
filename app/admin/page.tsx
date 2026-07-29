@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '../../lib/auth';
 import UploadPage from '../upload/page';
 import { 
@@ -1771,16 +1772,52 @@ export default function AdminPage() {
                           <div key={log.id} className={styles.adminCardItem}>
                             <div className={styles.adminCardHeader}>
                               <div>
-                                <div className={styles.adminCardTitle}>{log.customerName} ({log.customerPhone})</div>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                <div className={styles.adminCardTitle} style={{ fontSize: '0.98rem', fontWeight: 800 }}>{log.customerName}</div>
+                                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                  👤 Phone: <a href={`tel:${log.customerPhone}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>{log.customerPhone}</a>
+                                </div>
+                              </div>
+                              <span className={`badge ${
+                                log.actionType === 'whatsapp' ? 'badge-pending' :
+                                log.actionType === 'book_viewing' ? 'badge-primary' : 'badge-available'
+                              }`} style={{ fontSize: '0.65rem', padding: '3px 8px', textTransform: 'none', fontWeight: 700 }}>
+                                {log.actionType === 'call' && '📞 Call'}
+                                {log.actionType === 'whatsapp' && '💬 WhatsApp'}
+                                {log.actionType === 'book_viewing' && '📅 Viewing'}
+                                {log.actionType === 'sms' && '📱 SMS Lead'}
+                                {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
+                              </span>
+                            </div>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                <span>🏢 Property:</span>
+                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
+                                  {log.property ? (
+                                    <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
+                                      {log.property.title}
+                                    </Link>
+                                  ) : 'N/A'}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                <span>📞 Landlord Contact:</span>
+                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  <a href={`tel:${log.landlordPhone}`} style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{log.landlordPhone}</a>
+                                  <a href={`tel:${log.landlordPhone}`} title="Call Landlord" style={{ color: 'var(--primary)', fontSize: '0.9rem', display: 'inline-flex' }}>
+                                    📞
+                                  </a>
+                                  <a href={`https://wa.me/${log.landlordPhone.startsWith('0') ? '233' + log.landlordPhone.substring(1) : log.landlordPhone}`} target="_blank" rel="noopener noreferrer" title="WhatsApp Landlord" style={{ color: '#25D366', fontSize: '0.9rem', display: 'inline-flex' }}>
+                                    💬
+                                  </a>
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                <span>🕒 Time:</span>
+                                <span>
                                   {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
                                 </span>
                               </div>
-                              <span className="badge badge-available" style={{ fontSize: '0.65rem' }}>{log.actionType}</span>
-                            </div>
-                            <div className={styles.adminCardMeta}>
-                              <span><strong>Property:</strong> {log.property ? log.property.title : 'N/A'}</span>
-                              <span><strong>Landlord Contact:</strong> {log.landlordPhone}</span>
                             </div>
                           </div>
                         ))
