@@ -33,16 +33,24 @@ export async function graphqlRequest<T = any>(
       credentials: 'same-origin', // Ensures cookies are sent with the request
     });
 
-    if (!res.ok) {
-      throw new Error(`HTTP error! Status: ${res.status}`);
+    let body: GraphQLResponse<T>;
+    try {
+      body = await res.json();
+    } catch (err) {
+      if (!res.ok) {
+        throw new Error(`HTTP error! Status: ${res.status}`);
+      }
+      throw new Error('Failed to parse GraphQL response JSON.');
     }
-
-    const body: GraphQLResponse<T> = await res.json();
 
     if (body.errors && body.errors.length > 0) {
       // Sanitize: only expose the message, never internal stack traces
       const msg = body.errors[0].message;
       throw new Error(msg);
+    }
+
+    if (!res.ok) {
+      throw new Error(`HTTP error! Status: ${res.status}`);
     }
 
     if (!body.data) {
@@ -119,6 +127,7 @@ export const GET_PROPERTIES = `
       longitude
       description
       contact
+      landlordName
       imageUrl
       isFeatured
       createdAt
@@ -152,6 +161,7 @@ export const GET_PROPERTY_BY_ID = `
       latitude
       longitude
       contact
+      landlordName
       price
       description
       imageUrl
@@ -189,6 +199,7 @@ export const CREATE_PROPERTY = `
       status
       description
       contact
+      landlordName
       imageUrl
       isFeatured
       createdAt
@@ -209,10 +220,17 @@ export const UPDATE_PROPERTY = `
       price
       description
       contact
+      landlordName
       type
       status
       imageUrl
       isFeatured
+      gallery {
+        id
+        url
+        caption
+        order
+      }
     }
   }
 `;
@@ -445,5 +463,79 @@ export const CHANGE_PASSWORD_MUTATION = `
     }
   }
 `;
+
+export const GET_LANDLORD_REGISTRATIONS = `
+  query GetLandlordRegistrations {
+    landlordRegistrations {
+      id
+      name
+      dob
+      gender
+      nationalId
+      homeAddress
+      city
+      region
+      phone1
+      phone2
+      email
+      occupation
+      propAddress
+      propCity
+      propLandmark
+      propRegion
+      propGps
+      rent
+      advance
+      rooms
+      availableFrom
+      propType
+      amenities
+      plan
+      photos
+      status
+      agreementSigned
+      createdAt
+    }
+  }
+`;
+
+export const CREATE_LANDLORD_REGISTRATION = `
+  mutation CreateLandlordRegistration($input: LandlordRegistrationInput!) {
+    createLandlordRegistration(input: $input) {
+      id
+      name
+      status
+    }
+  }
+`;
+
+export const UPDATE_LANDLORD_REGISTRATION_STATUS = `
+  mutation UpdateLandlordRegistrationStatus($id: Int!, $status: String!) {
+    updateLandlordRegistrationStatus(id: $id, status: $status) {
+      id
+      status
+    }
+  }
+`;
+
+export const DELETE_LANDLORD_REGISTRATION = `
+  mutation DeleteLandlordRegistration($id: Int!) {
+    deleteLandlordRegistration(id: $id) {
+      id
+    }
+  }
+`;
+
+export const PUBLISH_LANDLORD_REGISTRATION = `
+  mutation PublishLandlordRegistration($id: Int!) {
+    publishLandlordRegistration(id: $id) {
+      id
+      title
+      status
+    }
+  }
+`;
+
+
 
 

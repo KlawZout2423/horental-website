@@ -41,6 +41,7 @@ interface Property {
   createdAt: string;
   owner?: PropertyOwner;
   gallery?: GalleryItem[];
+  landlordName?: string;
 }
 
 export default function PropertyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -798,10 +799,17 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
           <h3 className={styles.sidebarCardTitle}>Contact Landlord</h3>
           
           <div className={styles.landlordInfo}>
-            <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>Landlord / Owner</span>
-              <span className={styles.infoValue}>{property.owner?.name || 'HO Rentals Verified (Agent)'}</span>
-            </div>
+            {property.landlordName ? (
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>Landlord Name</span>
+                <span className={styles.infoValue}>{property.landlordName}</span>
+              </div>
+            ) : (
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>Landlord / Owner</span>
+                <span className={styles.infoValue}>{property.owner?.name || 'HO Rentals Verified (Agent)'}</span>
+              </div>
+            )}
 
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>Phone Contact</span>

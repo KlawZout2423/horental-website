@@ -33,6 +33,7 @@ export default function UploadPage({
   const [longitude, setLongitude] = useState<number | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [landlordName, setLandlordName] = useState('');
   
   // Amenities checkboxes state (all default to false - chosen explicitly by user)
   const [hasWifi, setHasWifi] = useState(false);
@@ -269,6 +270,7 @@ export default function UploadPage({
           caption: `${title} - Image ${index + 1}`,
           order: index + 1,
         })),
+        landlordName: landlordName.trim() || undefined,
       };
 
       await graphqlRequest(CREATE_PROPERTY, { input });
@@ -554,6 +556,18 @@ export default function UploadPage({
                 onChange={(e) => setContact(formatGhanaPhone(e.target.value))}
                 required
                 maxLength={10}
+                className="form-control"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="landlordName">Landlord Name (Optional)</label>
+              <input
+                id="landlordName"
+                type="text"
+                placeholder="e.g. Mr. John Doe"
+                value={landlordName}
+                onChange={(e) => setLandlordName(e.target.value)}
                 className="form-control"
               />
             </div>

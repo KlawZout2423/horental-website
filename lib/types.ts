@@ -20,9 +20,16 @@ export interface Property {
   longitude?: number;
   description: string;
   contact: string;
+  landlordName?: string;
   imageUrl: string;
   isFeatured?: boolean;
   createdAt?: string;
+  gallery?: Array<{
+    id: string;
+    url: string;
+    caption?: string;
+    order?: number;
+  }>;
 }
 
 /**
@@ -298,3 +305,35 @@ export function getFriendlyErrorMessage(err: unknown, defaultMsg: string = 'An u
   }
   return msg;
 }
+
+export interface LandlordRegistration {
+  id: string;
+  name: string;
+  dob?: string;
+  gender?: string;
+  nationalId?: string;
+  homeAddress?: string;
+  city: string;
+  region?: string;
+  phone1: string;
+  phone2?: string;
+  email?: string;
+  occupation?: string;
+  propAddress: string;
+  propCity?: string;
+  propLandmark?: string;
+  propRegion?: string;
+  propGps?: string;
+  rent: number;
+  advance?: string;
+  rooms?: number;
+  availableFrom?: string;
+  propType?: string;
+  amenities: string[];
+  plan?: string;
+  photos: string[];
+  status: string;
+  agreementSigned: boolean;
+  createdAt: string;
+}
+

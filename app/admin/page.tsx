@@ -21,11 +21,15 @@ import {
   DELETE_REPORT,
   ADMIN_RESET_USER_PASSWORD,
   GET_AUDIT_LOGS,
-  DELETE_OLD_AUDIT_LOGS
+  DELETE_OLD_AUDIT_LOGS,
+  GET_LANDLORD_REGISTRATIONS,
+  UPDATE_LANDLORD_REGISTRATION_STATUS,
+  DELETE_LANDLORD_REGISTRATION,
+  PUBLISH_LANDLORD_REGISTRATION
 } from '../../lib/graphql';
-import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon } from 'lucide-react';
+import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check } from 'lucide-react';
 import styles from './admin.module.css';
-import { getFriendlyErrorMessage } from '../../lib/types';
+import { getFriendlyErrorMessage, LandlordRegistration } from '../../lib/types';
 
 interface DashboardStats {
   totalProperties: number;
@@ -82,6 +86,13 @@ interface ReportItem {
   };
 }
 
+interface EditGalleryItem {
+  id?: string | number;
+  url: string;
+  file?: File;
+  previewUrl: string;
+}
+
 export default function AdminPage() {
   const { user, loading: authLoading, logout } = useAuth();
   const router = useRouter();
@@ -93,7 +104,7 @@ export default function AdminPage() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   
   // Navigation & loaders
-  const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'moderation' | 'audits' | 'reports' | 'upload'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords'>('analytics');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
@@ -101,6 +112,9 @@ export default function AdminPage() {
   const [auditFilter, setAuditFilter] = useState<'all' | 'call' | 'whatsapp' | 'book_viewing' | 'sms'>('all');
   const [loadingData, setLoadingData] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [landlordRegistrations, setLandlordRegistrations] = useState<LandlordRegistration[]>([]);
+  const [selectedLandlord, setSelectedLandlord] = useState<LandlordRegistration | null>(null);
+  const [landlordSearch, setLandlordSearch] = useState('');
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
   // Edit Property States
@@ -136,6 +150,8 @@ export default function AdminPage() {
   const [editEcgPrepaid, setEditEcgPrepaid] = useState(false);
   const [editIsFeatured, setEditIsFeatured] = useState(false);
   const [editPricePeriod, setEditPricePeriod] = useState('semester');
+  const [editLandlordName, setEditLandlordName] = useState('');
+  const [editGallery, setEditGallery] = useState<EditGalleryItem[]>([]);
 
   // Lands Specific Edit States
   const [editLandPlotSize, setEditLandPlotSize] = useState('');
@@ -223,13 +239,14 @@ export default function AdminPage() {
       setLoadingData(true);
     }
     try {
-      const [statsData, usersData, propertiesData, logsData, reportsData, auditLogsData] = await Promise.all([
+      const [statsData, usersData, propertiesData, logsData, reportsData, auditLogsData, landlordData] = await Promise.all([
         graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS),
         graphqlRequest<{ users: User[] }>(GET_USERS),
         graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES),
         graphqlRequest<{ contactLogs: ContactLogItem[] }>(GET_CONTACT_LOGS),
         graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] })),
-        graphqlRequest<{ auditLogs: AuditLogItem[] }>(GET_AUDIT_LOGS).catch(() => ({ auditLogs: [] }))
+        graphqlRequest<{ auditLogs: AuditLogItem[] }>(GET_AUDIT_LOGS).catch(() => ({ auditLogs: [] })),
+        graphqlRequest<{ landlordRegistrations: LandlordRegistration[] }>(GET_LANDLORD_REGISTRATIONS).catch(() => ({ landlordRegistrations: [] }))
       ]);
 
       if (statsData) setStats(statsData.dashboardStats);
@@ -238,6 +255,7 @@ export default function AdminPage() {
       if (logsData) setContactLogs(logsData.contactLogs);
       if (reportsData) setReports(reportsData.reports);
       if (auditLogsData) setAuditLogs(auditLogsData.auditLogs || []);
+      if (landlordData) setLandlordRegistrations(landlordData.landlordRegistrations || []);
     } catch (err: any) {
       console.error('Error loading admin data:', err);
       setMessage({ text: getFriendlyErrorMessage(err, 'Failed to fetch dashboard data.'), isError: true });
@@ -272,6 +290,62 @@ export default function AdminPage() {
       setMessage({ text: 'Report record deleted.', isError: false });
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to delete report.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleVerifyLandlord = async (id: number | string) => {
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+      await graphqlRequest(UPDATE_LANDLORD_REGISTRATION_STATUS, { id: parsedId, status: 'Verified' });
+      setLandlordRegistrations(prev =>
+        prev.map(r => r.id === id ? { ...r, status: 'Verified' } : r)
+      );
+      setMessage({ text: 'Landlord verified successfully.', isError: false });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to verify landlord.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteLandlord = async (id: number | string) => {
+    if (!confirm('Are you sure you want to remove this landlord registration? This cannot be undone.')) return;
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+      await graphqlRequest(DELETE_LANDLORD_REGISTRATION, { id: parsedId });
+      setLandlordRegistrations(prev => prev.filter(r => r.id !== id));
+      setMessage({ text: 'Landlord registration deleted.', isError: false });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to delete landlord.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handlePublishLandlord = async (id: number | string) => {
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+      await graphqlRequest(PUBLISH_LANDLORD_REGISTRATION, { id: parsedId });
+      
+      // Update registration status to verified locally
+      setLandlordRegistrations(prev =>
+        prev.map(r => r.id === id ? { ...r, status: 'Verified' } : r)
+      );
+
+      // Reload admin dashboard data to update Listings tab and stats counts
+      await loadAdminDashboardData(false);
+
+      setMessage({ text: '🎉 Landlord details published to property listings successfully!', isError: false });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to publish listing.', isError: true });
     } finally {
       setActionLoading(false);
     }
@@ -467,6 +541,16 @@ export default function AdminPage() {
     setEditContact(p.contact || '');
     setEditImageUrl(p.imageUrl || '');
     setEditIsFeatured(p.isFeatured || false);
+    setEditLandlordName(p.landlordName || '');
+    if (p.gallery) {
+      setEditGallery(p.gallery.map(g => ({
+        id: g.id,
+        url: g.url,
+        previewUrl: g.url
+      })));
+    } else {
+      setEditGallery([]);
+    }
     
     const desc = p.description || '';
     const descLower = desc.toLowerCase();
@@ -604,6 +688,42 @@ export default function AdminPage() {
 
       finalDescription += `\n\nPricePeriod: per ${editPricePeriod}`;
 
+      // Upload new images
+      const newFiles = editGallery.filter(item => item.file);
+      let uploadedUrls: string[] = [];
+      if (newFiles.length > 0) {
+        const formData = new FormData();
+        newFiles.forEach(item => {
+          if (item.file) formData.append('images', item.file);
+        });
+        const uploadRes = await fetch('/api/upload-multiple', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!uploadRes.ok) {
+          throw new Error('Failed to upload new gallery images.');
+        }
+        const data = await uploadRes.json();
+        uploadedUrls = data.imageUrls || data.images || [];
+      }
+
+      let newUrlIndex = 0;
+      const finalGalleryUrls: string[] = [];
+      editGallery.forEach(item => {
+        if (item.file) {
+          if (uploadedUrls[newUrlIndex]) {
+            finalGalleryUrls.push(uploadedUrls[newUrlIndex]);
+            newUrlIndex++;
+          }
+        } else {
+          finalGalleryUrls.push(item.url);
+        }
+      });
+
+      if (finalGalleryUrls.length === 0) {
+        throw new Error('Please keep or upload at least one image.');
+      }
+
       const input = {
         title: editTitle,
         location: editLocation,
@@ -616,35 +736,28 @@ export default function AdminPage() {
         status: editStatus,
         description: finalDescription,
         contact: editContact,
-        imageUrl: editImageUrl.trim() || editingProperty.imageUrl || '',
+        landlordName: editLandlordName.trim() || undefined,
+        imageUrl: finalGalleryUrls[0],
+        gallery: finalGalleryUrls.map((url, index) => ({
+          url,
+          caption: `${editTitle} - Image ${index + 1}`,
+          order: index + 1,
+        })),
         isFeatured: editIsFeatured,
       };
 
       const parsedId = parseInt(editingProperty.id, 10);
-      await graphqlRequest(UPDATE_PROPERTY, { 
+      const res = await graphqlRequest<{ updateProperty: Property }>(UPDATE_PROPERTY, { 
         id: isNaN(parsedId) ? editingProperty.id : parsedId, 
         input 
       });
 
+      const updatedProperty = res.updateProperty;
+
       setProperties((prev) =>
         prev.map((p) =>
           p.id === editingProperty.id
-            ? { 
-                ...p, 
-                title: editTitle, 
-                location: editLocation, 
-                digitalAddress: editDigitalAddress.trim() || undefined,
-                landmarks: editLandmarks.trim() || undefined,
-                latitude: editLatitude !== null ? editLatitude : undefined,
-                longitude: editLongitude !== null ? editLongitude : undefined,
-                price: parsedPrice, 
-                type: editType, 
-                status: editStatus, 
-                description: finalDescription, 
-                contact: editContact,
-                imageUrl: editImageUrl.trim() || editingProperty.imageUrl || '',
-                isFeatured: editIsFeatured,
-              }
+            ? { ...p, ...updatedProperty }
             : p
         )
       );
@@ -735,6 +848,15 @@ export default function AdminPage() {
               >
                 {reports.filter((r) => r.status === 'pending').length}
               </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('landlords')}
+              className={`${styles.navItem} ${activeTab === 'landlords' ? styles.activeNavItem : ''}`}
+            >
+              <FileText size={16} />
+              <span>Landlords Database</span>
+              <span className={styles.navCountBadge}>{landlordRegistrations.length}</span>
             </button>
 
             {/* Standard Nav Item for Upload Action */}
@@ -876,6 +998,12 @@ export default function AdminPage() {
                     <Flag size={16} /> Flagged Reports ({reports.filter((r) => r.status === 'pending').length})
                   </button>
                   <button
+                    onClick={() => { setActiveTab('landlords'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'landlords' ? styles.activeNavItem : ''}`}
+                  >
+                    <FileText size={16} /> Landlords Database ({landlordRegistrations.length})
+                  </button>
+                  <button
                     onClick={() => { setActiveTab('upload'); setIsMobileDrawerOpen(false); }}
                     className={`${styles.navItem} ${activeTab === 'upload' ? styles.activeNavItem : ''}`}
                     style={{ marginTop: '12px', borderTop: '1px solid #1E293B', paddingTop: '16px' }}
@@ -929,6 +1057,7 @@ export default function AdminPage() {
                 {activeTab === 'users' && 'Account Manager'}
                 {activeTab === 'audits' && 'Contact Inquiry Audits'}
                 {activeTab === 'reports' && 'Property Reports & Flagged Listings'}
+                {activeTab === 'landlords' && 'Landlord Registrations'}
               </h1>
               <p className={styles.pageSubtitle}>
                 {activeTab === 'analytics' && 'Overview statistics, inventory performance, and user-submitted listing flags.'}
@@ -936,6 +1065,7 @@ export default function AdminPage() {
                 {activeTab === 'users' && 'Manage registered accounts and adjust credentials and system roles.'}
                 {activeTab === 'audits' && 'Real-time record of customer call and WhatsApp inquiries to landlords.'}
                 {activeTab === 'reports' && 'Review user-flagged listings, reported scams, inaccurate photos, and manage property reports.'}
+                {activeTab === 'landlords' && 'Manage landlord platform agreements, personal information, and property details.'}
               </p>
             </>
           )}
@@ -2065,11 +2195,298 @@ export default function AdminPage() {
                 )}
               </div>
             </>
+          ) : activeTab === 'landlords' ? (
+            <>
+              {/* Landlord Registrations Stats */}
+              <div className={styles.statsGrid} style={{ marginBottom: '20px' }}>
+                <div className={styles.statCard} style={{ borderLeft: '4px solid #3B82F6' }}>
+                  <span className={styles.statLabel}>Total Registrations</span>
+                  <span className={styles.statValue}>{landlordRegistrations.length}</span>
+                </div>
+                <div className={styles.statCard} style={{ borderLeft: '4px solid #F59E0B' }}>
+                  <span className={styles.statLabel}>Basic Plan</span>
+                  <span className={styles.statValue}>
+                    {landlordRegistrations.filter((r) => r.plan === 'Basic').length}
+                  </span>
+                </div>
+                <div className={styles.statCard} style={{ borderLeft: '4px solid var(--primary)' }}>
+                  <span className={styles.statLabel}>Premium Plan</span>
+                  <span className={styles.statValue}>
+                    {landlordRegistrations.filter((r) => r.plan === 'Premium').length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Landlords search controls */}
+              <div className={styles.tableControls} style={{ marginBottom: '20px' }}>
+                <div className={styles.searchWrapper}>
+                  <Search size={18} className={styles.searchIcon} />
+                  <input
+                    type="text"
+                    placeholder="Search by landlord name, town/city, phone number, plan..."
+                    value={landlordSearch}
+                    onChange={(e) => setLandlordSearch(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                </div>
+              </div>
+
+              {/* Landlords list */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {landlordRegistrations.filter((r) =>
+                  (r.name + r.city + r.phone1 + (r.propAddress || '') + (r.plan || '')).toLowerCase().includes(landlordSearch.toLowerCase())
+                ).length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <AlertTriangle size={32} />
+                    <p>No landlord registrations found matching your search.</p>
+                  </div>
+                ) : (
+                  landlordRegistrations
+                    .filter((r) =>
+                      (r.name + r.city + r.phone1 + (r.propAddress || '') + (r.plan || '')).toLowerCase().includes(landlordSearch.toLowerCase())
+                    )
+                    .map((r) => (
+                      <div key={r.id} className={styles.landlordCard}>
+                        {/* Profile side */}
+                        <div className={styles.landlordProfileSide}>
+                          <div className={styles.landlordAvatarRow}>
+                            <div className={styles.landlordAvatarCircle}>
+                              {r.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                            </div>
+                            <div>
+                              <h3 className={styles.landlordNameText}>{r.name}</h3>
+                              <div className={styles.landlordMetaText}>
+                                Ref: {r.id}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={styles.landlordMetaText} style={{ marginTop: '2px', fontWeight: 600 }}>
+                            Registered: {r.createdAt ? new Date(parseInt(r.createdAt) || r.createdAt).toLocaleDateString() : 'Unknown'}
+                          </div>
+
+                          <div className={styles.landlordBadgesRow}>
+                            {r.plan && (
+                              <span 
+                                className={`${styles.landlordBadge} ${
+                                  r.plan === 'Premium' ? styles.landlordBadgePremium : styles.landlordBadgeBasic
+                                }`}
+                              >
+                                {r.plan} Plan
+                              </span>
+                            )}
+                            <span 
+                              className={`${styles.landlordBadge} ${
+                                r.status === 'Verified' ? styles.landlordBadgeVerified : styles.landlordBadgePending
+                              }`}
+                            >
+                              {r.status}
+                            </span>
+                            {r.agreementSigned && (
+                              <span className={`${styles.landlordBadge} ${styles.landlordBadgeAgreement}`}>
+                                Agreement
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Info details grid */}
+                        <div className={styles.landlordInfoGrid}>
+                          <div className={styles.infoBlock}>
+                            <span className={styles.infoLabel}>Primary Phone</span>
+                            <span className={styles.infoValue}>{r.phone1}</span>
+                          </div>
+                          <div className={styles.infoBlock}>
+                            <span className={styles.infoLabel}>City / Town</span>
+                            <span className={styles.infoValue}>{r.city}</span>
+                          </div>
+                          <div className={styles.infoBlock}>
+                            <span className={styles.infoLabel}>Property Address</span>
+                            <span className={styles.infoValue} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '240px' }}>
+                              {r.propAddress}
+                            </span>
+                          </div>
+                          <div className={styles.infoBlock}>
+                            <span className={styles.infoLabel}>Monthly Rent</span>
+                            <span className={styles.infoValue} style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                              GHS {r.rent.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className={styles.infoBlock}>
+                            <span className={styles.infoLabel}>Property Type</span>
+                            <span className={styles.infoValue}>{r.propType || '—'}</span>
+                          </div>
+                          <div className={styles.infoBlock}>
+                            <span className={styles.infoLabel}>Rooms Available</span>
+                            <span className={styles.infoValue}>{r.rooms || '—'}</span>
+                          </div>
+                        </div>
+
+                        {/* Actions & Thumbnails strip side */}
+                        <div className={styles.landlordActionsSide}>
+                          {r.photos && r.photos.length > 0 && (
+                            <div className={styles.landlordThumbStrip}>
+                              {r.photos.map((src, idx) => (
+                                <img 
+                                  key={idx} 
+                                  src={src} 
+                                  alt={`Prop ${idx}`} 
+                                  className={styles.landlordThumb}
+                                  onClick={() => setSelectedLandlord(r)}
+                                />
+                              ))}
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: 'auto' }}>
+                            <button 
+                              className="btn btn-outline" 
+                              style={{ width: '100%', padding: '6px 12px', fontSize: '0.78rem' }}
+                              onClick={() => setSelectedLandlord(r)}
+                            >
+                              Review Details
+                            </button>
+                            {r.status !== 'Verified' ? (
+                              <button 
+                                className="btn btn-primary" 
+                                style={{ width: '100%', padding: '6px 12px', fontSize: '0.78rem', backgroundColor: '#10B981', borderColor: '#10B981' }}
+                                onClick={() => handlePublishLandlord(r.id)}
+                                disabled={actionLoading}
+                              >
+                                Publish Listing
+                              </button>
+                            ) : (
+                              <span 
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  color: '#10B981',
+                                  padding: '6px 12px',
+                                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                  borderRadius: 'var(--radius-sm)',
+                                  width: '100%',
+                                  boxSizing: 'border-box'
+                                }}
+                              >
+                                <Check size={14} /> Published
+                              </span>
+                            )}
+                            <button 
+                              className="btn btn-outline" 
+                              style={{ width: '100%', padding: '6px 12px', fontSize: '0.78rem', color: 'var(--primary)', borderColor: 'var(--primary-light)' }}
+                              onClick={() => handleDeleteLandlord(r.id)}
+                              disabled={actionLoading}
+                            >
+                              Delete Record
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </>
           ) : activeTab === 'upload' ? (
             <UploadPage isEmbedded={true} onSuccess={() => { setActiveTab('properties'); loadAdminDashboardData(); }} />
           ) : null}
         </div>
       </main>
+
+      {selectedLandlord && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent} style={{ maxWidth: '640px' }}>
+            <div className={styles.modalHeader}>
+              <h2>Landlord Details: {selectedLandlord.name}</h2>
+              <button onClick={() => setSelectedLandlord(null)} className={styles.modalCloseBtn}>&times;</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '70vh', overflowY: 'auto', paddingRight: '4px' }}>
+              
+              {/* Personal Details */}
+              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '12px' }}>
+                  Personal Information
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85rem' }}>
+                  <div><strong>Full Name:</strong> {selectedLandlord.name}</div>
+                  <div><strong>DOB:</strong> {selectedLandlord.dob || '—'}</div>
+                  <div><strong>Gender:</strong> {selectedLandlord.gender || '—'}</div>
+                  <div><strong>National ID:</strong> {selectedLandlord.nationalId || '—'}</div>
+                  <div><strong>Occupation:</strong> {selectedLandlord.occupation || '—'}</div>
+                  <div><strong>Email:</strong> {selectedLandlord.email || '—'}</div>
+                  <div><strong>Phone 1:</strong> {selectedLandlord.phone1}</div>
+                  <div><strong>Phone 2:</strong> {selectedLandlord.phone2 || '—'}</div>
+                  <div style={{ gridColumn: '1 / -1' }}><strong>Home Address:</strong> {selectedLandlord.homeAddress || '—'}</div>
+                  <div style={{ gridColumn: '1 / -1' }}><strong>City/Region:</strong> {selectedLandlord.city} {selectedLandlord.region ? `, ${selectedLandlord.region} Region` : ''}</div>
+                </div>
+              </div>
+
+              {/* Property Details */}
+              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '12px' }}>
+                  Property Listing Details
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85rem' }}>
+                  <div><strong>Address:</strong> {selectedLandlord.propAddress}</div>
+                  <div><strong>Landmark:</strong> {selectedLandlord.propLandmark || '—'}</div>
+                  <div><strong>City/Region:</strong> {selectedLandlord.propCity || '—'} {selectedLandlord.propRegion ? `, ${selectedLandlord.propRegion} Region` : ''}</div>
+                  <div><strong>GPS Address:</strong> {selectedLandlord.propGps || '—'}</div>
+                  <div><strong>Monthly Rent:</strong> GHS {selectedLandlord.rent.toLocaleString()}</div>
+                  <div><strong>Advance Payment:</strong> {selectedLandlord.advance || '—'}</div>
+                  <div><strong>Rooms Available:</strong> {selectedLandlord.rooms || '—'}</div>
+                  <div><strong>Available From:</strong> {selectedLandlord.availableFrom || '—'}</div>
+                  <div><strong>Property Type:</strong> {selectedLandlord.propType || '—'}</div>
+                  <div><strong>Subscription:</strong> {selectedLandlord.plan} Plan</div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <strong>Amenities:</strong> {selectedLandlord.amenities && selectedLandlord.amenities.length > 0 ? selectedLandlord.amenities.join(', ') : '—'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Photos Gallery */}
+              {selectedLandlord.photos && selectedLandlord.photos.length > 0 && (
+                <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                  <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '12px' }}>
+                    Property Photos ({selectedLandlord.photos.length})
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
+                    {selectedLandlord.photos.map((src, idx) => (
+                      <a key={idx} href={src} target="_blank" rel="noopener noreferrer" style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', aspectRatio: '4/3', display: 'block' }}>
+                        <img src={src} alt={`Property view ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+              {selectedLandlord.status !== 'Verified' && (
+                <button 
+                  type="button" 
+                  onClick={() => { handlePublishLandlord(selectedLandlord.id); setSelectedLandlord(null); }} 
+                  className="btn btn-primary"
+                  style={{ backgroundColor: '#10B981', borderColor: '#10B981' }}
+                  disabled={actionLoading}
+                >
+                  Approve & Publish Listing
+                </button>
+              )}
+              <button 
+                type="button" 
+                onClick={() => setSelectedLandlord(null)} 
+                className="btn btn-outline"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editingProperty && (
         <div className={styles.modalOverlay}>
@@ -2082,39 +2499,56 @@ export default function AdminPage() {
             <form onSubmit={handleSaveEdit} className={styles.editForm}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-                {/* Main Image Upload & Preview Section */}
+                {/* Property Images Gallery Section */}
                 <div className="form-group" style={{ padding: '14px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                   <label style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <ImageIcon size={16} style={{ color: 'var(--primary)' }} /> Main Property Image & Cover Photo
+                    <ImageIcon size={16} style={{ color: 'var(--primary)' }} /> Property Image Gallery
                   </label>
-                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    {editImageUrl ? (
-                      <img 
-                        src={editImageUrl} 
-                        alt="Property Thumbnail" 
-                        style={{ width: '88px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }} 
-                      />
-                    ) : (
-                      <div style={{ width: '88px', height: '64px', borderRadius: '8px', backgroundColor: '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', color: '#64748B' }}>
-                        No image
-                      </div>
-                    )}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '220px' }}>
-                      <label className="btn btn-outline" style={{ cursor: 'pointer', padding: '8px 14px', fontSize: '0.82rem', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start' }}>
-                        <UploadCloud size={14} />
-                        {isUploadingEditImage ? 'Uploading new photo...' : 'Change / Upload New Photo File'}
-                        <input type="file" accept="image/*" onChange={handleEditImageUpload} disabled={isUploadingEditImage} style={{ display: 'none' }} />
-                      </label>
-                      <input 
-                        type="text" 
-                        placeholder="Or paste image URL (e.g. https://...)" 
-                        value={editImageUrl} 
-                        onChange={(e) => setEditImageUrl(e.target.value)} 
-                        className="form-control" 
-                        style={{ fontSize: '0.8rem', padding: '6px 10px' }}
-                      />
+                  
+                  <label className={styles.editFileUploader}>
+                    <UploadCloud size={28} style={{ color: 'var(--primary)' }} />
+                    <span style={{ fontWeight: 600 }}>Click to browse and add images to gallery</span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          const filesArray = Array.from(e.target.files);
+                          const newItems = filesArray.map(file => ({
+                            url: '',
+                            file,
+                            previewUrl: URL.createObjectURL(file)
+                          }));
+                          setEditGallery(prev => [...prev, ...newItems]);
+                        }
+                      }}
+                      className={styles.editFileInput}
+                    />
+                  </label>
+
+                  {editGallery.length > 0 && (
+                    <div className={styles.editPreviews}>
+                      {editGallery.map((item, index) => (
+                        <div key={index} className={styles.editPreviewCard}>
+                          <img src={item.previewUrl} alt={`gallery-${index}`} className={styles.editPreviewImage} />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditGallery(prev => prev.filter((_, i) => i !== index));
+                            }}
+                            className={styles.editRemovePreview}
+                            title="Remove image"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  )}
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '8px' }}>
+                    * The first image in the gallery will automatically be used as the cover/thumbnail image.
+                  </span>
                 </div>
 
                 <div className="form-group">
@@ -2324,9 +2758,15 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                <div className="form-group">
-                  <label>Landlord Contact Number</label>
-                  <input type="tel" value={editContact} onChange={(e) => setEditContact(e.target.value)} required className="form-control" />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div className="form-group">
+                    <label>Landlord Name</label>
+                    <input type="text" value={editLandlordName} onChange={(e) => setEditLandlordName(e.target.value)} className="form-control" placeholder="e.g. Mr. John Doe" />
+                  </div>
+                  <div className="form-group">
+                    <label>Landlord Contact Number</label>
+                    <input type="tel" value={editContact} onChange={(e) => setEditContact(e.target.value)} required className="form-control" />
+                  </div>
                 </div>
 
                 <div className="form-group">

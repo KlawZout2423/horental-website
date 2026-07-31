@@ -48,6 +48,7 @@ export const typeDefs = `#graphql
         price: Float!
         description: String
         contact: String
+        landlordName: String
         type: String
         status: String
         imageUrl: String
@@ -99,6 +100,7 @@ export const typeDefs = `#graphql
         price: Float!
         description: String
         contact: String
+        landlordName: String
         type: String
         status: String
         imageUrl: String
@@ -115,6 +117,17 @@ export const typeDefs = `#graphql
         landlordPhone: String!
         createdAt: String!
         property: Property!
+    }
+
+    type Report {
+        id: Int!
+        propertyId: Int!
+        reason: String!
+        details: String
+        status: String!
+        createdAt: String!
+        property: Property
+        reporter: User
     }
 
     input PartnerInput {
@@ -138,6 +151,64 @@ export const typeDefs = `#graphql
         createdAt: String!
     }
 
+    type LandlordRegistration {
+        id: ID!
+        name: String!
+        dob: String
+        gender: String
+        nationalId: String
+        homeAddress: String
+        city: String!
+        region: String
+        phone1: String!
+        phone2: String
+        email: String
+        occupation: String
+        propAddress: String!
+        propCity: String
+        propLandmark: String
+        propRegion: String
+        propGps: String
+        rent: Float!
+        advance: String
+        rooms: Int
+        availableFrom: String
+        propType: String
+        amenities: [String!]!
+        plan: String
+        photos: [String!]!
+        status: String!
+        agreementSigned: Boolean!
+        createdAt: String!
+    }
+
+    input LandlordRegistrationInput {
+        name: String!
+        dob: String
+        gender: String
+        nationalId: String
+        homeAddress: String
+        city: String!
+        region: String
+        phone1: String!
+        phone2: String
+        email: String
+        occupation: String
+        propAddress: String!
+        propCity: String
+        propLandmark: String
+        propRegion: String
+        propGps: String
+        rent: Float!
+        advance: String
+        rooms: Int
+        availableFrom: String
+        propType: String
+        amenities: [String!]!
+        plan: String
+        photos: [String!]!
+    }
+
     type AuditLog {
         id: Int!
         action: String!
@@ -158,6 +229,8 @@ export const typeDefs = `#graphql
         contactLogs: [ContactLog!]!
         passwordResetRequests: [PasswordResetRequest!]!
         auditLogs: [AuditLog!]!
+        reports: [Report!]!
+        landlordRegistrations: [LandlordRegistration!]!
     }
 
     type BasicPayload {
@@ -184,5 +257,11 @@ export const typeDefs = `#graphql
         createContactLog(customerName: String!, customerPhone: String!, actionType: String!, propertyId: Int!, landlordPhone: String!): ContactLog!
         recordPageVisit(path: String!): Boolean!
         deleteOldAuditLogs(days: Int!): BasicPayload!
+        createLandlordRegistration(input: LandlordRegistrationInput!): LandlordRegistration!
+        updateLandlordRegistrationStatus(id: Int!, status: String!): LandlordRegistration!
+        deleteLandlordRegistration(id: Int!): LandlordRegistration!
+        publishLandlordRegistration(id: Int!): Property!
+        updateReportStatus(id: Int!, status: String!): Report!
+        deleteReport(id: Int!): Report!
     }
 `;

@@ -159,6 +159,24 @@ export const resolvers = {
         take: 500,
       });
     },
+
+    landlordRegistrations: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
+      return prisma.landlordRegistration.findMany({
+        orderBy: { createdAt: 'desc' },
+      });
+    },
+
+    reports: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
+      return [];
+    },
   },
 
   Mutation: {
@@ -312,6 +330,7 @@ export const resolvers = {
           price: input.price,
           description: sanitizeInput(input.description),
           contact: formatGhanaPhone(input.contact),
+          landlordName: input.landlordName ? sanitizeInput(input.landlordName) : null,
           type: input.type,
           status: input.status || 'available',
           imageUrl: input.imageUrl,
@@ -349,6 +368,7 @@ export const resolvers = {
       if (updateData.landmarks) updateData.landmarks = sanitizeInput(updateData.landmarks);
       if (updateData.description) updateData.description = sanitizeInput(updateData.description);
       if (updateData.contact) updateData.contact = formatGhanaPhone(updateData.contact);
+      if (updateData.landlordName) updateData.landlordName = sanitizeInput(updateData.landlordName);
       if (updateData.latitude !== undefined && updateData.latitude !== null) updateData.latitude = parseFloat(updateData.latitude);
       if (updateData.longitude !== undefined && updateData.longitude !== null) updateData.longitude = parseFloat(updateData.longitude);
 
@@ -559,6 +579,140 @@ export const resolvers = {
         data: { path }
       });
       return true;
+    },
+
+    createLandlordRegistration: async (_: any, { input }: any) => {
+      return prisma.landlordRegistration.create({
+        data: {
+          name: sanitizeInput(input.name),
+          dob: input.dob ? sanitizeInput(input.dob) : null,
+          gender: input.gender ? sanitizeInput(input.gender) : null,
+          nationalId: input.nationalId ? sanitizeInput(input.nationalId) : null,
+          homeAddress: input.homeAddress ? sanitizeInput(input.homeAddress) : null,
+          city: sanitizeInput(input.city),
+          region: input.region ? sanitizeInput(input.region) : null,
+          phone1: formatGhanaPhone(input.phone1),
+          phone2: input.phone2 ? formatGhanaPhone(input.phone2) : null,
+          email: input.email ? sanitizeInput(input.email) : null,
+          occupation: input.occupation ? sanitizeInput(input.occupation) : null,
+          propAddress: sanitizeInput(input.propAddress),
+          propCity: input.propCity ? sanitizeInput(input.propCity) : null,
+          propLandmark: input.propLandmark ? sanitizeInput(input.propLandmark) : null,
+          propRegion: input.propRegion ? sanitizeInput(input.propRegion) : null,
+          propGps: input.propGps ? sanitizeInput(input.propGps) : null,
+          rent: parseFloat(input.rent),
+          advance: input.advance ? sanitizeInput(input.advance) : null,
+          rooms: input.rooms !== undefined && input.rooms !== null ? parseInt(input.rooms, 10) : null,
+          availableFrom: input.availableFrom ? sanitizeInput(input.availableFrom) : null,
+          propType: input.propType ? sanitizeInput(input.propType) : null,
+          amenities: input.amenities || [],
+          plan: input.plan ? sanitizeInput(input.plan) : null,
+          photos: input.photos || [],
+          status: 'Pending Verification',
+          agreementSigned: true,
+        }
+      });
+    },
+
+    updateLandlordRegistrationStatus: async (_: any, { id, status }: { id: any; status: string }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Not authorized');
+
+      const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+
+      return prisma.landlordRegistration.update({
+        where: { id: parsedId },
+        data: { status: sanitizeInput(status) },
+      });
+    },
+
+    deleteLandlordRegistration: async (_: any, { id }: { id: any }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Not authorized');
+
+      const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+
+      return prisma.landlordRegistration.delete({
+        where: { id: parsedId },
+      });
+    },
+
+    publishLandlordRegistration: async (_: any, { id }: { id: any }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Not authorized');
+
+      const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+
+      // 1. Fetch the registration
+      const r = await prisma.landlordRegistration.findUnique({
+        where: { id: parsedId }
+      });
+      if (!r) throw new Error('Registration not found');
+
+      // 2. Fetch default company
+      const defaultCompany = await prisma.company.findFirst({ where: { isOwnCompany: true } });
+      if (!defaultCompany) throw new Error('Default company not found');
+
+      // 3. Construct description & title
+      const title = `${r.propType} in ${r.city}`;
+      const description = `Beautiful ${r.propType} located in ${r.city}. Rooms: ${r.rooms || 1}. Advance period: ${r.advance || 'N/A'}. Available from: ${r.availableFrom || 'Immediately'}. Utilities/Amenities: ${r.amenities.join(', ') || 'None'}. Landmark: ${r.propLandmark || 'N/A'}.`;
+
+      // 4. Create property in database
+      const property = await prisma.property.create({
+        data: {
+          title: sanitizeInput(title),
+          location: sanitizeInput(`${r.propAddress}, ${r.city}`),
+          digitalAddress: r.propGps ? sanitizeInput(r.propGps) : null,
+          landmarks: r.propLandmark ? sanitizeInput(r.propLandmark) : null,
+          price: r.rent,
+          description: sanitizeInput(description),
+          contact: formatGhanaPhone(r.phone1),
+          landlordName: sanitizeInput(r.name),
+          type: r.propType || 'Single Room Self Contain',
+          status: 'available',
+          imageUrl: r.photos[0] || '',
+          isFeatured: r.plan === 'Premium',
+          ownerId: user.id,
+          companyId: defaultCompany.id,
+          images: {
+            create: r.photos.map((src, index) => ({
+              url: src.trim(),
+              caption: 'Property Photo',
+              order: index,
+            })) || [],
+          },
+        },
+        include: { owner: true, company: true, images: { orderBy: { order: 'asc' } } },
+      });
+
+      // 5. Update status of the landlord registration to "Verified"
+      await prisma.landlordRegistration.update({
+        where: { id: parsedId },
+        data: { status: 'Verified' }
+      });
+
+      createAuditLog('LANDLORD_PUBLISHED', `Admin ${adminUser.name} approved & published landlord registration #${parsedId} as property #${property.id}`, adminUser.email);
+
+      return property;
+    },
+
+    updateReportStatus: async (_: any, { id, status }: { id: any; status: string }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Not authorized');
+
+      return { id: typeof id === 'string' ? parseInt(id, 10) : id, status };
+    },
+
+    deleteReport: async (_: any, { id }: { id: any }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Not authorized');
+
+      return { id: typeof id === 'string' ? parseInt(id, 10) : id };
     },
   },
 

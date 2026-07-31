@@ -709,3 +709,301 @@
     display: block !important;
   }
 }
+
+/* Multi-image gallery manager in Edit Modal */
+.editPreviews {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.editPreviewCard {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.editPreviewImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.editRemovePreview {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--danger);
+  color: #fff;
+  border: none;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.editRemovePreview:hover {
+  background-color: var(--danger-hover);
+}
+
+.editFileUploader {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  text-align: center;
+  cursor: pointer;
+  background-color: var(--bg-surface-secondary);
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.editFileUploader:hover {
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+}
+
+.editFileInput {
+  display: none;
+}
+
+/* Landlords Directory Layout styles */
+.landlordCard {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 240px 1fr 180px;
+  gap: 24px;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landlordCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.landlordProfileSide {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.landlordAvatarRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.landlordAvatarCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--primary-light);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.landlordNameText {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.landlordMetaText {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.landlordBadgesRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.landlordBadge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.landlordBadgeBasic {
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+
+.landlordBadgePremium {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.landlordBadgePending {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #F59E0B;
+  border-color: #F59E0B;
+}
+
+.landlordBadgeVerified {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+  border-color: #10B981;
+}
+
+.landlordBadgeAgreement {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+  border-color: #3B82F6;
+}
+
+.landlordInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 24px;
+  font-size: 0.85rem;
+  border-left: 1px solid var(--border);
+  padding-left: 24px;
+}
+
+.infoBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.infoLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.infoValue {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.landlordActionsSide {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.landlordThumbStrip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  max-width: 180px;
+  padding-bottom: 2px;
+}
+
+.landlordThumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.landlordThumb:hover {
+  transform: scale(1.08);
+}
+
+@media (max-width: 900px) {
+  .landlordCard {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .landlordInfoGrid {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    padding-top: 16px;
+  }
+  
+  .landlordActionsSide {
+    align-items: flex-start;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+.tableControls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.searchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 12px 16px 12px 42px !important;
+  font-size: 0.9rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+
+
