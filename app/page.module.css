@@ -1213,21 +1213,3 @@
   }
 }
 
-/* Responsive Filters Visibility utilities */
-.desktopFilters {
-  display: flex !important;
-}
-
-.mobileFilters {
-  display: none !important;
-}
-
-@media (max-width: 968px) {
-  .desktopFilters {
-    display: none !important;
-  }
-  .mobileFilters {
-    display: block !important;
-  }
-}
-

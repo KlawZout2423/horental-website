@@ -287,8 +287,8 @@ export default function Home() {
           </form>
         </div>
 
-        {/* Property Type Filter Chips - Desktop View */}
-        <div className={`${styles.chipsOuter} ${styles.desktopFilters}`}>
+        {/* Property Type Filter Chips */}
+        <div className={styles.chipsOuter}>
           <div className={styles.chipsContainer} ref={dropdownRef}>
             {TYPE_CHIPS.map((chip) => {
               const isSelfContained = chip.type === 'self-contained';
@@ -340,39 +340,6 @@ export default function Home() {
               );
             })}
           </div>
-        </div>
-
-        {/* Mobile Dropdown Category Selector */}
-        <div className={styles.mobileFilters} style={{ padding: '8px 16px 16px' }}>
-          <select
-            value={activeTypeFilter}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === 'filters') {
-                router.push('/properties?openFilters=true');
-              } else {
-                setActiveTypeFilter(val);
-              }
-            }}
-            className="form-control"
-            style={{ fontSize: '0.85rem', fontWeight: 700, padding: '10px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-surface)' }}
-            aria-label="Filter Accommodation Type"
-          >
-            <option value="All">📁 All Categories</option>
-            <option value="filters">⚙️ Open Advanced Filters</option>
-            <option value="Student Hostel">🎓 Student Hostel</option>
-            <option value="Single Room">🛏️ Single Room</option>
-            <option value="Chamber & Hall">🛋️ Chamber & Hall</option>
-            <option value="Single Room SC">🏠 Single Room SC</option>
-            <option value="Chamber and Hall SC">🏠 Chamber & Hall SC</option>
-            <option value="Two Bedroom SC">🏠 Two Bedroom SC</option>
-            <option value="Three Bedroom SC">🏠 Three Bedroom SC</option>
-            <option value="Four Bedroom SC">🏠 Four Bedroom SC</option>
-            <option value="Furnitures">🛋️ Furnitures</option>
-            <option value="Lands">🌱 Lands</option>
-            <option value="Shops">🏬 Shops</option>
-            <option value="Short Stay">⏱️ Short Stay</option>
-          </select>
         </div>
       </div>
 
