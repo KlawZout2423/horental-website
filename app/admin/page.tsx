@@ -2217,6 +2217,30 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {/* Landlord shareable links */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <a 
+                  href="/landlord-registration" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="btn btn-outline" 
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', textDecoration: 'none', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+                >
+                  🌐 Open Public Form
+                </a>
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => {
+                    const link = `${window.location.origin}/landlord-registration`;
+                    navigator.clipboard.writeText(link);
+                    alert('Copied link: ' + link);
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+                >
+                  🔗 Copy Shareable Link
+                </button>
+              </div>
+
               {/* Landlords search controls */}
               <div className={styles.tableControls} style={{ marginBottom: '20px' }}>
                 <div className={styles.searchWrapper}>
