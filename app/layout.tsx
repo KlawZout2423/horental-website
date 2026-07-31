@@ -19,8 +19,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HO Rentals | Find Properties in Ho & Volta Region",
-  description: "Browse rooms, apartments, hostels, shops and lands in Ho, Hohoe and across the Volta Region. Find your perfect place with HO Rentals.",
+  title: {
+    default: "HO Rentals | Find Rooms, Hostels & Apartments in Ho & Volta Region",
+    template: "%s | HO Rentals"
+  },
+  description: "Browse and rent rooms, apartments, self-contains, student hostels, shops and lands in Ho, Hohoe and across the Volta Region of Ghana. Find your perfect place with HO Rentals.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://horentals.com"),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "HO Rentals | Rooms, Hostels & Apartments in Volta Region",
+    description: "Find affordable rooms, self-contains, student hostels, and properties for rent in Ho & across the Volta Region of Ghana.",
+    url: "/",
+    siteName: "HO Rentals",
+    locale: "en_GH",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "HO Rentals | Find Properties in Ho & Volta Region",
+    description: "Browse rooms, hostels, and apartments for rent in Ho & Volta Region.",
+  },
   icons: {
     icon: [{ url: "/icon.png", type: "image/png" }],
     shortcut: [{ url: "/icon.png", type: "image/png" }],
