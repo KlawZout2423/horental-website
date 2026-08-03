@@ -72,6 +72,7 @@ export default function LandlordRegistrationPage() {
   const [agreements, setAgreements] = useState<boolean[]>([
     false, false, false, false, false, false, false, false
   ]);
+  const [socialMediaBoost, setSocialMediaBoost] = useState(false);
 
   // Submission Status
   const [submitting, setSubmitting] = useState(false);
@@ -292,6 +293,7 @@ export default function LandlordRegistrationPage() {
         amenities,
         plan,
         photos: urls,
+        socialMediaBoost,
       };
 
       await graphqlRequest(CREATE_LANDLORD_REGISTRATION, { input });
@@ -318,6 +320,7 @@ export default function LandlordRegistrationPage() {
       setAvailableFrom('');
       setAmenities([]);
       setPhotos([]);
+      setSocialMediaBoost(false);
       setAgreements(new Array(agreementPoints.length).fill(false));
       setCurrentStep(1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -667,6 +670,15 @@ export default function LandlordRegistrationPage() {
                   <span>{pt}</span>
                 </label>
               ))}
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1.5px dashed var(--primary)' }}>
+                <p style={{ fontWeight: 700, color: 'var(--primary)', marginBottom: '8px', fontSize: '0.85rem' }}>Optional Social Media Boosting:</p>
+                <label className={`${styles.agreeItem} ${socialMediaBoost ? styles.checkedAgree : ''}`} style={{ borderBottom: 'none', padding: '4px 0' }}>
+                  <input type="checkbox" checked={socialMediaBoost} onChange={(e) => setSocialMediaBoost(e.target.checked)} />
+                  <span style={{ fontSize: '0.85rem' }}>
+                    I agree to pay <b style={{ color: 'var(--primary)' }}>GHS 30</b> to boost my property listing on Ho Rentals social media pages (Optional).
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -718,6 +730,10 @@ export default function LandlordRegistrationPage() {
               <div className={styles.reviewRow}>
                 <span className={styles.reviewKey}>Subscription Plan</span>
                 <span className={styles.reviewValue}>{plan} Plan</span>
+              </div>
+              <div className={styles.reviewRow}>
+                <span className={styles.reviewKey}>Social Media Boost</span>
+                <span className={styles.reviewValue}>{socialMediaBoost ? 'Yes (GHS 30)' : 'No'}</span>
               </div>
               <div className={styles.reviewRow}>
                 <span className={styles.reviewKey}>Amenities</span>

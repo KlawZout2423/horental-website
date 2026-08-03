@@ -288,57 +288,59 @@ export default function Home() {
         </div>
 
         {/* Property Type Filter Chips */}
-        <div className={styles.chipsOuter}>
-          <div className={styles.chipsContainer} ref={dropdownRef}>
-            {TYPE_CHIPS.map((chip) => {
-              const isSelfContained = chip.type === 'self-contained';
-              const isFilters = chip.type === 'filters';
-              const isActive =
-                activeTypeFilter === chip.type ||
-                (isSelfContained &&
-                  SELF_CONTAINED_OPTIONS.some((opt) => opt.type === activeTypeFilter));
+        <div className={styles.chipsWrapper}>
+          <div className={styles.chipsOuter}>
+            <div className={styles.chipsContainer} ref={dropdownRef}>
+              {TYPE_CHIPS.map((chip) => {
+                const isSelfContained = chip.type === 'self-contained';
+                const isFilters = chip.type === 'filters';
+                const isActive =
+                  activeTypeFilter === chip.type ||
+                  (isSelfContained &&
+                    SELF_CONTAINED_OPTIONS.some((opt) => opt.type === activeTypeFilter));
 
-              if (isSelfContained) {
+                if (isSelfContained) {
+                  return (
+                    <div key={chip.type} className={styles.dropdownContainer}>
+                      <button
+                        type="button"
+                        className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
+                        onClick={() => handleChipClick(chip.type)}
+                      >
+                        <span>{chip.label}</span>
+                        <ChevronDown size={14} />
+                      </button>
+                      {showSelfContainedDropdown && (
+                        <div className={styles.dropdownMenu}>
+                          {SELF_CONTAINED_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.type}
+                              type="button"
+                              className={styles.dropdownItem}
+                              onClick={() => handleSelfContainedSelect(opt.type)}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
                 return (
-                  <div key={chip.type} className={styles.dropdownContainer}>
-                    <button
-                      type="button"
-                      className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
-                      onClick={() => handleChipClick(chip.type)}
-                    >
-                      <span>{chip.label}</span>
-                      <ChevronDown size={14} />
-                    </button>
-                    {showSelfContainedDropdown && (
-                      <div className={styles.dropdownMenu}>
-                        {SELF_CONTAINED_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.type}
-                            type="button"
-                            className={styles.dropdownItem}
-                            onClick={() => handleSelfContainedSelect(opt.type)}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <button
+                    key={chip.type}
+                    type="button"
+                    className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
+                    onClick={() => handleChipClick(chip.type)}
+                  >
+                    {isFilters && <SlidersHorizontal size={14} />}
+                    <span>{chip.label}</span>
+                  </button>
                 );
-              }
-
-              return (
-                <button
-                  key={chip.type}
-                  type="button"
-                  className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
-                  onClick={() => handleChipClick(chip.type)}
-                >
-                  {isFilters && <SlidersHorizontal size={14} />}
-                  <span>{chip.label}</span>
-                </button>
-              );
-            })}
+              })}
+            </div>
           </div>
         </div>
       </div>

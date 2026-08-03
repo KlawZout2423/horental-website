@@ -494,6 +494,7 @@ export const GET_LANDLORD_REGISTRATIONS = `
       photos
       status
       agreementSigned
+      socialMediaBoost
       createdAt
     }
   }

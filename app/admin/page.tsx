@@ -2311,6 +2311,14 @@ export default function AdminPage() {
                                 Agreement
                               </span>
                             )}
+                            {r.socialMediaBoost && (
+                              <span 
+                                className={styles.landlordBadge} 
+                                style={{ backgroundColor: '#FEF3C7', color: '#D97706', borderColor: '#F59E0B' }}
+                              >
+                                ✨ Boost Agreed
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -2465,6 +2473,7 @@ export default function AdminPage() {
                   <div><strong>Available From:</strong> {selectedLandlord.availableFrom || '—'}</div>
                   <div><strong>Property Type:</strong> {selectedLandlord.propType || '—'}</div>
                   <div><strong>Subscription:</strong> {selectedLandlord.plan} Plan</div>
+                  <div><strong>Social Media Boost:</strong> {selectedLandlord.socialMediaBoost ? 'Yes (GHS 30 agreed)' : 'No'}</div>
                   <div style={{ gridColumn: '1 / -1' }}>
                     <strong>Amenities:</strong> {selectedLandlord.amenities && selectedLandlord.amenities.length > 0 ? selectedLandlord.amenities.join(', ') : '—'}
                   </div>

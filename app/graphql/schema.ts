@@ -179,6 +179,7 @@ export const typeDefs = `#graphql
         photos: [String!]!
         status: String!
         agreementSigned: Boolean!
+        socialMediaBoost: Boolean!
         createdAt: String!
     }
 
@@ -207,6 +208,7 @@ export const typeDefs = `#graphql
         amenities: [String!]!
         plan: String
         photos: [String!]!
+        socialMediaBoost: Boolean
     }
 
     type AuditLog {

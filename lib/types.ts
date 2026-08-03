@@ -334,6 +334,7 @@ export interface LandlordRegistration {
   photos: string[];
   status: string;
   agreementSigned: boolean;
+  socialMediaBoost: boolean;
   createdAt: string;
 }
 

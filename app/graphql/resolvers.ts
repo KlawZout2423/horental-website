@@ -610,6 +610,7 @@ export const resolvers = {
           photos: input.photos || [],
           status: 'Pending Verification',
           agreementSigned: true,
+          socialMediaBoost: input.socialMediaBoost || false,
         }
       });
     },
