@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*',
-      allow: ['/', '/properties', '/about', '/privacy', '/terms', '/landlord-registration'],
-      disallow: ['/admin', '/login', '/register', '/api/', '/graphql'],
+      allow: ['/', '/properties', '/about', '/privacy', '/terms', '/landlord-registration', '/login', '/register'],
+      disallow: ['/admin', '/api/', '/graphql'],
     },
     sitemap: `${baseUrl}/sitemap.xml`,
   };

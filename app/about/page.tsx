@@ -20,7 +20,7 @@ import styles from './about.module.css';
 
 export const metadata: Metadata = {
   title: 'About Us | HO Rentals - Built by Students for Ghana',
-  description: 'The story behind HO Rentals. Born at Ho Technical University to eliminate fake agents and connect tenants directly with verified landlords across Ho and the Volta Region.',
+  description: 'The story behind HO Rentals. Born at Ho Technical University to eliminate fake agents and connect tenants directly with verified landlords across Ho and Ghana.',
 };
 
 export default function AboutPage() {
@@ -31,7 +31,7 @@ export default function AboutPage() {
         <div className={styles.heroContent}>
           <div className={styles.locationTag}>
             <MapPin size={15} className={styles.pinIcon} />
-            <span>Ho, Volta Region, Ghana</span>
+            <span>Ho, Ghana</span>
           </div>
 
           <h1 className={styles.heroTitle}>
@@ -209,7 +209,7 @@ export default function AboutPage() {
             </div>
             <div>
               <strong className={styles.foundersName}>The Founder Team</strong>
-              <span className={styles.foundersTitle}>Young Ghanaian Entrepreneurs &bull; Ho, Volta Region</span>
+              <span className={styles.foundersTitle}>Young Ghanaian Entrepreneurs &bull; Ho, Ghana</span>
             </div>
           </div>
         </div>
