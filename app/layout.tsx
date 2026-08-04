@@ -41,11 +41,6 @@ export const metadata: Metadata = {
     title: "HO Rentals | Find Properties in Ho & Volta Region",
     description: "Browse rooms, hostels, and apartments for rent in Ho & Volta Region.",
   },
-  icons: {
-    icon: [{ url: "/icon.png", type: "image/png" }],
-    shortcut: [{ url: "/icon.png", type: "image/png" }],
-    apple: [{ url: "/icon.png", type: "image/png" }],
-  },
 };
 
 export default function RootLayout({
