@@ -19,7 +19,7 @@ import {
 import styles from './about.module.css';
 
 export const metadata: Metadata = {
-  title: 'About Us | HO Rentals - Built by Students for Ghana',
+  title: 'About Us | HO Rentals - Connecting Tenants & Landlords Directly',
   description: 'The story behind HO Rentals. Born at Ho Technical University to eliminate fake agents and connect tenants directly with verified landlords across Ho and Ghana.',
 };
 
