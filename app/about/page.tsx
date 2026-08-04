@@ -48,6 +48,12 @@ export default function AboutPage() {
             We are young entrepreneurs in our early 20s from Ho. We built <strong>HO Rentals</strong> to give tenants and landlords what we wished existed: a direct, honest, and 100% verified platform.
           </p>
 
+          <div className={styles.heroCta}>
+            <Link href="/properties" className="btn btn-primary" style={{ padding: '12px 20px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '8px', width: 'fit-content' }}>
+              Search Verified Rentals <ArrowRight size={16} />
+            </Link>
+          </div>
+
           <div className={styles.heroStats}>
             <div className={styles.statItem}>
               <span className={styles.statNumber}>100%</span>
