@@ -146,6 +146,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(loggedUser);
 
+      // Trigger PWA install prompt after login
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          window.dispatchEvent(new Event('trigger-pwa-prompt'));
+        }, 1000);
+      }
+
       if (loggedUser.role === 'admin') {
         router.push('/admin');
       } else {
@@ -179,6 +186,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(registeredUser);
+
+      // Trigger PWA install prompt after registration
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          window.dispatchEvent(new Event('trigger-pwa-prompt'));
+        }, 1000);
+      }
+
       router.push('/');
     } catch (error) {
       throw error;

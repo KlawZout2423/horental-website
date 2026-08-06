@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Smartphone, X, DownloadCloud } from 'lucide-react';
 
 export default function PwaInstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const deferredPromptRef = useRef<any>(null);
 
   useEffect(() => {
     // Register Service Worker
@@ -22,9 +22,9 @@ export default function PwaInstallPrompt() {
 
     // 1. Check if the app is already running in standalone mode (installed)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const dismissedSession = sessionStorage.getItem('pwa_prompt_dismissed') === 'true';
+    const dismissedLocal = localStorage.getItem('pwa_prompt_dismissed') === 'true';
     
-    if (isStandalone || dismissedSession) {
+    if (isStandalone || dismissedLocal) {
       return;
     }
 
@@ -33,16 +33,25 @@ export default function PwaInstallPrompt() {
       // Prevent the browser's default prompt from appearing automatically
       e.preventDefault();
       // Save the event so it can be triggered later
-      setDeferredPrompt(e);
-      // Show our custom banner
-      setShowPrompt(true);
+      deferredPromptRef.current = e;
+    };
+
+    // 3. Listen for the custom trigger event (e.g. login/signup success)
+    const handleTriggerPrompt = () => {
+      const currentStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const currentDismissed = localStorage.getItem('pwa_prompt_dismissed') === 'true';
+
+      if (!currentStandalone && !currentDismissed && deferredPromptRef.current) {
+        setShowPrompt(true);
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('trigger-pwa-prompt', handleTriggerPrompt);
 
-    // 3. Listen for appinstalled event to clean up
+    // 4. Listen for appinstalled event to clean up
     const handleAppInstalled = () => {
-      setDeferredPrompt(null);
+      deferredPromptRef.current = null;
       setShowPrompt(false);
       console.log('HO Rentals PWA was installed successfully!');
     };
@@ -51,30 +60,32 @@ export default function PwaInstallPrompt() {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('trigger-pwa-prompt', handleTriggerPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    const promptEvent = deferredPromptRef.current;
+    if (!promptEvent) return;
 
     // Show the browser's native install prompt dialog
-    deferredPrompt.prompt();
+    promptEvent.prompt();
 
     // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
+    const { outcome } = await promptEvent.userChoice;
     console.log(`User response to install prompt: ${outcome}`);
 
     // We no longer need the prompt
-    setDeferredPrompt(null);
+    deferredPromptRef.current = null;
     setShowPrompt(false);
   };
 
   const handleDismiss = () => {
     setShowPrompt(false);
     setIsDismissed(true);
-    // Remember dismissal for this session so we don't annoy the user
-    sessionStorage.setItem('pwa_prompt_dismissed', 'true');
+    // Remember dismissal persistently so we don't annoy the user
+    localStorage.setItem('pwa_prompt_dismissed', 'true');
   };
 
   if (!showPrompt || isDismissed) {
