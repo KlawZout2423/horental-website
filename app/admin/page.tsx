@@ -27,7 +27,7 @@ import {
   DELETE_LANDLORD_REGISTRATION,
   PUBLISH_LANDLORD_REGISTRATION
 } from '../../lib/graphql';
-import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check } from 'lucide-react';
+import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy } from 'lucide-react';
 import styles from './admin.module.css';
 import { getFriendlyErrorMessage, LandlordRegistration } from '../../lib/types';
 
@@ -115,6 +115,10 @@ export default function AdminPage() {
   const [landlordRegistrations, setLandlordRegistrations] = useState<LandlordRegistration[]>([]);
   const [selectedLandlord, setSelectedLandlord] = useState<LandlordRegistration | null>(null);
   const [landlordSearch, setLandlordSearch] = useState('');
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrModalUrl, setQrModalUrl] = useState('');
+  const [qrModalTitle, setQrModalTitle] = useState('');
+  const [downloadingQr, setDownloadingQr] = useState(false);
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
   // Edit Property States
@@ -2239,6 +2243,18 @@ export default function AdminPage() {
                 >
                   🔗 Copy Shareable Link
                 </button>
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => {
+                    const link = `${window.location.origin}/`;
+                    setQrModalUrl(link);
+                    setQrModalTitle('HO Rentals Web App');
+                    setIsQrModalOpen(true);
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+                >
+                  📱 View Web App QR
+                </button>
               </div>
 
               {/* Landlords search controls */}
@@ -2912,6 +2928,168 @@ export default function AdminPage() {
                 <button type="submit" disabled={actionLoading} className="btn btn-primary">Save Changes</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isQrModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent} style={{ maxWidth: '420px', textAlign: 'center' }}>
+            <div className={styles.modalHeader}>
+              <h2 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <QrCode size={20} style={{ color: 'var(--primary)' }} />
+                <span>View QR Code</span>
+              </h2>
+              <button onClick={() => setIsQrModalOpen(false)} className={styles.modalCloseBtn}>&times;</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '10px 0' }}>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: '0' }}>
+                Scan or download this code to share the <strong>{qrModalTitle}</strong>.
+              </p>
+
+              <div style={{ 
+                position: 'relative', 
+                backgroundColor: '#ffffff', 
+                padding: '12px', 
+                borderRadius: 'var(--radius-md)', 
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrModalUrl)}&color=c1121f&ecc=H`} 
+                  alt="QR Code" 
+                  style={{ display: 'block', borderRadius: 'var(--radius-sm)' }}
+                  width={220}
+                  height={220}
+                />
+
+                {/* Branded Logo Overlay */}
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '44px',
+                  height: '44px',
+                  backgroundColor: '#FFFFFF',
+                  border: '3px solid #FFFFFF',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden'
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src="/logo.png" 
+                    alt="Ho Rentals Logo" 
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ 
+                fontSize: '0.78rem', 
+                fontFamily: 'monospace', 
+                color: 'var(--text-muted)', 
+                backgroundColor: 'var(--bg-surface-secondary)', 
+                padding: '6px 12px', 
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border)',
+                wordBreak: 'break-all',
+                maxWidth: '100%',
+                userSelect: 'all'
+              }}>
+                {qrModalUrl}
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                <button 
+                  onClick={async () => {
+                    try {
+                      setDownloadingQr(true);
+                      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrModalUrl)}&color=c1121f&ecc=H`;
+                      
+                      const qrImage = new Image();
+                      qrImage.crossOrigin = 'anonymous';
+                      qrImage.src = qrUrl;
+                      
+                      await new Promise((resolve, reject) => {
+                        qrImage.onload = resolve;
+                        qrImage.onerror = reject;
+                      });
+
+                      const logoImage = new Image();
+                      logoImage.src = '/logo.png';
+                      await new Promise((resolve, reject) => {
+                        logoImage.onload = resolve;
+                        logoImage.onerror = reject;
+                      });
+
+                      const canvas = document.createElement('canvas');
+                      canvas.width = 300;
+                      canvas.height = 300;
+                      const ctx = canvas.getContext('2d');
+                      if (!ctx) throw new Error('Could not get canvas context');
+
+                      ctx.drawImage(qrImage, 0, 0, 300, 300);
+
+                      const logoSize = 60;
+                      const logoX = (300 - logoSize) / 2;
+                      const logoY = (300 - logoSize) / 2;
+                      
+                      ctx.fillStyle = '#ffffff';
+                      ctx.beginPath();
+                      if (typeof ctx.roundRect === 'function') {
+                        ctx.roundRect(logoX - 4, logoY - 4, logoSize + 8, logoSize + 8, 8);
+                      } else {
+                        ctx.rect(logoX - 4, logoY - 4, logoSize + 8, logoSize + 8);
+                      }
+                      ctx.fill();
+
+                      ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
+
+                      const dataUrl = canvas.toDataURL('image/png');
+                      const a = document.createElement('a');
+                      a.href = dataUrl;
+                      a.download = `ho-rentals-${qrModalTitle.toLowerCase().replace(/\s+/g, '-')}-qr.png`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    } catch (error) {
+                      console.error('Failed to download branded QR code:', error);
+                      window.open(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrModalUrl)}&color=c1121f&ecc=H`, '_blank');
+                    } finally {
+                      setDownloadingQr(false);
+                    }
+                  }}
+                  disabled={downloadingQr}
+                  className="btn btn-primary"
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.9rem', padding: '10px 16px' }}
+                >
+                  <Download size={16} />
+                  <span>{downloadingQr ? 'Downloading...' : 'Download'}</span>
+                </button>
+
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(qrModalUrl);
+                    alert('Copied link: ' + qrModalUrl);
+                  }}
+                  className="btn btn-outline"
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.9rem', padding: '10px 16px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+                >
+                  <Copy size={16} />
+                  <span>Copy Link</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

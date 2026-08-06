@@ -6,6 +6,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import SupportFAB from "../components/SupportFAB";
 import MustChangePasswordModal from "../components/MustChangePasswordModal";
+import PwaInstallPrompt from "../components/PwaInstallPrompt";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -54,6 +55,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#C1121F" />
         {/* Google AdSense */}
         {adsenseClientId && adsenseClientId !== 'ca-pub-placeholder' && (
           <Script
@@ -93,6 +96,7 @@ export default function RootLayout({
             </main>
             <Footer />
             <SupportFAB />
+            <PwaInstallPrompt />
           </div>
         </AuthProvider>
       </body>

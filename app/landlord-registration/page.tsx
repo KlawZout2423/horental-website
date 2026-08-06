@@ -19,7 +19,10 @@ import {
   CheckSquare, 
   AlertCircle, 
   Loader,
-  BadgeDollarSign
+  BadgeDollarSign,
+  QrCode,
+  Download,
+  Copy
 } from 'lucide-react';
 import { graphqlRequest, CREATE_LANDLORD_REGISTRATION } from '../../lib/graphql';
 import { formatGhanaPhone, isValidGhanaPhone } from '../../lib/types';
@@ -367,9 +370,167 @@ export default function LandlordRegistrationPage() {
       </div>
 
       {success && (
-        <div className={styles.successBanner}>
-          <Check size={20} />
-          <span>Landlord registered and property details submitted successfully! We will contact you soon for verification.</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+          <div className={styles.successBanner} style={{ marginBottom: 0 }}>
+            <Check size={20} />
+            <span>Landlord registered and property details submitted successfully! We will contact you soon for verification.</span>
+          </div>
+          
+          <div style={{
+            padding: '24px',
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-sm)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            gap: '16px'
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--primary-light)',
+              color: 'var(--primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justify-content: 'center'
+            }}>
+              <QrCode size={24} />
+            </div>
+            
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 6px 0', color: 'var(--text-primary)' }}>
+                Help Other Landlords in Ho!
+              </h3>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: '0', maxWidth: '400px', lineHeight: '1.5' }}>
+                Recommend HO Rentals to other landlords. Let them scan this QR code or share the link to list their properties directly.
+              </p>
+            </div>
+
+            <div style={{
+              position: 'relative',
+              backgroundColor: '#ffffff',
+              padding: '12px',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justify-content: 'center'
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(typeof window !== 'undefined' ? `${window.location.origin}/landlord-registration` : 'https://horentals.com/landlord-registration')}&color=c1121f&ecc=H`}
+                alt="Landlord Registration QR Code"
+                width={160}
+                height={160}
+                style={{ display: 'block' }}
+              />
+
+              {/* Branded Logo Overlay */}
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '32px',
+                height: '32px',
+                backgroundColor: '#FFFFFF',
+                border: '2px solid #FFFFFF',
+                borderRadius: '6px',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justify-content: 'center',
+                overflow: 'hidden'
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src="/logo.png" 
+                  alt="Ho Rentals Logo" 
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '300px' }}>
+              <button
+                onClick={async () => {
+                  try {
+                    const link = window.location.origin + '/landlord-registration';
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}&color=c1121f&ecc=H`;
+                    
+                    const qrImage = new Image();
+                    qrImage.crossOrigin = 'anonymous';
+                    qrImage.src = qrUrl;
+                    
+                    await new Promise((resolve, reject) => {
+                      qrImage.onload = resolve;
+                      qrImage.onerror = reject;
+                    });
+
+                    const logoImage = new Image();
+                    logoImage.src = '/logo.png';
+                    await new Promise((resolve, reject) => {
+                      logoImage.onload = resolve;
+                      logoImage.onerror = reject;
+                    });
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 300;
+                    canvas.height = 300;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) throw new Error('Could not get canvas context');
+
+                    ctx.drawImage(qrImage, 0, 0, 300, 300);
+
+                    const logoSize = 60;
+                    const logoX = (300 - logoSize) / 2;
+                    const logoY = (300 - logoSize) / 2;
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    if (typeof ctx.roundRect === 'function') {
+                      ctx.roundRect(logoX - 4, logoY - 4, logoSize + 8, logoSize + 8, 8);
+                    } else {
+                      ctx.rect(logoX - 4, logoY - 4, logoSize + 8, logoSize + 8);
+                    }
+                    ctx.fill();
+
+                    ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
+
+                    const dataUrl = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = dataUrl;
+                    a.download = 'ho-rentals-landlord-registration-qr.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  } catch (e) {
+                    window.open(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(window.location.origin + '/landlord-registration')}&color=c1121f&ecc=H`, '_blank');
+                  }
+                }}
+                className="btn btn-primary"
+                style={{ flex: 1, padding: '10px 14px', fontSize: '0.85rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                <Download size={14} /> Download QR
+              </button>
+              
+              <button
+                onClick={() => {
+                  const link = window.location.origin + '/landlord-registration';
+                  navigator.clipboard.writeText(link);
+                  alert('Copied link: ' + link);
+                }}
+                className="btn btn-outline"
+                style={{ flex: 1, padding: '10px 14px', fontSize: '0.85rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+              >
+                <Copy size={14} /> Copy Link
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
