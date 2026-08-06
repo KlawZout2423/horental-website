@@ -148,6 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Trigger PWA install prompt after login
       if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pwa_trigger_pending', 'true');
         setTimeout(() => {
           window.dispatchEvent(new Event('trigger-pwa-prompt'));
         }, 1000);
@@ -189,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Trigger PWA install prompt after registration
       if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pwa_trigger_pending', 'true');
         setTimeout(() => {
           window.dispatchEvent(new Event('trigger-pwa-prompt'));
         }, 1000);

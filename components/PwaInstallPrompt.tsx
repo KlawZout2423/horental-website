@@ -34,6 +34,16 @@ export default function PwaInstallPrompt() {
       e.preventDefault();
       // Save the event so it can be triggered later
       deferredPromptRef.current = e;
+
+      // If we have a pending trigger, show the banner now!
+      const isPending = sessionStorage.getItem('pwa_trigger_pending') === 'true';
+      const currentStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const currentDismissed = localStorage.getItem('pwa_prompt_dismissed') === 'true';
+
+      if (isPending && !currentStandalone && !currentDismissed) {
+        setShowPrompt(true);
+        sessionStorage.removeItem('pwa_trigger_pending'); // Consumed
+      }
     };
 
     // 3. Listen for the custom trigger event (e.g. login/signup success)
@@ -41,8 +51,14 @@ export default function PwaInstallPrompt() {
       const currentStandalone = window.matchMedia('(display-mode: standalone)').matches;
       const currentDismissed = localStorage.getItem('pwa_prompt_dismissed') === 'true';
 
-      if (!currentStandalone && !currentDismissed && deferredPromptRef.current) {
-        setShowPrompt(true);
+      if (!currentStandalone && !currentDismissed) {
+        if (deferredPromptRef.current) {
+          setShowPrompt(true);
+          sessionStorage.removeItem('pwa_trigger_pending'); // Consumed
+        } else {
+          // If deferredPrompt isn't ready yet, mark it as pending so it shows when the browser fires the event
+          sessionStorage.setItem('pwa_trigger_pending', 'true');
+        }
       }
     };
 
@@ -53,6 +69,7 @@ export default function PwaInstallPrompt() {
     const handleAppInstalled = () => {
       deferredPromptRef.current = null;
       setShowPrompt(false);
+      sessionStorage.removeItem('pwa_trigger_pending'); // Clean up pending trigger
       console.log('HO Rentals PWA was installed successfully!');
     };
 
