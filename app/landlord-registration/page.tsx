@@ -396,7 +396,7 @@ export default function LandlordRegistrationPage() {
               color: 'var(--primary)',
               display: 'flex',
               alignItems: 'center',
-              justify-content: 'center'
+              justifyContent: 'center'
             }}>
               <QrCode size={24} />
             </div>
@@ -418,7 +418,7 @@ export default function LandlordRegistrationPage() {
               border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
-              justify-content: 'center'
+              justifyContent: 'center'
             }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
@@ -443,7 +443,7 @@ export default function LandlordRegistrationPage() {
                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
                 display: 'flex',
                 alignItems: 'center',
-                justify-content: 'center',
+                justifyContent: 'center',
                 overflow: 'hidden'
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
