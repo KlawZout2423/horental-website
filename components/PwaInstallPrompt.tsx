@@ -138,7 +138,7 @@ export default function PwaInstallPrompt() {
             <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)' }}>
               Install HO Rentals App
             </h4>
-            <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700, textTransform: 'uppercase', tracking: '0.5px' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Add to Home Screen
             </span>
           </div>
