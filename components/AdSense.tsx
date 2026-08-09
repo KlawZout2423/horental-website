@@ -15,7 +15,7 @@ export default function AdSense({
   responsive = 'true',
   style = { display: 'block' },
 }: AdSenseProps) {
-  const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
+  const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-8918210886432706";
 
   useEffect(() => {
     try {
