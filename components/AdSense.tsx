@@ -7,6 +7,7 @@ interface AdSenseProps {
   adFormat?: string;
   responsive?: string;
   style?: React.CSSProperties;
+  adLayoutKey?: string;
 }
 
 export default function AdSense({
@@ -14,6 +15,7 @@ export default function AdSense({
   adFormat = 'auto',
   responsive = 'true',
   style = { display: 'block' },
+  adLayoutKey,
 }: AdSenseProps) {
   const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-8918210886432706";
 
@@ -58,6 +60,7 @@ export default function AdSense({
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
         data-full-width-responsive={responsive}
+        data-ad-layout-key={adLayoutKey}
       />
     </div>
   );

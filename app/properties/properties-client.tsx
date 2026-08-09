@@ -644,7 +644,8 @@ export default function PropertiesClient() {
             <div className={styles.grid}>
               {filteredProperties.map((p, index) => {
                 const isSaved = savedIds.includes(p.id);
-                const feedAdSlotId = process.env.NEXT_PUBLIC_ADSENSE_FEED_SLOT_ID || "feed-ad-placeholder";
+                const feedAdSlotId = process.env.NEXT_PUBLIC_ADSENSE_FEED_SLOT_ID || "1488358944";
+                const feedAdLayoutKey = process.env.NEXT_PUBLIC_ADSENSE_FEED_LAYOUT_KEY || "-63+cs-z-69+ot";
                 return (
                   <React.Fragment key={p.id}>
                     <Link
@@ -791,6 +792,7 @@ export default function PropertiesClient() {
                       >
                         <AdSense 
                           adSlot={feedAdSlotId} 
+                          adLayoutKey={feedAdLayoutKey}
                           adFormat="fluid" 
                           responsive="true" 
                           style={{ display: 'block', width: '100%', height: '100%' }} 
