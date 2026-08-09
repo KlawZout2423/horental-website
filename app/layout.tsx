@@ -59,11 +59,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#C1121F" />
         {/* Google AdSense */}
         {adsenseClientId && adsenseClientId !== 'ca-pub-placeholder' && (
-          <Script
+          <script
             async
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
             crossOrigin="anonymous"
-            strategy="afterInteractive"
           />
         )}
 
