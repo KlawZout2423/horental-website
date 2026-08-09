@@ -8,6 +8,7 @@ import { useAuth } from '../../lib/auth';
 import { graphqlRequest, GET_PROPERTIES } from '../../lib/graphql';
 import styles from './properties.module.css';
 import AuthPromptModal from '../../components/AuthPromptModal';
+import AdSense from '../../components/AdSense';
 
 import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImageUrl } from '../../lib/types';
 
@@ -643,133 +644,160 @@ export default function PropertiesClient() {
             <div className={styles.grid}>
               {filteredProperties.map((p, index) => {
                 const isSaved = savedIds.includes(p.id);
+                const feedAdSlotId = process.env.NEXT_PUBLIC_ADSENSE_FEED_SLOT_ID || "feed-ad-placeholder";
                 return (
-                  <Link
-                    href={`/properties/${p.id}`}
-                    key={p.id}
-                    className={`${styles.propertyCard} animate-slide-up`}
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <div className={styles.imageWrapper}>
-                      <img
-                        src={getOptimizedImageUrl(p.imageUrl || getFallbackImage(p.type), 500)}
-                        alt={p.title}
-                        className={styles.propertyImage}
-                        loading={index < 2 ? "eager" : "lazy"}
-                        fetchPriority={index < 2 ? "high" : "low"}
-                        decoding="async"
-                      />
+                  <React.Fragment key={p.id}>
+                    <Link
+                      href={`/properties/${p.id}`}
+                      className={`${styles.propertyCard} animate-slide-up`}
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <div className={styles.imageWrapper}>
+                        <img
+                          src={getOptimizedImageUrl(p.imageUrl || getFallbackImage(p.type), 500)}
+                          alt={p.title}
+                          className={styles.propertyImage}
+                          loading={index < 2 ? "eager" : "lazy"}
+                          fetchPriority={index < 2 ? "high" : "low"}
+                          decoding="async"
+                        />
 
-                      {/* Heart save button */}
-                      <button
-                        onClick={(e) => handleToggleSave(e, p.id)}
-                        className={styles.saveButton}
-                        aria-label="Save listing"
-                      >
-                        <Heart size={16} fill={isSaved ? 'var(--primary)' : 'none'} color={isSaved ? 'var(--primary)' : 'currentColor'} />
-                      </button>
-                    </div>
-
-                    <div className={styles.cardContent}>
-                      <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span className={`badge badge-${p.status === 'available' ? 'available' : p.status === 'rented' || p.status === 'occupied' ? 'rented' : 'pending'}`} style={{ padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px', fontWeight: 700 }}>
-                          {p.status === 'available' ? 'Available' : p.status === 'rented' ? 'Occupied' : p.status}
-                        </span>
-                        <span className="badge" style={{ backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600, padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px' }}>
-                          {p.type}
-                        </span>
+                        {/* Heart save button */}
+                        <button
+                          onClick={(e) => handleToggleSave(e, p.id)}
+                          className={styles.saveButton}
+                          aria-label="Save listing"
+                        >
+                          <Heart size={16} fill={isSaved ? 'var(--primary)' : 'none'} color={isSaved ? 'var(--primary)' : 'currentColor'} />
+                        </button>
                       </div>
 
-                      <h3 className={styles.cardTitle} style={{ marginTop: '2px', marginBottom: '6px', fontSize: '1.05rem', fontWeight: 700, textTransform: 'capitalize' }}>{p.title}</h3>
-
-                      <div className={styles.cardMetaRow} style={{ marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-                        <div className={styles.cardLocation} style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>
-                          <MapPin size={13} style={{ color: 'var(--primary)' }} />
-                          <span>{p.location.toLowerCase().includes('ho') ? p.location : `${p.location}, Ho`}</span>
-                        </div>
-                        {p.digitalAddress && (
-                          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--primary-dark)', backgroundColor: 'var(--primary-light)', padding: '2px 6px', borderRadius: '4px' }}>
-                            🇬🇭 {p.digitalAddress}
+                      <div className={styles.cardContent}>
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <span className={`badge badge-${p.status === 'available' ? 'available' : p.status === 'rented' || p.status === 'occupied' ? 'rented' : 'pending'}`} style={{ padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px', fontWeight: 700 }}>
+                            {p.status === 'available' ? 'Available' : p.status === 'rented' ? 'Occupied' : p.status}
                           </span>
-                        )}
-                      </div>
+                          <span className="badge" style={{ backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600, padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px' }}>
+                            {p.type}
+                          </span>
+                        </div>
 
-                      {(() => {
-                        const isLand = p.type?.toLowerCase().includes('land');
-                        const isFurniture = p.type?.toLowerCase().includes('furniture');
-                        const isShop = p.type?.toLowerCase().includes('shop');
-                        const rawDesc = p.description || '';
+                        <h3 className={styles.cardTitle} style={{ marginTop: '2px', marginBottom: '6px', fontSize: '1.05rem', fontWeight: 700, textTransform: 'capitalize' }}>{p.title}</h3>
 
-                        if (isLand || isFurniture || isShop) {
-                          return (
-                            <p
-                              style={{
-                                fontSize: '0.8rem',
-                                color: 'var(--text-secondary)',
-                                margin: '4px 0 0',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                                lineHeight: '1.35'
-                              }}
-                            >
-                              {rawDesc || 'Verified listing — click to view full details.'}
-                            </p>
-                          );
-                        }
+                        <div className={styles.cardMetaRow} style={{ marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                          <div className={styles.cardLocation} style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>
+                            <MapPin size={13} style={{ color: 'var(--primary)' }} />
+                            <span>{p.location.toLowerCase().includes('ho') ? p.location : `${p.location}, Ho`}</span>
+                          </div>
+                          {p.digitalAddress && (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--primary-dark)', backgroundColor: 'var(--primary-light)', padding: '2px 6px', borderRadius: '4px' }}>
+                              🇬🇭 {p.digitalAddress}
+                            </span>
+                          )}
+                        </div>
 
-                        const desc = rawDesc.toLowerCase();
-                        let showWifi = desc.includes('wi-fi') || desc.includes('wifi');
-                        let showWater = desc.includes('water');
-                        let showPrepaid = desc.includes('prepaid') || desc.includes('meter');
-                        let showBed = desc.includes('bed') || desc.includes('room') || desc.includes('desk') || desc.includes('hostel');
-                        let showParking = desc.includes('park') || desc.includes('car');
+                        {(() => {
+                          const isLand = p.type?.toLowerCase().includes('land');
+                          const isFurniture = p.type?.toLowerCase().includes('furniture');
+                          const isShop = p.type?.toLowerCase().includes('shop');
+                          const rawDesc = p.description || '';
 
-                        if (!showWifi && !showWater && !showPrepaid && !showBed) {
-                          showWater = true;
-                          showBed = true;
-                          showPrepaid = true;
-                        }
-
-                        return (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <div className={styles.amenitiesRow}>
-                              {showBed && <span className={styles.amenity}>🛏️ Bed/Room</span>}
-                              {showWater && <span className={styles.amenity}>💧 Water</span>}
-                              {showPrepaid && <span className={styles.amenity}>⚡ Prepaid</span>}
-                              {showWifi && <span className={styles.amenity}>📶 WiFi</span>}
-                              {showParking && <span className={styles.amenity}>🚗 Parking</span>}
-                            </div>
-                            {rawDesc && (
+                          if (isLand || isFurniture || isShop) {
+                            return (
                               <p
                                 style={{
-                                  fontSize: '0.78rem',
-                                  color: 'var(--text-muted)',
-                                  margin: '2px 0 0',
+                                  fontSize: '0.8rem',
+                                  color: 'var(--text-secondary)',
+                                  margin: '4px 0 0',
                                   display: '-webkit-box',
                                   WebkitLineClamp: 2,
                                   WebkitBoxOrient: 'vertical',
                                   overflow: 'hidden',
-                                  lineHeight: '1.3'
+                                  lineHeight: '1.35'
                                 }}
                               >
-                                {rawDesc}
+                                {rawDesc || 'Verified listing — click to view full details.'}
                               </p>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
+                            );
+                          }
 
-                    <div className={styles.cardFooter} style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '12px' }}>
-                      <div className={styles.cardPrice}>
-                        <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>GH₵ {p.price.toLocaleString()}</span>
-                        <span className={styles.cardPricePeriod} style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{getPricePeriodLabel(p.description, true)}</span>
+                          const desc = rawDesc.toLowerCase();
+                          let showWifi = desc.includes('wi-fi') || desc.includes('wifi');
+                          let showWater = desc.includes('water');
+                          let showPrepaid = desc.includes('prepaid') || desc.includes('meter');
+                          let showBed = desc.includes('bed') || desc.includes('room') || desc.includes('desk') || desc.includes('hostel');
+                          let showParking = desc.includes('park') || desc.includes('car');
+
+                          if (!showWifi && !showWater && !showPrepaid && !showBed) {
+                            showWater = true;
+                            showBed = true;
+                            showPrepaid = true;
+                          }
+
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <div className={styles.amenitiesRow}>
+                                {showBed && <span className={styles.amenity}>🛏️ Bed/Room</span>}
+                                {showWater && <span className={styles.amenity}>💧 Water</span>}
+                                {showPrepaid && <span className={styles.amenity}>⚡ Prepaid</span>}
+                                {showWifi && <span className={styles.amenity}>📶 WiFi</span>}
+                                {showParking && <span className={styles.amenity}>🚗 Parking</span>}
+                              </div>
+                              {rawDesc && (
+                                <p
+                                  style={{
+                                    fontSize: '0.78rem',
+                                    color: 'var(--text-muted)',
+                                    margin: '2px 0 0',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                    lineHeight: '1.3'
+                                  }}
+                                >
+                                  {rawDesc}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
-                      <span className={styles.viewDetailsBtn}>View Details &rarr;</span>
-                    </div>
-                  </Link>
+
+                      <div className={styles.cardFooter} style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '12px' }}>
+                        <div className={styles.cardPrice}>
+                          <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>GH₵ {p.price.toLocaleString()}</span>
+                          <span className={styles.cardPricePeriod} style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{getPricePeriodLabel(p.description, true)}</span>
+                        </div>
+                        <span className={styles.viewDetailsBtn}>View Details &rarr;</span>
+                      </div>
+                    </Link>
+                    {(index + 1) % 6 === 0 && (
+                      <div 
+                        className={`${styles.propertyCard} animate-slide-up`} 
+                        style={{ 
+                          animationDelay: `${(index + 1) * 50}ms`,
+                          padding: '16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          minHeight: '360px',
+                          backgroundColor: 'var(--bg-surface)',
+                          borderRadius: '12px',
+                          border: '1px dashed var(--border)',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <AdSense 
+                          adSlot={feedAdSlotId} 
+                          adFormat="fluid" 
+                          responsive="true" 
+                          style={{ display: 'block', width: '100%', height: '100%' }} 
+                        />
+                      </div>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </div>
