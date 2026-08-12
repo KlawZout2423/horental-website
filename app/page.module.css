@@ -270,10 +270,11 @@
   .stickySearchBar {
     position: sticky;
     top: 70px;
-    z-index: 300;
+    z-index: 1000;
     background-color: var(--bg-surface);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
     border-bottom: 1px solid var(--border);
+    overflow: visible;
   }
 
   .mobileSearchRow {
@@ -445,6 +446,7 @@
   z-index: 1000;
   position: sticky;
   top: 70px;
+  overflow: visible;
 }
 
 /* Mobile search row — hidden on desktop */
@@ -498,6 +500,7 @@
 .chipsWrapper {
   position: relative;
   width: 100%;
+  overflow: visible;
 }
 
 /* horizontal Category Chips scrollbar matching Flutter _typeChips */
@@ -656,6 +659,8 @@
   border-bottom: 1px solid var(--border);
   padding-top: 28px;
   padding-bottom: 44px;
+  position: relative;
+  z-index: 1;
 }
 
 /* High Fidelity Premium Property Card */
