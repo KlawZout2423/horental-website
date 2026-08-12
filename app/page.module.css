@@ -442,7 +442,7 @@
   width: 100%;
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border);
-  z-index: 200;
+  z-index: 1000;
   position: sticky;
   top: 70px;
 }
@@ -507,13 +507,14 @@
   padding: 8px 24px 16px;
   display: flex;
   justify-content: center;
-  z-index: 50;
+  z-index: 1005;
   position: relative;
 }
 
 @media (max-width: 1024px) {
   .chipsOuter {
     overflow-x: auto;
+    overflow-y: visible;
     justify-content: flex-start;
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -596,7 +597,7 @@
 /* Self-contained relative layering dropdown */
 .dropdownContainer {
   position: relative;
-  z-index: 500;
+  z-index: 2000;
 }
 
 .dropdownMenu {
@@ -606,8 +607,8 @@
   background-color: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
-  z-index: 9999;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+  z-index: 99999;
   min-width: 230px;
   padding: 6px;
   display: flex;
@@ -619,13 +620,13 @@
 @media (max-width: 1024px) {
   .dropdownMenu {
     position: fixed;
-    top: 135px;
+    top: 140px;
     left: 16px;
     right: 16px;
     width: auto;
     min-width: unset;
-    z-index: 9999;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+    z-index: 99999;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
   }
 }
 

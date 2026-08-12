@@ -314,7 +314,60 @@ export default function PropertiesClient() {
 
   return (
     <div className={`${styles.container} animate-fade-in`}>
-      <h1 className={styles.title} style={{ marginBottom: '20px' }}>Filter &amp; Search Properties</h1>
+      <h1 className={styles.title} style={{ marginBottom: '12px' }}>Filter &amp; Search Properties</h1>
+
+      {/* Category Chips Bar with Self-Contained Dropdown */}
+      <div className={styles.chipsOuter}>
+        <div className={styles.chipsContainer} ref={dropdownRef}>
+          {TYPE_CHIPS.map((chip) => {
+            const isSelfContained = chip.type === 'self-contained';
+            const isActive =
+              propertyType === chip.type ||
+              (isSelfContained &&
+                SELF_CONTAINED_OPTIONS.some((opt) => opt.type === propertyType));
+
+            if (isSelfContained) {
+              return (
+                <div key={chip.type} className={styles.dropdownContainer}>
+                  <button
+                    type="button"
+                    className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
+                    onClick={() => handleChipClick(chip.type)}
+                  >
+                    <span>{chip.label}</span>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showSelfContainedDropdown && (
+                    <div className={styles.dropdownMenu}>
+                      {SELF_CONTAINED_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.type}
+                          type="button"
+                          className={styles.dropdownItem}
+                          onClick={() => handleSelfContainedSelect(opt.type)}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={chip.type}
+                type="button"
+                className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
+                onClick={() => handleChipClick(chip.type)}
+              >
+                <span>{chip.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Sticky Mobile Filter Toggle Bar */}
       <div className={styles.mobileFilterBar}>
@@ -504,80 +557,89 @@ export default function PropertiesClient() {
             </div>
           </div>
 
-          {/* Water Facilities Filter */}
-          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+          {/* Water Facilities Compact Multi-Select Pills */}
+          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>💧 Water Supply</span>
               {selectedWaterTypes.length > 0 && <span className={styles.activeFilterCount}>{selectedWaterTypes.length}</span>}
             </label>
-            <div className={styles.checkboxList}>
+            <div className={styles.pillGrid}>
               {[
-                { id: 'ghana-water', label: 'Ghana Water Supply', value: 'Ghana Water' },
-                { id: 'polytank-water', label: 'Polytank / Storage Tank', value: 'Polytank' },
-                { id: 'borehole-water', label: 'Borehole Water', value: 'Borehole' },
-                { id: 'well-water', label: 'Well Water', value: 'Well' },
-              ].map((item) => (
-                <label key={item.id} className={styles.checkboxOption}>
-                  <input
-                    type="checkbox"
-                    checked={selectedWaterTypes.includes(item.value)}
-                    onChange={() => handleToggleWaterFilter(item.value)}
-                  />
-                  <span>{item.label}</span>
-                </label>
-              ))}
+                { label: 'Ghana Water', value: 'Ghana Water' },
+                { label: 'Polytank / Tank', value: 'Polytank' },
+                { label: 'Borehole', value: 'Borehole' },
+                { label: 'Well Water', value: 'Well' },
+              ].map((item) => {
+                const isSelected = selectedWaterTypes.includes(item.value);
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`}
+                    onClick={() => handleToggleWaterFilter(item.value)}
+                  >
+                    {isSelected ? '✓ ' : ''}{item.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Metering & Electricity Filter */}
-          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+          {/* Metering & Electricity Compact Multi-Select Pills */}
+          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>⚡ Electricity & Metering</span>
+              <span>⚡ Electricity &amp; Metering</span>
               {selectedMeterTypes.length > 0 && <span className={styles.activeFilterCount}>{selectedMeterTypes.length}</span>}
             </label>
-            <div className={styles.checkboxList}>
+            <div className={styles.pillGrid}>
               {[
-                { id: 'prepaid-meter', label: 'ECG Prepaid Meter', value: 'Prepaid' },
-                { id: 'separate-meter', label: 'ECG Separate Meter / Postpaid', value: 'Postpaid' },
-                { id: 'shared-meter', label: 'ECG Shared Meter', value: 'Shared' },
-              ].map((item) => (
-                <label key={item.id} className={styles.checkboxOption}>
-                  <input
-                    type="checkbox"
-                    checked={selectedMeterTypes.includes(item.value)}
-                    onChange={() => handleToggleMeterFilter(item.value)}
-                  />
-                  <span>{item.label}</span>
-                </label>
-              ))}
+                { label: 'ECG Prepaid', value: 'Prepaid' },
+                { label: 'ECG Separate', value: 'Postpaid' },
+                { label: 'ECG Shared', value: 'Shared' },
+              ].map((item) => {
+                const isSelected = selectedMeterTypes.includes(item.value);
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`}
+                    onClick={() => handleToggleMeterFilter(item.value)}
+                  >
+                    {isSelected ? '✓ ' : ''}{item.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Amenities & Comfort Checklist Filter */}
-          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+          {/* Amenities & Comfort Compact Multi-Select Pills */}
+          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>✨ Comforts & Security</span>
+              <span>✨ Comforts &amp; Security</span>
               {selectedAmenities.length > 0 && <span className={styles.activeFilterCount}>{selectedAmenities.length}</span>}
             </label>
-            <div className={styles.checkboxList}>
+            <div className={styles.pillGrid}>
               {[
-                { id: 'amenity-wifi', label: 'High-Speed WiFi', value: 'WiFi' },
-                { id: 'amenity-ac', label: 'Air Conditioning (AC)', value: 'AC' },
-                { id: 'amenity-desk', label: 'Study Desk & Chair', value: 'Study Desk' },
-                { id: 'amenity-furnished', label: 'Furnished / Bed Included', value: 'Furnished' },
-                { id: 'amenity-cctv', label: 'CCTV Security Camera', value: 'CCTV' },
-                { id: 'amenity-gated', label: 'Gated & Fenced', value: 'Gated & Fenced' },
-                { id: 'amenity-parking', label: 'Vehicle Parking Space', value: 'Parking' },
-              ].map((item) => (
-                <label key={item.id} className={styles.checkboxOption}>
-                  <input
-                    type="checkbox"
-                    checked={selectedAmenities.includes(item.value)}
-                    onChange={() => handleToggleAmenityFilter(item.value)}
-                  />
-                  <span>{item.label}</span>
-                </label>
-              ))}
+                { label: 'High-Speed WiFi', value: 'WiFi' },
+                { label: 'Air Conditioning', value: 'AC' },
+                { label: 'Study Desk', value: 'Study Desk' },
+                { label: 'Furnished / Bed', value: 'Furnished' },
+                { label: 'CCTV Security', value: 'CCTV' },
+                { label: 'Gated & Fenced', value: 'Gated & Fenced' },
+                { label: 'Parking Space', value: 'Parking' },
+              ].map((item) => {
+                const isSelected = selectedAmenities.includes(item.value);
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`}
+                    onClick={() => handleToggleAmenityFilter(item.value)}
+                  >
+                    {isSelected ? '✓ ' : ''}{item.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -594,7 +656,7 @@ export default function PropertiesClient() {
               className="btn btn-outline"
               style={{ padding: '12px 16px', fontWeight: 600 }}
             >
-              Cancel
+              Close
             </button>
           </div>
         </aside>
