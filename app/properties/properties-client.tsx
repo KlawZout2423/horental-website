@@ -12,25 +12,7 @@ import AdSense from '../../components/AdSense';
 
 import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImageUrl } from '../../lib/types';
 
-const TYPE_CHIPS = [
-  { label: 'All', type: 'All' },
-  { label: 'Self-Contained ▾', type: 'self-contained' },
-  { label: 'Student Hostel', type: 'Student Hostel' },
-  { label: 'Single Room', type: 'Single Room' },
-  { label: 'Chamber & Hall', type: 'Chamber & Hall' },
-  { label: 'Shops', type: 'Shops' },
-  { label: 'Lands', type: 'Lands' },
-  { label: 'Short Stay', type: 'Short Stay' }
-];
 
-const SELF_CONTAINED_OPTIONS = [
-  { label: 'All Self-Contained', type: 'self-contained' },
-  { label: 'Single Room SC', type: 'Single Room SC' },
-  { label: 'Chamber and Hall SC', type: 'Chamber and Hall SC' },
-  { label: 'Two Bedroom SC', type: 'Two Bedroom SC' },
-  { label: 'Three Bedroom SC', type: 'Three Bedroom SC' },
-  { label: 'Four Bedroom SC', type: 'Four Bedroom SC' }
-];
 
 const POPULAR_AREAS = [
   { name: 'UHAS', icon: '🎓', label: 'UHAS Campus' },
@@ -83,33 +65,7 @@ export default function PropertiesClient() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
 
-  // Self-Contained Dropdown State
-  const [showSelfContainedDropdown, setShowSelfContainedDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowSelfContainedDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleChipClick = (type: string) => {
-    if (type === 'self-contained') {
-      setShowSelfContainedDropdown((prev) => !prev);
-      return;
-    }
-    setShowSelfContainedDropdown(false);
-    setPropertyType(type);
-  };
-
-  const handleSelfContainedSelect = (subType: string) => {
-    setPropertyType(subType);
-    setShowSelfContainedDropdown(false);
-  };
 
   // Calculate dynamic maximum price for range slider (rounded up to nearest 100)
   const maxPossiblePrice = properties.length > 0
@@ -316,58 +272,7 @@ export default function PropertiesClient() {
     <div className={`${styles.container} animate-fade-in`}>
       <h1 className={styles.title} style={{ marginBottom: '12px' }}>Filter &amp; Search Properties</h1>
 
-      {/* Category Chips Bar with Self-Contained Dropdown */}
-      <div className={styles.chipsOuter}>
-        <div className={styles.chipsContainer} ref={dropdownRef}>
-          {TYPE_CHIPS.map((chip) => {
-            const isSelfContained = chip.type === 'self-contained';
-            const isActive =
-              propertyType === chip.type ||
-              (isSelfContained &&
-                SELF_CONTAINED_OPTIONS.some((opt) => opt.type === propertyType));
 
-            if (isSelfContained) {
-              return (
-                <div key={chip.type} className={styles.dropdownContainer}>
-                  <button
-                    type="button"
-                    className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
-                    onClick={() => handleChipClick(chip.type)}
-                  >
-                    <span>{chip.label}</span>
-                    <ChevronDown size={14} />
-                  </button>
-                  {showSelfContainedDropdown && (
-                    <div className={styles.dropdownMenu}>
-                      {SELF_CONTAINED_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.type}
-                          type="button"
-                          className={styles.dropdownItem}
-                          onClick={() => handleSelfContainedSelect(opt.type)}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            return (
-              <button
-                key={chip.type}
-                type="button"
-                className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
-                onClick={() => handleChipClick(chip.type)}
-              >
-                <span>{chip.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Sticky Mobile Filter Toggle Bar */}
       <div className={styles.mobileFilterBar}>
@@ -415,248 +320,222 @@ export default function PropertiesClient() {
             </div>
           </div>
 
-          {/* Search text filter */}
-          <div className={styles.filterGroup}>
-            <label htmlFor="search-keyword">Search Keyword</label>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <input
-                id="search-keyword"
-                type="text"
-                placeholder="Search location, hostel or property..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="form-control"
-                style={{ paddingLeft: '36px', paddingRight: searchQuery ? '36px' : '12px' }}
-              />
-              <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  style={{
-                    position: 'absolute',
-                    right: '10px',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '2px',
-                  }}
-                  aria-label="Clear search keyword"
-                >
-                  <X size={15} />
-                </button>
-              )}
-            </div>
-          </div>
+          {/* Scrollable filter content */}
+          <div className={styles.sidebarScrollArea}>
 
-          {/* Property Type Filter */}
-          <div className={styles.filterGroup}>
-            <label htmlFor="accommodation-type">Accommodation Type</label>
-            <select
-              id="accommodation-type"
-              value={propertyType}
-              onChange={(e) => setPropertyType(e.target.value)}
-              className={styles.selectInput}
-              style={{ backgroundColor: 'var(--bg-surface)' }}
-            >
-              <option value="All">All Categories</option>
-              <option value="self-contained">Self-Contained (All)</option>
-              {PROPERTY_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Price Range Filter */}
-          <div className={styles.filterGroup}>
-            <label id="price-range-label">Price Range (GH₵)</label>
-            <div className={styles.priceRangeInputs}>
-              <input
-                type="number"
-                placeholder="Min"
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-                className={styles.priceInput}
-                aria-label="Minimum price in GH₵"
-              />
-              <span style={{ color: 'var(--text-muted)' }}>-</span>
-              <input
-                type="number"
-                placeholder="Max"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                className={styles.priceInput}
-                aria-label="Maximum price in GH₵"
-              />
-            </div>
-
-            {/* Range Slider for Max Price */}
-            <div style={{ marginTop: '12px' }}>
-              <input
-                type="range"
-                min="0"
-                max={maxPossiblePrice}
-                step="50"
-                value={maxPrice ? Number(maxPrice) : maxPossiblePrice}
-                onChange={(e) => setMaxPrice(e.target.value === String(maxPossiblePrice) ? '' : e.target.value)}
-                style={{
-                  width: '100%',
-                  accentColor: 'var(--primary)',
-                  cursor: 'pointer',
-                  height: '6px',
-                  borderRadius: '3px',
-                  backgroundColor: 'var(--border)'
-                }}
-                aria-label="Maximum price slider"
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                <span>GH₵0</span>
-                <span>Max: {maxPrice ? `GH₵${Number(maxPrice).toLocaleString()}` : 'Any'}</span>
-                <span>GH₵{maxPossiblePrice.toLocaleString()}</span>
+            {/* Search text filter */}
+            <div className={styles.filterGroup}>
+              <label htmlFor="search-keyword">Search Keyword</label>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                  id="search-keyword"
+                  type="text"
+                  placeholder="Search location, hostel or property..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="form-control"
+                  style={{ paddingLeft: '36px', paddingRight: searchQuery ? '36px' : '12px' }}
+                />
+                <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '2px',
+                    }}
+                    aria-label="Clear search keyword"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
               </div>
             </div>
-          </div>
 
-          {/* Availability Status Filter */}
-          <div className={styles.filterGroup}>
-            <label>Availability</label>
-            <div className={styles.radioList}>
-              <label className={styles.radioOption}>
+            {/* Property Type Filter */}
+            <div className={styles.filterGroup}>
+              <label htmlFor="accommodation-type">Accommodation Type</label>
+              <select
+                id="accommodation-type"
+                value={propertyType}
+                onChange={(e) => setPropertyType(e.target.value)}
+                className={styles.selectInput}
+                style={{ backgroundColor: 'var(--bg-surface)' }}
+              >
+                <option value="All">All Categories</option>
+                <option value="self-contained">Self-Contained (All)</option>
+                {PROPERTY_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Price Range Filter */}
+            <div className={styles.filterGroup}>
+              <label id="price-range-label">Price Range (GH₵)</label>
+              <div className={styles.priceRangeInputs}>
                 <input
-                  type="radio"
-                  name="availability"
-                  checked={availability === 'All'}
-                  onChange={() => setAvailability('All')}
+                  type="number"
+                  placeholder="Min"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  className={styles.priceInput}
+                  aria-label="Minimum price in GH₵"
                 />
-                All Properties
-              </label>
-              <label className={styles.radioOption}>
+                <span style={{ color: 'var(--text-muted)' }}>-</span>
                 <input
-                  type="radio"
-                  name="availability"
-                  checked={availability === 'Available'}
-                  onChange={() => setAvailability('Available')}
+                  type="number"
+                  placeholder="Max"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  className={styles.priceInput}
+                  aria-label="Maximum price in GH₵"
                 />
-                Available Only
-              </label>
-              <label className={styles.radioOption}>
+              </div>
+              <div style={{ marginTop: '12px' }}>
                 <input
-                  type="radio"
-                  name="availability"
-                  checked={availability === 'Rented'}
-                  onChange={() => setAvailability('Rented')}
+                  type="range"
+                  min="0"
+                  max={maxPossiblePrice}
+                  step="50"
+                  value={maxPrice ? Number(maxPrice) : maxPossiblePrice}
+                  onChange={(e) => setMaxPrice(e.target.value === String(maxPossiblePrice) ? '' : e.target.value)}
+                  style={{
+                    width: '100%',
+                    accentColor: 'var(--primary)',
+                    cursor: 'pointer',
+                    height: '6px',
+                    borderRadius: '3px',
+                    backgroundColor: 'var(--border)'
+                  }}
+                  aria-label="Maximum price slider"
                 />
-                Rented / Occupied
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                  <span>GH₵0</span>
+                  <span>Max: {maxPrice ? `GH₵${Number(maxPrice).toLocaleString()}` : 'Any'}</span>
+                  <span>GH₵{maxPossiblePrice.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Availability Status Filter */}
+            <div className={styles.filterGroup}>
+              <label>Availability</label>
+              <div className={styles.radioList}>
+                <label className={styles.radioOption}>
+                  <input type="radio" name="availability" checked={availability === 'All'} onChange={() => setAvailability('All')} />
+                  All Properties
+                </label>
+                <label className={styles.radioOption}>
+                  <input type="radio" name="availability" checked={availability === 'Available'} onChange={() => setAvailability('Available')} />
+                  Available Only
+                </label>
+                <label className={styles.radioOption}>
+                  <input type="radio" name="availability" checked={availability === 'Rented'} onChange={() => setAvailability('Rented')} />
+                  Rented / Occupied
+                </label>
+              </div>
+            </div>
+
+            {/* Water Supply */}
+            <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>💧 Water Supply</span>
+                {selectedWaterTypes.length > 0 && <span className={styles.activeFilterCount}>{selectedWaterTypes.length}</span>}
               </label>
+              <div className={styles.pillGrid}>
+                {[
+                  { label: 'Ghana Water', value: 'Ghana Water' },
+                  { label: 'Polytank / Tank', value: 'Polytank' },
+                  { label: 'Borehole', value: 'Borehole' },
+                  { label: 'Well Water', value: 'Well' },
+                ].map((item) => {
+                  const isSelected = selectedWaterTypes.includes(item.value);
+                  return (
+                    <button key={item.value} type="button" className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`} onClick={() => handleToggleWaterFilter(item.value)}>
+                      {isSelected ? '✓ ' : ''}{item.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Water Facilities Compact Multi-Select Pills */}
-          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>💧 Water Supply</span>
-              {selectedWaterTypes.length > 0 && <span className={styles.activeFilterCount}>{selectedWaterTypes.length}</span>}
-            </label>
-            <div className={styles.pillGrid}>
-              {[
-                { label: 'Ghana Water', value: 'Ghana Water' },
-                { label: 'Polytank / Tank', value: 'Polytank' },
-                { label: 'Borehole', value: 'Borehole' },
-                { label: 'Well Water', value: 'Well' },
-              ].map((item) => {
-                const isSelected = selectedWaterTypes.includes(item.value);
-                return (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`}
-                    onClick={() => handleToggleWaterFilter(item.value)}
-                  >
-                    {isSelected ? '✓ ' : ''}{item.label}
-                  </button>
-                );
-              })}
+            {/* Electricity */}
+            <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>⚡ Electricity &amp; Metering</span>
+                {selectedMeterTypes.length > 0 && <span className={styles.activeFilterCount}>{selectedMeterTypes.length}</span>}
+              </label>
+              <div className={styles.pillGrid}>
+                {[
+                  { label: 'ECG Prepaid', value: 'Prepaid' },
+                  { label: 'ECG Separate', value: 'Postpaid' },
+                  { label: 'ECG Shared', value: 'Shared' },
+                ].map((item) => {
+                  const isSelected = selectedMeterTypes.includes(item.value);
+                  return (
+                    <button key={item.value} type="button" className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`} onClick={() => handleToggleMeterFilter(item.value)}>
+                      {isSelected ? '✓ ' : ''}{item.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Metering & Electricity Compact Multi-Select Pills */}
-          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>⚡ Electricity &amp; Metering</span>
-              {selectedMeterTypes.length > 0 && <span className={styles.activeFilterCount}>{selectedMeterTypes.length}</span>}
-            </label>
-            <div className={styles.pillGrid}>
-              {[
-                { label: 'ECG Prepaid', value: 'Prepaid' },
-                { label: 'ECG Separate', value: 'Postpaid' },
-                { label: 'ECG Shared', value: 'Shared' },
-              ].map((item) => {
-                const isSelected = selectedMeterTypes.includes(item.value);
-                return (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`}
-                    onClick={() => handleToggleMeterFilter(item.value)}
-                  >
-                    {isSelected ? '✓ ' : ''}{item.label}
-                  </button>
-                );
-              })}
+            {/* Amenities */}
+            <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>✨ Comforts &amp; Security</span>
+                {selectedAmenities.length > 0 && <span className={styles.activeFilterCount}>{selectedAmenities.length}</span>}
+              </label>
+              <div className={styles.pillGrid}>
+                {[
+                  { label: 'High-Speed WiFi', value: 'WiFi' },
+                  { label: 'Air Conditioning', value: 'AC' },
+                  { label: 'Study Desk', value: 'Study Desk' },
+                  { label: 'Furnished / Bed', value: 'Furnished' },
+                  { label: 'CCTV Security', value: 'CCTV' },
+                  { label: 'Gated & Fenced', value: 'Gated & Fenced' },
+                  { label: 'Parking Space', value: 'Parking' },
+                ].map((item) => {
+                  const isSelected = selectedAmenities.includes(item.value);
+                  return (
+                    <button key={item.value} type="button" className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`} onClick={() => handleToggleAmenityFilter(item.value)}>
+                      {isSelected ? '✓ ' : ''}{item.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Amenities & Comfort Compact Multi-Select Pills */}
-          <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>✨ Comforts &amp; Security</span>
-              {selectedAmenities.length > 0 && <span className={styles.activeFilterCount}>{selectedAmenities.length}</span>}
-            </label>
-            <div className={styles.pillGrid}>
-              {[
-                { label: 'High-Speed WiFi', value: 'WiFi' },
-                { label: 'Air Conditioning', value: 'AC' },
-                { label: 'Study Desk', value: 'Study Desk' },
-                { label: 'Furnished / Bed', value: 'Furnished' },
-                { label: 'CCTV Security', value: 'CCTV' },
-                { label: 'Gated & Fenced', value: 'Gated & Fenced' },
-                { label: 'Parking Space', value: 'Parking' },
-              ].map((item) => {
-                const isSelected = selectedAmenities.includes(item.value);
-                return (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`}
-                    onClick={() => handleToggleAmenityFilter(item.value)}
-                  >
-                    {isSelected ? '✓ ' : ''}{item.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          </div>{/* end sidebarScrollArea */}
 
+          {/* Pinned footer — always visible at bottom of drawer */}
           <div className={styles.mobileDrawerFooter}>
             <button
               onClick={() => setShowMobileFilters(false)}
               className="btn btn-primary"
-              style={{ flex: 1, padding: '12px', fontWeight: 700 }}
+              style={{ flex: 1, padding: '14px', fontWeight: 700, fontSize: '0.95rem' }}
             >
-              Show {filteredProperties.length} Properties
+              Show {filteredProperties.length} {filteredProperties.length === 1 ? 'Property' : 'Properties'}
             </button>
             <button
-              onClick={() => setShowMobileFilters(false)}
+              onClick={handleResetFilters}
               className="btn btn-outline"
-              style={{ padding: '12px 16px', fontWeight: 600 }}
+              style={{ padding: '14px 18px', fontWeight: 600 }}
             >
-              Close
+              Reset
             </button>
           </div>
         </aside>

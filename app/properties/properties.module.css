@@ -16,132 +16,7 @@
   font-size: 0.95rem;
 }
 
-/* Category Chips & Self-Contained Dropdown */
-.chipsOuter {
-  width: 100%;
-  padding: 4px 0 16px 0;
-  display: flex;
-  position: relative;
-  margin-bottom: 16px;
-  z-index: 100;
-}
 
-@media (max-width: 1024px) {
-  .chipsOuter {
-    overflow-x: auto;
-    overflow-y: visible;
-    justify-content: flex-start;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .chipsOuter::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 24px;
-    background: linear-gradient(90deg, transparent 0%, var(--bg-surface) 100%);
-    pointer-events: none;
-    z-index: 10;
-  }
-  .chipsOuter::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-.chipsContainer {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: nowrap;
-}
-
-.chip {
-  padding: 8px 18px;
-  border-radius: 9999px;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border);
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  user-select: none;
-}
-
-.chip:hover {
-  border-color: var(--primary-light-hover);
-  color: var(--primary);
-  background-color: var(--primary-light);
-}
-
-.activeChip {
-  background-color: var(--primary-light) !important;
-  color: var(--primary) !important;
-  border-color: var(--primary) !important;
-  font-weight: 700 !important;
-  box-shadow: var(--shadow-sm);
-}
-
-.dropdownContainer {
-  position: relative;
-  display: inline-block;
-  z-index: 1000;
-}
-
-.dropdownMenu {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 99999;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 210px;
-  animation: fadeIn 0.2s ease;
-}
-
-@media (max-width: 1024px) {
-  .dropdownMenu {
-    position: fixed;
-    top: 140px;
-    left: 16px;
-    right: 16px;
-    width: auto;
-    min-width: unset;
-    z-index: 99999;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-  }
-}
-
-.dropdownItem {
-  padding: 10px 14px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-}
-
-.dropdownItem:hover {
-  background-color: var(--primary-light);
-  color: var(--primary);
-  padding-left: 18px;
-}
 
 .layout {
   display: grid;
@@ -155,6 +30,11 @@
     grid-template-columns: 1fr;
     margin-bottom: 40px;
   }
+}
+
+/* Sidebar scroll area — transparent on desktop, scrollable on mobile */
+.sidebarScrollArea {
+  display: contents;
 }
 
 /* Sidebar filter styles */
@@ -705,18 +585,7 @@
     color: var(--primary);
   }
 
-  .mobileDrawerFooter {
-    display: flex;
-    gap: 12px;
-    padding: 14px 24px max(16px, env(safe-area-inset-bottom));
-    background-color: var(--bg-surface);
-    border-top: 1px solid var(--border);
-    position: sticky;
-    bottom: 0;
-    z-index: 100;
-    margin: auto -24px 0 -24px;
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
-  }
+  /* mobileDrawerFooter is handled above */
 
   .sidebar {
     display: none;
@@ -731,8 +600,9 @@
     border-top-right-radius: 24px;
     border: 1px solid var(--border);
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
-    overflow-y: auto;
-    padding: 24px 24px 0 24px;
+    /* Do NOT overflow-y here — inner content div handles scroll */
+    overflow: hidden;
+    padding: 0;
     height: 90vh;
     max-height: 90vh;
     flex-direction: column;
@@ -741,6 +611,45 @@
 
   .sidebar.showMobile {
     display: flex !important;
+  }
+
+  /* The filter groups scroll independently, footer stays pinned */
+  .sidebar > *:not(.mobileDrawerFooter):not(.filterSectionTitle) {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .sidebar .filterSectionTitle {
+    padding: 20px 24px 12px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    background-color: var(--bg-surface);
+    z-index: 2;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+
+  /* Wrap all filter groups in a scrollable area */
+  .sidebarScrollArea {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 24px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobileDrawerFooter {
+    display: flex;
+    gap: 12px;
+    padding: 14px 24px max(16px, env(safe-area-inset-bottom));
+    background-color: var(--bg-surface);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 100;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
   }
 
   /* Fix grid for mobile — single column, full width */

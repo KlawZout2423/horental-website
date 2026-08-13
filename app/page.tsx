@@ -71,17 +71,33 @@ export default function Home() {
   };
   
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const selfContainedBtnRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
 
   // Close dropdown overlay when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+        selfContainedBtnRef.current && !selfContainedBtnRef.current.contains(event.target as Node)
+      ) {
         setShowSelfContainedDropdown(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Recalculate dropdown position whenever it opens
+  useEffect(() => {
+    if (showSelfContainedDropdown && selfContainedBtnRef.current) {
+      const rect = selfContainedBtnRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY + 8,
+        left: rect.left + window.scrollX,
+      });
+    }
+  }, [showSelfContainedDropdown]);
 
   // Fetch properties from database
   useEffect(() => {
@@ -290,7 +306,7 @@ export default function Home() {
         {/* Property Type Filter Chips */}
         <div className={styles.chipsWrapper}>
           <div className={styles.chipsOuter}>
-            <div className={styles.chipsContainer} ref={dropdownRef}>
+            <div className={styles.chipsContainer}>
               {TYPE_CHIPS.map((chip) => {
                 const isSelfContained = chip.type === 'self-contained';
                 const isFilters = chip.type === 'filters';
@@ -301,30 +317,16 @@ export default function Home() {
 
                 if (isSelfContained) {
                   return (
-                    <div key={chip.type} className={styles.dropdownContainer}>
-                      <button
-                        type="button"
-                        className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
-                        onClick={() => handleChipClick(chip.type)}
-                      >
-                        <span>{chip.label}</span>
-                        <ChevronDown size={14} />
-                      </button>
-                      {showSelfContainedDropdown && (
-                        <div className={styles.dropdownMenu}>
-                          {SELF_CONTAINED_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.type}
-                              type="button"
-                              className={styles.dropdownItem}
-                              onClick={() => handleSelfContainedSelect(opt.type)}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <button
+                      key={chip.type}
+                      ref={selfContainedBtnRef}
+                      type="button"
+                      className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
+                      onClick={() => handleChipClick(chip.type)}
+                    >
+                      <span>{chip.label}</span>
+                      <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: showSelfContainedDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                    </button>
                   );
                 }
 
@@ -343,6 +345,31 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Self-Contained dropdown — rendered as fixed overlay outside scroll container */}
+        {showSelfContainedDropdown && dropdownPos && (
+          <div
+            ref={dropdownRef}
+            className={styles.dropdownMenu}
+            style={{
+              position: 'fixed',
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              zIndex: 99999,
+            }}
+          >
+            {SELF_CONTAINED_OPTIONS.map((opt) => (
+              <button
+                key={opt.type}
+                type="button"
+                className={styles.dropdownItem}
+                onClick={() => handleSelfContainedSelect(opt.type)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Property Listings Section */}
