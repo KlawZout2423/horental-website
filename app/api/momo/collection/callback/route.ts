@@ -87,31 +87,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { externalId, resultCode } = body;
 
-    if (resultCode === 0) {
-      // Find the booking by momoTxId
-      const booking = await prisma.booking.findFirst({
-        where: { momoTxId: externalId },
-        include: { company: true },
-      });
-
-      if (booking) {
-        // Update booking status
-        await prisma.booking.update({
-          where: { id: booking.id },
-          data: { status: 'paid' },
-        });
-
-        // Trigger disbursement if not own company and has commission
-        if (!booking.company.isOwnCompany && booking.commissionAmount > 0 && booking.company.momoAccount) {
-          const netAmount = booking.totalAmount - booking.commissionAmount;
-          try {
-            await disburseToPartner(booking.company.momoAccount, netAmount, `payout_${externalId}`);
-          } catch (disburseError) {
-            console.error('Failed to disburse to partner:', disburseError);
-          }
-        }
-      }
-    }
+    console.log(`MoMo collection callback received: TxId=${externalId}, Result=${resultCode}`);
 
     return new NextResponse('OK', { status: 200 });
   } catch (error: any) {

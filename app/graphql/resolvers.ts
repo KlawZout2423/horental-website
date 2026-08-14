@@ -243,17 +243,6 @@ export const resolvers = {
       };
     },
 
-    myBookings: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
-      if (!user) throw new Error('Not authenticated');
-      return prisma.booking.findMany({
-        where: { userId: user.id },
-        include: {
-          property: { include: { owner: true } },
-          company: true,
-        },
-      });
-    },
-
     companies: async () => {
       return prisma.company.findMany({ include: { properties: true } });
     },
@@ -545,56 +534,6 @@ export const resolvers = {
       return prisma.property.delete({
         where: { id },
         include: { owner: true, company: true },
-      });
-    },
-
-    createBooking: async (_: any, { propertyId, startDate, endDate, totalAmount }: any, { user }: { user: { id: number } | null }) => {
-      if (!user) throw new Error('Not authenticated');
-      
-      const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
-      if (!fullUser?.phone) throw new Error('User phone number required');
-
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      if (start >= end) throw new Error('End date must be after start date');
-
-      const overlapping = await prisma.booking.findFirst({
-        where: {
-          propertyId,
-          OR: [{ startDate: { lte: end }, endDate: { gte: start } }],
-          status: { notIn: ['cancelled'] },
-        },
-      });
-      if (overlapping) throw new Error('Property already booked');
-
-      const property = await prisma.property.findUnique({
-        where: { id: propertyId },
-        include: { company: true },
-      });
-      if (!property) throw new Error('Property not found');
-
-      const companyId = property.companyId;
-      const commissionAmount = property.company.isOwnCompany ? 0 : COMMISSION_FEE;
-      const momoTxId = `tx_${uuidv4()}`;
-
-      await collectPayment(fullUser.phone, totalAmount, momoTxId, `Booking for ${property.title}`);
-
-      return prisma.booking.create({
-        data: {
-          propertyId,
-          userId: user.id,
-          companyId,
-          startDate: start,
-          endDate: end,
-          totalAmount,
-          commissionAmount,
-          momoTxId,
-          status: 'pending_payment',
-        },
-        include: {
-          property: { include: { owner: true } },
-          company: true,
-        },
       });
     },
 

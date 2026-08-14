@@ -86,18 +86,6 @@ export const typeDefs = `#graphql
         company: Company
     }
 
-    type Booking {
-        id: Int!
-        startDate: DateTime!
-        endDate: DateTime!
-        totalAmount: Float!
-        status: String!
-        user: User!
-        property: Property!
-        company: Company!
-        commissionAmount: Float!
-        momoTxId: String
-    }
 
     type AuthPayload {
         token: String!
@@ -251,7 +239,6 @@ export const typeDefs = `#graphql
         users: [User!]!
         properties(type: String): [Property!]!
         property(id: Int!): Property
-        myBookings: [Booking!]!
         companies: [Company!]!
         company(id: Int!): Company
         dashboardStats: DashboardStats!
@@ -278,7 +265,6 @@ export const typeDefs = `#graphql
         addProperty(input: PropertyInput!): Property!
         updateProperty(id: Int!, input: PropertyInput!): Property!
         deleteProperty(id: Int!): Property!
-        createBooking(propertyId: Int!, startDate: DateTime!, endDate: DateTime!, totalAmount: Float!): Booking!
         createCompany(name: String!, logoUrl: String, contact: String!, momoAccount: String): Company!
         createPartner(input: PartnerInput!): AuthPayload!
         updatePropertyCompany(id: Int!, companyId: Int!): Property!

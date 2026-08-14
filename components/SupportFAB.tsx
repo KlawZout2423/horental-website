@@ -24,7 +24,7 @@ export default function SupportFAB() {
         <div className={styles.popupMenu}>
           <div className={styles.popupHeader}>
             <span className={styles.popupTitle}>HO Rentals Support</span>
-            <span className={styles.popupSubtitle}>Need help with a listing or booking?</span>
+            <span className={styles.popupSubtitle}>Need help with a listing or inquiry?</span>
           </div>
           <div className={styles.popupDivider} />
           

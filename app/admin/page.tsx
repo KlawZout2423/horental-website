@@ -2539,33 +2539,95 @@ export default function AdminPage() {
 
               {/* ── Views over time chart ─────────────────────────────── */}
               <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
-                  <BarChart3 size={20} style={{ color: 'var(--primary)' }} />
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Views Over Time</h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <BarChart3 size={20} style={{ color: 'var(--primary)' }} />
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Views Over Time</h3>
+                  </div>
+                  {analytics?.viewsOverTime?.length ? (() => {
+                    const total = analytics.viewsOverTime.reduce((s: number, d: any) => s + d.count, 0);
+                    const peak = Math.max(...analytics.viewsOverTime.map((d: any) => d.count));
+                    return (
+                      <div style={{ display: 'flex', gap: '20px' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)' }}>{total.toLocaleString()}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Peak</div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b' }}>{peak.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    );
+                  })() : null}
                 </div>
                 {analyticsLoading ? (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader size={28} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
                 ) : analytics?.viewsOverTime?.length ? (() => {
-                  const maxCount = Math.max(...analytics.viewsOverTime.map((d: any) => d.count), 1);
-                  // Only show last 30 bars to avoid crowding
                   const visible = analytics.viewsOverTime.slice(-30);
+                  const maxCount = Math.max(...visible.map((d: any) => d.count), 1);
+                  const CHART_H = 180;
+                  const yTicks = [1, 0.75, 0.5, 0.25, 0].map(pct => Math.round(pct * maxCount));
+                  const step = visible.length > 20 ? 5 : visible.length > 10 ? 3 : 1;
                   return (
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '120px', overflowX: 'auto' }}>
-                      {visible.map((d: any) => (
-                        <div key={d.date} title={`${d.date}: ${d.count} views`} style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', minWidth: '20px' }}>
-                          <div style={{
-                            width: '100%', borderRadius: '4px 4px 0 0',
-                            height: `${Math.max(4, Math.round((d.count / maxCount) * 100))}px`,
-                            backgroundColor: d.count > 0 ? 'var(--primary)' : 'var(--border)',
-                            transition: 'height 0.3s ease',
-                          }} />
-                          {visible.length <= 14 && (
-                            <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', transform: 'rotate(-45deg)', whiteSpace: 'nowrap' }}>
-                              {d.date.slice(5)}
-                            </span>
-                          )}
+                    <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
+                      <div style={{ display: 'flex', minWidth: `${Math.max(visible.length * 28, 320)}px` }}>
+                        {/* Y-axis labels */}
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingRight: '8px', height: `${CHART_H}px`, minWidth: '34px', flexShrink: 0 }}>
+                          {yTicks.map((val) => (
+                            <span key={val} style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'right', lineHeight: 1 }}>{val}</span>
+                          ))}
                         </div>
-                      ))}
+                        {/* Chart body */}
+                        <div style={{ flex: 1, position: 'relative' }}>
+                          {/* Gridlines */}
+                          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `${CHART_H}px`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none', zIndex: 0 }}>
+                            {yTicks.map((val, i) => (
+                              <div key={val} style={{ borderTop: `1px ${i === 4 ? 'solid' : 'dashed'} var(--border)`, opacity: i === 4 ? 1 : 0.5, width: '100%' }} />
+                            ))}
+                          </div>
+                          {/* Bars */}
+                          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: `${CHART_H}px`, position: 'relative', zIndex: 1 }}>
+                            {visible.map((d: any) => {
+                              const barH = d.count > 0 ? Math.max(4, Math.round((d.count / maxCount) * CHART_H)) : 0;
+                              const isPeak = d.count === maxCount && d.count > 0;
+                              return (
+                                <div key={d.date} title={`${d.date}: ${d.count} view${d.count !== 1 ? 's' : ''}`} style={{ flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', position: 'relative', cursor: 'default' }}>
+                                  {isPeak && (
+                                    <span style={{ position: 'absolute', bottom: `${barH + 4}px`, fontSize: '0.62rem', fontWeight: 800, color: '#f59e0b', whiteSpace: 'nowrap', background: 'var(--bg-surface)', padding: '0 3px', borderRadius: '3px', zIndex: 3, border: '1px solid #f59e0b22' }}>
+                                      {d.count}
+                                    </span>
+                                  )}
+                                  <div style={{
+                                    width: '100%',
+                                    borderRadius: '4px 4px 0 0',
+                                    height: `${barH}px`,
+                                    background: isPeak
+                                      ? 'linear-gradient(180deg, #fbbf24 0%, #d97706 100%)'
+                                      : d.count > 0
+                                        ? 'linear-gradient(180deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 60%, #000) 100%)'
+                                        : 'transparent',
+                                    boxShadow: isPeak ? '0 0 10px rgba(245,158,11,0.35)' : undefined,
+                                    transition: 'height 0.4s cubic-bezier(.4,0,.2,1)',
+                                  }} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {/* X-axis date labels */}
+                          <div style={{ display: 'flex', gap: '3px', marginTop: '8px', height: '36px' }}>
+                            {visible.map((d: any, i: number) => (
+                              <div key={d.date} style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', overflow: 'visible' }}>
+                                {(i % step === 0 || i === visible.length - 1) && (
+                                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', transform: 'rotate(-40deg)', whiteSpace: 'nowrap', transformOrigin: 'top center', display: 'block', fontWeight: 600 }}>
+                                    {d.date.slice(5)}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   );
                 })() : (

@@ -493,6 +493,7 @@ export default function UploadPage({
                   <option value="outright sale">Outright Sale (Total)</option>
                   <option value="year">per year</option>
                   <option value="month">per month</option>
+                  <option value="day">per day</option>
                   <option value="item">per item</option>
                 </select>
               </div>

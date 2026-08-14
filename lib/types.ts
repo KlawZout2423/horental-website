@@ -126,6 +126,9 @@ export function getPricePeriodLabel(desc?: string, short: boolean = true): strin
   if (lower.includes('priceperiod: per year') || lower.includes('priceperiod: year') || lower.includes('per year')) {
     return short ? '/year' : '/ year';
   }
+  if (lower.includes('priceperiod: per day') || lower.includes('per day') || lower.includes('priceperiod: day')) {
+    return short ? '/day' : '/ day';
+  }
   return short ? '/sem' : '/ semester';
 }
 
