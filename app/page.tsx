@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../lib/auth';
 import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTIES } from '../lib/graphql';
+import { trackVisit } from '../lib/trackVisit';
 import styles from './page.module.css';
 import AuthPromptModal from '../components/AuthPromptModal';
 
@@ -121,23 +122,8 @@ export default function Home() {
     }
     fetchProperties();
 
-    // Log unique page visit (24h cooldown)
-    if (typeof window !== 'undefined') {
-      const storageKey = 'visit_landing_timestamp';
-      const lastVisit = localStorage.getItem(storageKey);
-      const now = Date.now();
-      const COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
-
-      if (!lastVisit || now - parseInt(lastVisit, 10) > COOLDOWN) {
-        graphqlRequest(`
-          mutation RecordVisit($path: String!) {
-            recordPageVisit(path: $path)
-          }
-        `, { path: '/' })
-          .then(() => localStorage.setItem(storageKey, String(now)))
-          .catch((err) => console.error('Page visit log error:', err));
-      }
-    }
+    // Log unique page visit with UTM + referrer (24h cooldown)
+    trackVisit('/', 'visit_landing_timestamp');
   }, []);
 
   // Apply filters

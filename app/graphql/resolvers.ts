@@ -109,6 +109,140 @@ export const resolvers = {
       }
     },
 
+    pageVisitAnalytics: async (_: any, { period }: { period?: string }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
+      const now = new Date();
+
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - 6);
+      weekStart.setHours(0, 0, 0, 0);
+
+      const monthStart = new Date(now);
+      monthStart.setDate(now.getDate() - 29);
+      monthStart.setHours(0, 0, 0, 0);
+
+      // Period for views-over-time chart
+      let chartStart = monthStart;
+      let days = 30;
+      if (period === 'today') { chartStart = todayStart; days = 1; }
+      else if (period === '7d') { chartStart = weekStart; days = 7; }
+      else if (period === '30d') { chartStart = monthStart; days = 30; }
+      else if (period === '90d') {
+        chartStart = new Date(now);
+        chartStart.setDate(now.getDate() - 89);
+        chartStart.setHours(0, 0, 0, 0);
+        days = 90;
+      } else if (period === 'all') {
+        chartStart = new Date('2020-01-01');
+        days = Math.ceil((now.getTime() - chartStart.getTime()) / (1000 * 60 * 60 * 24));
+      }
+
+      const [totalViews, todayViews, weekViews, monthViews, allVisits] = await Promise.all([
+        prisma.pageVisit.count(),
+        prisma.pageVisit.count({ where: { createdAt: { gte: todayStart } } }),
+        prisma.pageVisit.count({ where: { createdAt: { gte: weekStart } } }),
+        prisma.pageVisit.count({ where: { createdAt: { gte: monthStart } } }),
+        prisma.pageVisit.findMany({
+          where: { createdAt: { gte: chartStart } },
+          select: { createdAt: true, utmSource: true, referrer: true, path: true },
+          orderBy: { createdAt: 'asc' },
+        }),
+      ]);
+
+      // ── Source breakdown ──────────────────────────────────────────────────
+      const sourceMap: Record<string, number> = {};
+      for (const v of allVisits) {
+        let src = 'Direct / Unknown';
+        if (v.utmSource) {
+          const s = v.utmSource.toLowerCase();
+          if (s.includes('tiktok')) src = 'TikTok';
+          else if (s.includes('instagram') || s.includes('ig')) src = 'Instagram';
+          else if (s.includes('facebook') || s.includes('fb')) src = 'Facebook';
+          else if (s.includes('whatsapp') || s.includes('wa')) src = 'WhatsApp';
+          else if (s.includes('google')) src = 'Google';
+          else if (s.includes('twitter') || s.includes('x.com')) src = 'X / Twitter';
+          else src = v.utmSource;
+        } else if (v.referrer) {
+          const r = v.referrer.toLowerCase();
+          if (r.includes('tiktok')) src = 'TikTok';
+          else if (r.includes('instagram')) src = 'Instagram';
+          else if (r.includes('facebook') || r.includes('fb.com')) src = 'Facebook';
+          else if (r.includes('whatsapp')) src = 'WhatsApp';
+          else if (r.includes('google')) src = 'Google';
+          else if (r.includes('twitter') || r.includes('x.com')) src = 'X / Twitter';
+        }
+        sourceMap[src] = (sourceMap[src] || 0) + 1;
+      }
+      const totalForPct = allVisits.length || 1;
+      const sources = Object.entries(sourceMap)
+        .map(([source, count]) => ({
+          source,
+          count,
+          percentage: Math.round((count / totalForPct) * 1000) / 10,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      // ── Views over time ───────────────────────────────────────────────────
+      const dayMap: Record<string, number> = {};
+      // Pre-fill all days in range with 0
+      for (let i = 0; i < days; i++) {
+        const d = new Date(chartStart);
+        d.setDate(chartStart.getDate() + i);
+        const key = d.toISOString().split('T')[0];
+        dayMap[key] = 0;
+      }
+      for (const v of allVisits) {
+        const key = v.createdAt.toISOString().split('T')[0];
+        if (dayMap[key] !== undefined) dayMap[key]++;
+        else dayMap[key] = 1;
+      }
+      const viewsOverTime = Object.entries(dayMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, count]) => ({ date, count }));
+
+      // ── Top properties ────────────────────────────────────────────────────
+      const propMap: Record<string, number> = {};
+      for (const v of allVisits) {
+        const match = v.path.match(/^\/properties\/(\d+)$/);
+        if (match) {
+          propMap[match[1]] = (propMap[match[1]] || 0) + 1;
+        }
+      }
+      const topIds = Object.entries(propMap)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10);
+
+      const topProperties = await Promise.all(
+        topIds.map(async ([propertyId, views]) => {
+          const prop = await prisma.property.findUnique({
+            where: { id: parseInt(propertyId) },
+            select: { title: true },
+          });
+          return {
+            propertyId,
+            title: prop?.title || `Property #${propertyId}`,
+            views,
+          };
+        })
+      );
+
+      return {
+        totalViews,
+        todayViews,
+        weekViews,
+        monthViews,
+        sources,
+        viewsOverTime,
+        topProperties,
+      };
+    },
+
     myBookings: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
       return prisma.booking.findMany({
@@ -574,9 +708,23 @@ export const resolvers = {
       return { success: true, message: `Successfully deleted ${deletedCount} audit log(s).` };
     },
 
-    recordPageVisit: async (_: any, { path }: { path: string }) => {
+    recordPageVisit: async (_: any, { path, utmSource, utmMedium, utmCampaign, utmContent, referrer }: {
+      path: string;
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+      utmContent?: string;
+      referrer?: string;
+    }) => {
       await prisma.pageVisit.create({
-        data: { path }
+        data: {
+          path,
+          utmSource: utmSource || null,
+          utmMedium: utmMedium || null,
+          utmCampaign: utmCampaign || null,
+          utmContent: utmContent || null,
+          referrer: referrer || null,
+        }
       });
       return true;
     },

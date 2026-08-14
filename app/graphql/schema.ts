@@ -28,6 +28,33 @@ export const typeDefs = `#graphql
         todayPageVisits: Int!
     }
 
+    type VisitSourceBreakdown {
+        source: String!
+        count: Int!
+        percentage: Float!
+    }
+
+    type VisitDayCount {
+        date: String!
+        count: Int!
+    }
+
+    type TopProperty {
+        propertyId: String!
+        title: String!
+        views: Int!
+    }
+
+    type PageVisitAnalytics {
+        totalViews: Int!
+        todayViews: Int!
+        weekViews: Int!
+        monthViews: Int!
+        sources: [VisitSourceBreakdown!]!
+        viewsOverTime(period: String): [VisitDayCount!]!
+        topProperties: [TopProperty!]!
+    }
+
     type User {
         id: Int!
         name: String!
@@ -233,6 +260,7 @@ export const typeDefs = `#graphql
         auditLogs: [AuditLog!]!
         reports: [Report!]!
         landlordRegistrations: [LandlordRegistration!]!
+        pageVisitAnalytics(period: String): PageVisitAnalytics!
     }
 
     type BasicPayload {
@@ -257,7 +285,7 @@ export const typeDefs = `#graphql
         deleteUser(id: Int!): User!
         updateUserRole(id: Int!, role: String!): User!
         createContactLog(customerName: String!, customerPhone: String!, actionType: String!, propertyId: Int!, landlordPhone: String!): ContactLog!
-        recordPageVisit(path: String!): Boolean!
+        recordPageVisit(path: String!, utmSource: String, utmMedium: String, utmCampaign: String, utmContent: String, referrer: String): Boolean!
         deleteOldAuditLogs(days: Int!): BasicPayload!
         createLandlordRegistration(input: LandlordRegistrationInput!): LandlordRegistration!
         updateLandlordRegistrationStatus(id: Int!, status: String!): LandlordRegistration!

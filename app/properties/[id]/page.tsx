@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth';
 import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2, Maximize2, Navigation } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTY_BY_ID, UPDATE_PROPERTY, CREATE_REPORT } from '../../../lib/graphql';
+import { trackVisit } from '../../../lib/trackVisit';
 import styles from './detail.module.css';
 import AuthPromptModal from '../../../components/AuthPromptModal';
 import Toast from '../../../components/Toast';
@@ -321,23 +322,8 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
     }
     loadPropertyDetails();
 
-    // Log unique page visit (24h cooldown)
-    if (typeof window !== 'undefined') {
-      const storageKey = `visit_detail_timestamp_${id}`;
-      const lastVisit = localStorage.getItem(storageKey);
-      const now = Date.now();
-      const COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
-
-      if (!lastVisit || now - parseInt(lastVisit, 10) > COOLDOWN) {
-        graphqlRequest(`
-          mutation RecordVisit($path: String!) {
-            recordPageVisit(path: $path)
-          }
-        `, { path: `/properties/${id}` })
-          .then(() => localStorage.setItem(storageKey, String(now)))
-          .catch((err) => console.error('Page visit log error:', err));
-      }
-    }
+    // Log unique page visit with UTM + referrer (24h cooldown per property)
+    trackVisit(`/properties/${id}`, `visit_detail_timestamp_${id}`);
   }, [id]);
 
   if (loading) {

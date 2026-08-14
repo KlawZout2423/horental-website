@@ -308,6 +308,37 @@ export const GET_DASHBOARD_STATS = `
   }
 `;
 
+export const RECORD_PAGE_VISIT = `
+  mutation RecordPageVisit($path: String!, $utmSource: String, $utmMedium: String, $utmCampaign: String, $utmContent: String, $referrer: String) {
+    recordPageVisit(path: $path, utmSource: $utmSource, utmMedium: $utmMedium, utmCampaign: $utmCampaign, utmContent: $utmContent, referrer: $referrer)
+  }
+`;
+
+export const GET_PAGE_ANALYTICS = `
+  query GetPageAnalytics($period: String) {
+    pageVisitAnalytics(period: $period) {
+      totalViews
+      todayViews
+      weekViews
+      monthViews
+      sources {
+        source
+        count
+        percentage
+      }
+      viewsOverTime {
+        date
+        count
+      }
+      topProperties {
+        propertyId
+        title
+        views
+      }
+    }
+  }
+`;
+
 export const CREATE_CONTACT_LOG = `
   mutation CreateContactLog($customerName: String!, $customerPhone: String!, $actionType: String!, $propertyId: Int!, $landlordPhone: String!) {
     createContactLog(customerName: $customerName, customerPhone: $customerPhone, actionType: $actionType, propertyId: $propertyId, landlordPhone: $landlordPhone) {

@@ -25,9 +25,11 @@ import {
   GET_LANDLORD_REGISTRATIONS,
   UPDATE_LANDLORD_REGISTRATION_STATUS,
   DELETE_LANDLORD_REGISTRATION,
-  PUBLISH_LANDLORD_REGISTRATION
+  PUBLISH_LANDLORD_REGISTRATION,
+  GET_PAGE_ANALYTICS
 } from '../../lib/graphql';
-import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy } from 'lucide-react';
+import { buildTrackingUrl } from '../../lib/trackVisit';
+import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2 } from 'lucide-react';
 import styles from './admin.module.css';
 import { getFriendlyErrorMessage, LandlordRegistration } from '../../lib/types';
 
@@ -104,10 +106,29 @@ export default function AdminPage() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   
   // Navigation & loaders
-  const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic'>('analytics');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+
+  // Analytics state
+  interface VisitSource { source: string; count: number; percentage: number; }
+  interface VisitDay { date: string; count: number; }
+  interface TopProp { propertyId: string; title: string; views: number; }
+  interface PageAnalytics {
+    totalViews: number; todayViews: number; weekViews: number; monthViews: number;
+    sources: VisitSource[]; viewsOverTime: VisitDay[]; topProperties: TopProp[];
+  }
+  const [analytics, setAnalytics] = useState<PageAnalytics | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<'today'|'7d'|'30d'|'90d'|'all'>('30d');
+  // Campaign link generator state
+  const [campPlatform, setCampPlatform] = useState('tiktok');
+  const [campCampaign, setCampCampaign] = useState('');
+  const [campContent, setCampContent] = useState('');
+  const [campBaseUrl, setCampBaseUrl] = useState('https://horentals.com');
+  const [campGenerated, setCampGenerated] = useState('');
+  const [campCopied, setCampCopied] = useState(false);
   const [auditLogView, setAuditLogView] = useState<'all' | 'system' | 'contacts'>('all');
   const [auditFilter, setAuditFilter] = useState<'all' | 'call' | 'whatsapp' | 'book_viewing' | 'sms'>('all');
   const [loadingData, setLoadingData] = useState(true);
@@ -267,6 +288,23 @@ export default function AdminPage() {
       setLoadingData(false);
     }
   }
+
+  async function loadAnalytics(period = analyticsPeriod) {
+    setAnalyticsLoading(true);
+    try {
+      const data = await graphqlRequest<{ pageVisitAnalytics: any }>(GET_PAGE_ANALYTICS, { period });
+      if (data?.pageVisitAnalytics) setAnalytics(data.pageVisitAnalytics);
+    } catch (err) {
+      console.error('Analytics load error:', err);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }
+
+  // Re-fetch analytics when period changes or tab becomes active
+  useEffect(() => {
+    if (activeTab === 'traffic') loadAnalytics(analyticsPeriod);
+  }, [activeTab, analyticsPeriod]);
 
   const handleUpdateReportStatus = async (reportId: number, newStatus: string) => {
     setActionLoading(true);
@@ -834,6 +872,14 @@ export default function AdminPage() {
             </button>
 
             <button
+              onClick={() => setActiveTab('traffic')}
+              className={`${styles.navItem} ${activeTab === 'traffic' ? styles.activeNavItem : ''}`}
+            >
+              <TrendingUp size={16} />
+              <span>Traffic Analytics</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('reports')}
               className={`${styles.navItem} ${activeTab === 'reports' ? styles.activeNavItem : ''}`}
               style={{
@@ -913,6 +959,7 @@ export default function AdminPage() {
               {activeTab === 'properties' && 'Properties'}
               {activeTab === 'users' && 'Users'}
               {activeTab === 'audits' && 'Audit Logs'}
+              {activeTab === 'traffic' && 'Traffic Analytics'}
               {activeTab === 'reports' && 'Flagged Reports'}
               {activeTab === 'upload' && 'Upload Property'}
             </span>
@@ -1060,6 +1107,7 @@ export default function AdminPage() {
                 {activeTab === 'properties' && 'Property Listings'}
                 {activeTab === 'users' && 'Account Manager'}
                 {activeTab === 'audits' && 'Contact Inquiry Audits'}
+            {activeTab === 'traffic' && 'Traffic & Campaign Analytics'}
                 {activeTab === 'reports' && 'Property Reports & Flagged Listings'}
                 {activeTab === 'landlords' && 'Landlord Registrations'}
               </h1>
@@ -1068,6 +1116,7 @@ export default function AdminPage() {
                 {activeTab === 'properties' && 'View, search, edit availability, and delete published property listings.'}
                 {activeTab === 'users' && 'Manage registered accounts and adjust credentials and system roles.'}
                 {activeTab === 'audits' && 'Real-time record of customer call and WhatsApp inquiries to landlords.'}
+            {activeTab === 'traffic' && 'View traffic sources, visit trends, top listings, and generate campaign tracking links.'}
                 {activeTab === 'reports' && 'Review user-flagged listings, reported scams, inaccurate photos, and manage property reports.'}
                 {activeTab === 'landlords' && 'Manage landlord platform agreements, personal information, and property details.'}
               </p>
@@ -1161,8 +1210,17 @@ export default function AdminPage() {
                   </span>
                 </div>
                 
-                <div className={styles.statCard} style={{ borderLeft: '4px solid #06B6D4' }}>
-                  <span className={styles.statLabel}>Traffic Views</span>
+                <div
+                  className={styles.statCard}
+                  style={{ borderLeft: '4px solid #06B6D4', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                  onClick={() => setActiveTab('traffic')}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(6,182,212,0.15)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
+                  title="Click to view detailed analytics"
+                >
+                  <span className={styles.statLabel} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Traffic Views <TrendingUp size={13} style={{ color: '#06B6D4' }} />
+                  </span>
                   <span className={styles.statValue} style={{ color: '#06B6D4' }}>
                     {stats.todayPageVisits || 0}
                   </span>
@@ -2440,6 +2498,206 @@ export default function AdminPage() {
             </>
           ) : activeTab === 'upload' ? (
             <UploadPage isEmbedded={true} onSuccess={() => { setActiveTab('properties'); loadAdminDashboardData(); }} />
+          ) : activeTab === 'traffic' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+
+              {/* ── Overview numbers ─────────────────────────────────── */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
+                {[
+                  { label: 'Today', value: analytics?.todayViews ?? '—', color: '#06B6D4' },
+                  { label: 'This Week', value: analytics?.weekViews ?? '—', color: '#8B5CF6' },
+                  { label: 'This Month', value: analytics?.monthViews ?? '—', color: '#10B981' },
+                  { label: 'All Time', value: analytics?.totalViews ?? '—', color: 'var(--primary)' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="card glass" style={{ padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', borderLeft: `4px solid ${color}` }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
+                    <div style={{ fontSize: '2rem', fontWeight: 800, color, marginTop: '8px' }}>
+                      {analyticsLoading ? <Loader size={20} className="animate-spin" /> : value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Period selector ───────────────────────────────────── */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Period:</span>
+                {(['today','7d','30d','90d','all'] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setAnalyticsPeriod(p)}
+                    style={{
+                      padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, border: '1px solid var(--border)',
+                      backgroundColor: analyticsPeriod === p ? 'var(--primary)' : 'var(--bg-surface)',
+                      color: analyticsPeriod === p ? '#fff' : 'var(--text-secondary)',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                  >
+                    {p === 'today' ? 'Today' : p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : p === '90d' ? '3 Months' : 'All Time'}
+                  </button>
+                ))}
+              </div>
+
+              {/* ── Views over time chart ─────────────────────────────── */}
+              <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
+                  <BarChart3 size={20} style={{ color: 'var(--primary)' }} />
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Views Over Time</h3>
+                </div>
+                {analyticsLoading ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader size={28} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
+                ) : analytics?.viewsOverTime?.length ? (() => {
+                  const maxCount = Math.max(...analytics.viewsOverTime.map((d: any) => d.count), 1);
+                  // Only show last 30 bars to avoid crowding
+                  const visible = analytics.viewsOverTime.slice(-30);
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '120px', overflowX: 'auto' }}>
+                      {visible.map((d: any) => (
+                        <div key={d.date} title={`${d.date}: ${d.count} views`} style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', minWidth: '20px' }}>
+                          <div style={{
+                            width: '100%', borderRadius: '4px 4px 0 0',
+                            height: `${Math.max(4, Math.round((d.count / maxCount) * 100))}px`,
+                            backgroundColor: d.count > 0 ? 'var(--primary)' : 'var(--border)',
+                            transition: 'height 0.3s ease',
+                          }} />
+                          {visible.length <= 14 && (
+                            <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', transform: 'rotate(-45deg)', whiteSpace: 'nowrap' }}>
+                              {d.date.slice(5)}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })() : (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No view data for this period.</p>
+                )}
+              </div>
+
+              {/* ── Traffic sources + Top properties ─────────────────── */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+
+                {/* Sources table */}
+                <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                    <PieChart size={20} style={{ color: 'var(--primary)' }} />
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Traffic Sources</h3>
+                  </div>
+                  {analyticsLoading ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Loader size={24} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
+                  ) : analytics?.sources?.length ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {analytics.sources.map((s: any) => {
+                        const srcColors: Record<string, string> = {
+                          'TikTok': '#010101', 'Instagram': '#E1306C', 'Facebook': '#1877F2',
+                          'WhatsApp': '#25D366', 'Google': '#4285F4', 'X / Twitter': '#1DA1F2',
+                          'Direct / Unknown': '#94A3B8',
+                        };
+                        const color = srcColors[s.source] || 'var(--primary)';
+                        return (
+                          <div key={s.source}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{s.source}</span>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{s.count} &nbsp;<span style={{ color: 'var(--text-muted)' }}>({s.percentage}%)</span></span>
+                            </div>
+                            <div style={{ height: '6px', borderRadius: '3px', backgroundColor: 'var(--border)', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', borderRadius: '3px', backgroundColor: color, width: `${s.percentage}%`, transition: 'width 0.5s ease' }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No source data yet. UTM tracking will populate this as visitors arrive.</p>
+                  )}
+                </div>
+
+                {/* Top properties */}
+                <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                    <Building size={20} style={{ color: 'var(--primary)' }} />
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Top Viewed Properties</h3>
+                  </div>
+                  {analyticsLoading ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Loader size={24} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
+                  ) : analytics?.topProperties?.length ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {analytics.topProperties.map((p: any, i: number) => (
+                        <div key={p.propertyId} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-sm)' }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800, flexShrink: 0 }}>
+                            #{i + 1}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID #{p.propertyId}</div>
+                          </div>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', flexShrink: 0 }}>{p.views} views</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No property view data yet.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Campaign link generator ───────────────────────────── */}
+              <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                  <Link2 size={20} style={{ color: 'var(--primary)' }} />
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Campaign Link Generator</h3>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Platform</label>
+                    <select value={campPlatform} onChange={e => setCampPlatform(e.target.value)} className="form-control" style={{ backgroundColor: 'var(--bg-surface)' }}>
+                      {['tiktok','instagram','facebook','whatsapp','google'].map(p => (
+                        <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Base URL</label>
+                    <input className="form-control" value={campBaseUrl} onChange={e => setCampBaseUrl(e.target.value)} placeholder="https://horentals.com" />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Campaign Name</label>
+                    <input className="form-control" value={campCampaign} onChange={e => setCampCampaign(e.target.value)} placeholder="e.g. august_launch" />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Content / Ad Label</label>
+                    <input className="form-control" value={campContent} onChange={e => setCampContent(e.target.value)} placeholder="e.g. video_1" />
+                  </div>
+                </div>
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: '10px 24px', fontWeight: 700 }}
+                  onClick={() => {
+                    try {
+                      const url = buildTrackingUrl(campBaseUrl, campPlatform, 'social', campCampaign, campContent);
+                      setCampGenerated(url);
+                      setCampCopied(false);
+                    } catch {
+                      setCampGenerated('Invalid base URL — must include https://');
+                    }
+                  }}
+                >
+                  Generate Link
+                </button>
+                {campGenerated && (
+                  <div style={{ marginTop: '16px', padding: '14px 16px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <code style={{ flex: 1, fontSize: '0.8rem', wordBreak: 'break-all', color: 'var(--text-primary)' }}>{campGenerated}</code>
+                    <button
+                      className="btn btn-outline"
+                      style={{ padding: '6px 14px', fontSize: '0.8rem', flexShrink: 0 }}
+                      onClick={() => { navigator.clipboard.writeText(campGenerated); setCampCopied(true); setTimeout(() => setCampCopied(false), 2000); }}
+                    >
+                      {campCopied ? <><Check size={14} /> Copied!</> : <><Copy size={14} /> Copy</>}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+            </div>
           ) : null}
         </div>
       </main>

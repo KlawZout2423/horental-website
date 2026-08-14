@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, MapPin, SlidersHorizontal, RefreshCcw, Star, Heart, X, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { graphqlRequest, GET_PROPERTIES } from '../../lib/graphql';
+import { trackVisit } from '../../lib/trackVisit';
 import styles from './properties.module.css';
 import AuthPromptModal from '../../components/AuthPromptModal';
 import AdSense from '../../components/AdSense';
@@ -101,23 +102,8 @@ export default function PropertiesClient() {
     }
     fetchProperties();
 
-    // Log unique page visit (24h cooldown)
-    if (typeof window !== 'undefined') {
-      const storageKey = 'visit_search_timestamp';
-      const lastVisit = localStorage.getItem(storageKey);
-      const now = Date.now();
-      const COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
-
-      if (!lastVisit || now - parseInt(lastVisit, 10) > COOLDOWN) {
-        graphqlRequest(`
-          mutation RecordVisit($path: String!) {
-            recordPageVisit(path: $path)
-          }
-        `, { path: '/properties' })
-          .then(() => localStorage.setItem(storageKey, String(now)))
-          .catch((err) => console.error('Page visit log error:', err));
-      }
-    }
+    // Log unique page visit with UTM + referrer (24h cooldown)
+    trackVisit('/properties', 'visit_search_timestamp');
   }, []);
 
   // Recalculate filtered properties

@@ -114,12 +114,18 @@ model ContactLog {
 }
 
 model PageVisit {
-  id        Int      @id @default(autoincrement())
-  path      String
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  path        String
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmContent  String?
+  referrer    String?
+  createdAt   DateTime @default(now())
 
   @@index([createdAt])
   @@index([path])
+  @@index([utmSource])
 }
 
 model PasswordResetRequest {
