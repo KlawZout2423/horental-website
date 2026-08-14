@@ -219,6 +219,18 @@ export default function PropertiesClient() {
 
   const activeAdvancedFilterCount = selectedWaterTypes.length + selectedMeterTypes.length + selectedAmenities.length;
 
+  // Pulse the show button when filtered count changes
+  const [btnPulse, setBtnPulse] = useState(false);
+  const prevCountRef = useRef(filteredProperties.length);
+  useEffect(() => {
+    if (prevCountRef.current !== filteredProperties.length) {
+      prevCountRef.current = filteredProperties.length;
+      setBtnPulse(true);
+      const t = setTimeout(() => setBtnPulse(false), 600);
+      return () => clearTimeout(t);
+    }
+  }, [filteredProperties.length]);
+
   // Load saved bookmarks from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -525,15 +537,17 @@ export default function PropertiesClient() {
           <div className={styles.mobileDrawerFooter}>
             <button
               onClick={() => setShowMobileFilters(false)}
-              className="btn btn-primary"
-              style={{ flex: 1, padding: '14px', fontWeight: 700, fontSize: '0.95rem' }}
+              className={`btn btn-primary ${styles.showPropertiesBtn} ${btnPulse ? styles.showPropertiesBtnPulse : ''}`}
             >
-              Show {filteredProperties.length} {filteredProperties.length === 1 ? 'Property' : 'Properties'}
+              <span style={{ fontSize: '1.05rem' }}>
+                {filteredProperties.length === 0
+                  ? 'No Results — Clear Filters'
+                  : `Show ${filteredProperties.length} ${filteredProperties.length === 1 ? 'Property' : 'Properties'} →`}
+              </span>
             </button>
             <button
               onClick={handleResetFilters}
-              className="btn btn-outline"
-              style={{ padding: '14px 18px', fontWeight: 600 }}
+              className={`btn btn-outline ${styles.resetDrawerBtn}`}
             >
               Reset
             </button>
