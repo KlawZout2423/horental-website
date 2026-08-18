@@ -2800,11 +2800,6 @@ export default function AdminPage() {
               </div>
             </div>
           ) : null}
-                )}
-              </div>
-
-            </div>
-          ) : null}
         </div>
       </main>
 
