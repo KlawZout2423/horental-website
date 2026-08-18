@@ -64,9 +64,24 @@ export function buildTrackingUrl(
 /**
  * Record a page visit with UTM and referrer data.
  * Respects the existing 24h localStorage cooldown per storageKey.
+ * Admin users are excluded — their visits are never counted.
  */
 export function trackVisit(path: string, storageKey: string) {
   if (typeof window === 'undefined') return;
+
+  // Skip tracking for admin users — read role from user_data cookie
+  try {
+    const match = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('user_data='));
+    if (match) {
+      const raw = decodeURIComponent(match.split('=').slice(1).join('='));
+      const parsed = JSON.parse(raw);
+      if (parsed?.role === 'admin') return; // admin visit — do not count
+    }
+  } catch {
+    // cookie unreadable — proceed normally
+  }
 
   const lastVisit = localStorage.getItem(storageKey);
   const now = Date.now();
