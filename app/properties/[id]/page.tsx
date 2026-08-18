@@ -809,15 +809,21 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               className="btn btn-secondary" 
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              <MessageSquare size={16} /> WhatsApp Chat (0557922593)
+              <MessageSquare size={16} /> WhatsApp — {property.landlordName || property.owner?.name || 'Landlord'}
             </button>
 
-            <a 
-              href={`sms:0557922593?body=Hi, I am interested in property "${property.title}" listed on HO Rentals.`} 
-              className="btn btn-outline" 
+            <a
+              href={(() => {
+                const landlordName = property.landlordName || property.owner?.name || 'Landlord';
+                const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
+                const msg = `Hi ${landlordName}, I found your property on HO Rentals and I'm interested.\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n\nCould you please provide more details?\n\nThank you.`;
+                const cleanPhone = (property.contact || '0557922593').replace(/[^0-9]/g, '');
+                return `sms:${cleanPhone}?body=${encodeURIComponent(msg)}`;
+              })()}
+              className="btn btn-outline"
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              <MessageSquare size={16} /> SMS Support (0557922593)
+              <MessageSquare size={16} /> SMS — {property.landlordName || property.owner?.name || 'Landlord'}
             </a>
           </div>
         </aside>
