@@ -543,7 +543,7 @@ export default function UploadPage({
                 style={{ backgroundColor: 'var(--bg-surface)' }}
               >
                 <option value="available">Available</option>
-                <option value="rented">Rented / Occupied / Sold</option>
+                <option value="rented">Occupied / Sold / Taken</option>
               </select>
             </div>
 

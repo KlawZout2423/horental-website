@@ -341,3 +341,31 @@ export interface LandlordRegistration {
   createdAt: string;
 }
 
+
+/**
+ * Returns the correct status label based on property type.
+ * - Lands / Furnitures: "Available" / "Sold"
+ * - Shops: "Available" / "Taken"
+ * - Everything else: "Available" / "Occupied"
+ */
+export function getStatusLabel(status: string, type?: string): string {
+  if (status === 'available') return 'Available';
+  const t = (type || '').toLowerCase();
+  if (t.includes('land')) return 'Sold';
+  if (t.includes('furniture') || t.includes('furnitures')) return 'Sold';
+  if (t.includes('shop')) return 'Taken';
+  return 'Occupied';
+}
+
+/**
+ * Returns the toggle button label for the admin "mark as" button.
+ */
+export function getToggleStatusLabel(currentStatus: string, type?: string): string {
+  if (currentStatus === 'available') {
+    const t = (type || '').toLowerCase();
+    if (t.includes('land') || t.includes('furniture') || t.includes('furnitures')) return 'Mark Sold';
+    if (t.includes('shop')) return 'Mark Taken';
+    return 'Mark Occupied';
+  }
+  return 'Mark Available';
+}

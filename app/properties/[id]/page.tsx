@@ -959,7 +959,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     style={{ padding: '10px', fontSize: '0.85rem', backgroundColor: 'var(--bg-surface)' }}
                   >
                     <option value="Incorrect Price">Incorrect Price</option>
-                    <option value="Already Rented">Already Rented / Occupied</option>
+                    <option value="Already Rented">Already Rented / Occupied / Sold</option>
                     <option value="Fake/Scam Listing">Fake or Scam Listing</option>
                     <option value="Unresponsive Number">Unresponsive Landlord Contact</option>
                     <option value="Inaccurate Photos">Inaccurate Photos / Description</option>

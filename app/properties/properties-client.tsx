@@ -11,7 +11,7 @@ import styles from './properties.module.css';
 import AuthPromptModal from '../../components/AuthPromptModal';
 import AdSense from '../../components/AdSense';
 
-import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImageUrl } from '../../lib/types';
+import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImageUrl, getStatusLabel } from '../../lib/types';
 
 
 
@@ -441,7 +441,7 @@ export default function PropertiesClient() {
                 </label>
                 <label className={styles.radioOption}>
                   <input type="radio" name="availability" checked={availability === 'Rented'} onChange={() => setAvailability('Rented')} />
-                  Rented / Occupied
+                  Rented / Occupied / Sold
                 </label>
               </div>
             </div>
@@ -617,7 +617,7 @@ export default function PropertiesClient() {
                       <div className={styles.cardContent}>
                         <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                           <span className={`badge badge-${p.status === 'available' ? 'available' : p.status === 'rented' || p.status === 'occupied' ? 'rented' : 'pending'}`} style={{ padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px', fontWeight: 700 }}>
-                            {p.status === 'available' ? 'Available' : p.status === 'rented' ? 'Occupied' : p.status}
+                            {getStatusLabel(p.status, p.type)}
                           </span>
                           <span className="badge" style={{ backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600, padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px' }}>
                             {p.type}

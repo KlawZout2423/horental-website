@@ -31,7 +31,7 @@ import {
 import { buildTrackingUrl } from '../../lib/trackVisit';
 import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2 } from 'lucide-react';
 import styles from './admin.module.css';
-import { getFriendlyErrorMessage, LandlordRegistration } from '../../lib/types';
+import { getFriendlyErrorMessage, LandlordRegistration, getStatusLabel, getToggleStatusLabel } from '../../lib/types';
 
 interface DashboardStats {
   totalProperties: number;
@@ -1375,7 +1375,7 @@ export default function AdminPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <div style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: 'var(--primary)', flexShrink: 0 }} />
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>Occupied / Rented</span>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>Occupied / Sold / Taken</span>
                                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{rented} listings ({occupancyRate}%)</span>
                               </div>
                             </div>
@@ -1483,7 +1483,7 @@ export default function AdminPage() {
                           <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{p.location}</td>
                           <td>
                             <span className={`badge badge-${p.status === 'available' ? 'available' : 'rented'}`}>
-                              {p.status}
+                              {getStatusLabel(p.status, p.type)}
                             </span>
                           </td>
                           <td>
@@ -1494,7 +1494,7 @@ export default function AdminPage() {
                                 className={`btn ${p.status === 'available' ? 'btn-secondary' : 'btn-outline'}`}
                                 style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px' }}
                               >
-                                {p.status === 'available' ? 'Mark Rented' : 'Mark Available'}
+                                {getToggleStatusLabel(p.status, p.type)}
                               </button>
 
                               <button
@@ -2499,68 +2499,84 @@ export default function AdminPage() {
           ) : activeTab === 'upload' ? (
             <UploadPage isEmbedded={true} onSuccess={() => { setActiveTab('properties'); loadAdminDashboardData(); }} />
           ) : activeTab === 'traffic' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
-              {/* ── Overview numbers ─────────────────────────────────── */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
+            {/* ── Section: Key Metrics ──────────────────────────────────── */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Overview</p>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Page View Metrics</h2>
+                </div>
+                {/* Period Selector */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface-secondary)', borderRadius: '24px', padding: '4px', border: '1px solid var(--border)' }}>
+                  {(['today','7d','30d','90d','all'] as const).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setAnalyticsPeriod(p)}
+                      style={{
+                        padding: '5px 13px',
+                        borderRadius: '20px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        border: 'none',
+                        backgroundColor: analyticsPeriod === p ? 'var(--primary)' : 'transparent',
+                        color: analyticsPeriod === p ? '#fff' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {p === 'today' ? 'Today' : p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : p === '90d' ? '3 Mo' : 'All Time'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
                 {[
-                  { label: 'Today', value: analytics?.todayViews ?? '—', color: '#06B6D4' },
-                  { label: 'This Week', value: analytics?.weekViews ?? '—', color: '#8B5CF6' },
-                  { label: 'This Month', value: analytics?.monthViews ?? '—', color: '#10B981' },
-                  { label: 'All Time', value: analytics?.totalViews ?? '—', color: 'var(--primary)' },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="card glass" style={{ padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', borderLeft: `4px solid ${color}` }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
-                    <div style={{ fontSize: '2rem', fontWeight: 800, color, marginTop: '8px' }}>
-                      {analyticsLoading ? <Loader size={20} className="animate-spin" /> : value}
+                  { label: 'Today', value: analytics?.todayViews ?? '—', color: '#06B6D4', icon: '☀️' },
+                  { label: 'This Week', value: analytics?.weekViews ?? '—', color: '#8B5CF6', icon: '📅' },
+                  { label: 'This Month', value: analytics?.monthViews ?? '—', color: '#10B981', icon: '📆' },
+                  { label: 'All Time', value: analytics?.totalViews ?? '—', color: 'var(--primary)', icon: '🌐' },
+                ].map(({ label, value, color, icon }) => (
+                  <div key={label} className="card glass" style={{ padding: '18px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', borderTop: `3px solid ${color}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{label}</span>
+                      <span style={{ fontSize: '1rem' }}>{icon}</span>
+                    </div>
+                    <div style={{ fontSize: '2rem', fontWeight: 900, color, lineHeight: 1 }}>
+                      {analyticsLoading ? <Loader size={20} className="animate-spin" /> : value?.toLocaleString?.() ?? value}
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
 
-              {/* ── Period selector ───────────────────────────────────── */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Period:</span>
-                {(['today','7d','30d','90d','all'] as const).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setAnalyticsPeriod(p)}
-                    style={{
-                      padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, border: '1px solid var(--border)',
-                      backgroundColor: analyticsPeriod === p ? 'var(--primary)' : 'var(--bg-surface)',
-                      color: analyticsPeriod === p ? '#fff' : 'var(--text-secondary)',
-                      cursor: 'pointer', transition: 'all 0.15s',
-                    }}
-                  >
-                    {p === 'today' ? 'Today' : p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : p === '90d' ? '3 Months' : 'All Time'}
-                  </button>
-                ))}
+            {/* ── Section: Views Over Time ───────────────────────────────── */}
+            <div>
+              <div style={{ marginBottom: '14px' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Trend</p>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Views Over Time</h2>
               </div>
-
-              {/* ── Views over time chart ─────────────────────────────── */}
-              <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <BarChart3 size={20} style={{ color: 'var(--primary)' }} />
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Views Over Time</h3>
-                  </div>
-                  {analytics?.viewsOverTime?.length ? (() => {
-                    const total = analytics.viewsOverTime.reduce((s: number, d: any) => s + d.count, 0);
-                    const peak = Math.max(...analytics.viewsOverTime.map((d: any) => d.count));
-                    return (
-                      <div style={{ display: 'flex', gap: '20px' }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</div>
-                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)' }}>{total.toLocaleString()}</div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Peak</div>
-                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b' }}>{peak.toLocaleString()}</div>
-                        </div>
+              <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                {analytics?.viewsOverTime?.length ? (() => {
+                  const total = analytics.viewsOverTime.reduce((s: number, d: any) => s + d.count, 0);
+                  const peak = Math.max(...analytics.viewsOverTime.map((d: any) => d.count));
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Total Views</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary)' }}>{total.toLocaleString()}</div>
                       </div>
-                    );
-                  })() : null}
-                </div>
+                      <div style={{ width: '1px', height: '32px', background: 'var(--border)' }} />
+                      <div>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Peak Day</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f59e0b' }}>{peak.toLocaleString()}</div>
+                      </div>
+                    </div>
+                  );
+                })() : null}
                 {analyticsLoading ? (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader size={28} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
                 ) : analytics?.viewsOverTime?.length ? (() => {
@@ -2572,21 +2588,17 @@ export default function AdminPage() {
                   return (
                     <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
                       <div style={{ display: 'flex', minWidth: `${Math.max(visible.length * 28, 320)}px` }}>
-                        {/* Y-axis labels */}
                         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingRight: '8px', height: `${CHART_H}px`, minWidth: '34px', flexShrink: 0 }}>
                           {yTicks.map((val) => (
                             <span key={val} style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'right', lineHeight: 1 }}>{val}</span>
                           ))}
                         </div>
-                        {/* Chart body */}
                         <div style={{ flex: 1, position: 'relative' }}>
-                          {/* Gridlines */}
                           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `${CHART_H}px`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none', zIndex: 0 }}>
                             {yTicks.map((val, i) => (
                               <div key={val} style={{ borderTop: `1px ${i === 4 ? 'solid' : 'dashed'} var(--border)`, opacity: i === 4 ? 1 : 0.5, width: '100%' }} />
                             ))}
                           </div>
-                          {/* Bars */}
                           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: `${CHART_H}px`, position: 'relative', zIndex: 1 }}>
                             {visible.map((d: any) => {
                               const barH = d.count > 0 ? Math.max(4, Math.round((d.count / maxCount) * CHART_H)) : 0;
@@ -2599,14 +2611,8 @@ export default function AdminPage() {
                                     </span>
                                   )}
                                   <div style={{
-                                    width: '100%',
-                                    borderRadius: '4px 4px 0 0',
-                                    height: `${barH}px`,
-                                    background: isPeak
-                                      ? 'linear-gradient(180deg, #fbbf24 0%, #d97706 100%)'
-                                      : d.count > 0
-                                        ? 'linear-gradient(180deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 60%, #000) 100%)'
-                                        : 'transparent',
+                                    width: '100%', borderRadius: '4px 4px 0 0', height: `${barH}px`,
+                                    background: isPeak ? 'linear-gradient(180deg, #fbbf24 0%, #d97706 100%)' : d.count > 0 ? 'linear-gradient(180deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 60%, #000) 100%)' : 'transparent',
                                     boxShadow: isPeak ? '0 0 10px rgba(245,158,11,0.35)' : undefined,
                                     transition: 'height 0.4s cubic-bezier(.4,0,.2,1)',
                                   }} />
@@ -2614,7 +2620,6 @@ export default function AdminPage() {
                               );
                             })}
                           </div>
-                          {/* X-axis date labels */}
                           <div style={{ display: 'flex', gap: '3px', marginTop: '8px', height: '36px' }}>
                             {visible.map((d: any, i: number) => (
                               <div key={d.date} style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', overflow: 'visible' }}>
@@ -2634,20 +2639,26 @@ export default function AdminPage() {
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No view data for this period.</p>
                 )}
               </div>
+            </div>
 
-              {/* ── Traffic sources + Top properties ─────────────────── */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+            {/* ── Section: Sources + Top Properties (2-col) ─────────────── */}
+            <div>
+              <div style={{ marginBottom: '14px' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Breakdown</p>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Traffic Sources & Top Listings</h2>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
 
-                {/* Sources table */}
-                <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                    <PieChart size={20} style={{ color: 'var(--primary)' }} />
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Traffic Sources</h3>
+                {/* Traffic Sources */}
+                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                    <PieChart size={18} style={{ color: 'var(--primary)' }} />
+                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0 }}>Traffic Sources</h3>
                   </div>
                   {analyticsLoading ? (
                     <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Loader size={24} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
                   ) : analytics?.sources?.length ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                       {analytics.sources.map((s: any) => {
                         const srcColors: Record<string, string> = {
                           'TikTok': '#010101', 'Instagram': '#E1306C', 'Facebook': '#1877F2',
@@ -2657,82 +2668,105 @@ export default function AdminPage() {
                         const color = srcColors[s.source] || 'var(--primary)';
                         return (
                           <div key={s.source}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                              <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{s.source}</span>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{s.count} &nbsp;<span style={{ color: 'var(--text-muted)' }}>({s.percentage}%)</span></span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'block' }} />
+                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{s.source}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
+                                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{s.count}</span>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>{s.percentage}%</span>
+                              </div>
                             </div>
-                            <div style={{ height: '6px', borderRadius: '3px', backgroundColor: 'var(--border)', overflow: 'hidden' }}>
-                              <div style={{ height: '100%', borderRadius: '3px', backgroundColor: color, width: `${s.percentage}%`, transition: 'width 0.5s ease' }} />
+                            <div style={{ height: '5px', borderRadius: '99px', backgroundColor: 'var(--border)', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', borderRadius: '99px', backgroundColor: color, width: `${s.percentage}%`, transition: 'width 0.6s cubic-bezier(.4,0,.2,1)' }} />
                             </div>
                           </div>
                         );
                       })}
                     </div>
                   ) : (
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No source data yet. UTM tracking will populate this as visitors arrive.</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6 }}>No source data yet. UTM tracking will populate this as visitors arrive.</p>
                   )}
                 </div>
 
-                {/* Top properties */}
-                <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                    <Building size={20} style={{ color: 'var(--primary)' }} />
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Top Viewed Properties</h3>
+                {/* Top Properties */}
+                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                    <Building size={18} style={{ color: 'var(--primary)' }} />
+                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0 }}>Top Viewed Properties</h3>
                   </div>
                   {analyticsLoading ? (
                     <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Loader size={24} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
-                  ) : analytics?.topProperties?.length ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {analytics.topProperties.map((p: any, i: number) => (
-                        <div key={p.propertyId} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-sm)' }}>
-                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800, flexShrink: 0 }}>
-                            #{i + 1}
+                  ) : analytics?.topProperties?.length ? (() => {
+                    const maxViews = Math.max(...analytics.topProperties.map((p: any) => p.views), 1);
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {analytics.topProperties.map((p: any, i: number) => (
+                          <div key={p.propertyId}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
+                              <span style={{
+                                minWidth: '22px', height: '22px', borderRadius: '6px',
+                                background: i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#b45309' : 'var(--bg-surface-secondary)',
+                                color: i < 3 ? '#fff' : 'var(--text-muted)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '0.65rem', fontWeight: 900, flexShrink: 0,
+                              }}>{i + 1}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '0.82rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{p.title}</div>
+                                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600 }}>ID #{p.propertyId}</div>
+                              </div>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', flexShrink: 0 }}>{p.views.toLocaleString()} <span style={{ fontWeight: 600, fontSize: '0.7rem', color: 'var(--text-muted)' }}>views</span></span>
+                            </div>
+                            <div style={{ height: '3px', borderRadius: '99px', backgroundColor: 'var(--border)', overflow: 'hidden', marginLeft: '32px' }}>
+                              <div style={{ height: '100%', borderRadius: '99px', background: i === 0 ? '#f59e0b' : 'var(--primary)', width: `${Math.round((p.views / maxViews) * 100)}%`, transition: 'width 0.5s ease' }} />
+                            </div>
                           </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID #{p.propertyId}</div>
-                          </div>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', flexShrink: 0 }}>{p.views} views</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No property view data yet.</p>
+                        ))}
+                      </div>
+                    );
+                  })() : (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6 }}>No property view data yet.</p>
                   )}
                 </div>
               </div>
+            </div>
 
-              {/* ── Campaign link generator ───────────────────────────── */}
-              <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                  <Link2 size={20} style={{ color: 'var(--primary)' }} />
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Campaign Link Generator</h3>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+            {/* ── Section: Campaign Link Generator ───────────────────────── */}
+            <div>
+              <div style={{ marginBottom: '14px' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Tools</p>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Campaign Link Generator</h2>
+              </div>
+              <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <p style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
+                  Generate UTM-tagged links to track which campaign or platform is driving traffic to your listings.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '18px' }}>
                   <div className="form-group">
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Platform</label>
-                    <select value={campPlatform} onChange={e => setCampPlatform(e.target.value)} className="form-control" style={{ backgroundColor: 'var(--bg-surface)' }}>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Platform</label>
+                    <select value={campPlatform} onChange={e => setCampPlatform(e.target.value)} className="form-control" style={{ backgroundColor: 'var(--bg-surface)', fontSize: '0.85rem' }}>
                       {['tiktok','instagram','facebook','whatsapp','google'].map(p => (
                         <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
                       ))}
                     </select>
                   </div>
                   <div className="form-group">
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Base URL</label>
-                    <input className="form-control" value={campBaseUrl} onChange={e => setCampBaseUrl(e.target.value)} placeholder="https://horentals.com" />
+                    <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Base URL</label>
+                    <input className="form-control" style={{ fontSize: '0.85rem' }} value={campBaseUrl} onChange={e => setCampBaseUrl(e.target.value)} placeholder="https://horentals.com" />
                   </div>
                   <div className="form-group">
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Campaign Name</label>
-                    <input className="form-control" value={campCampaign} onChange={e => setCampCampaign(e.target.value)} placeholder="e.g. august_launch" />
+                    <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Campaign Name</label>
+                    <input className="form-control" style={{ fontSize: '0.85rem' }} value={campCampaign} onChange={e => setCampCampaign(e.target.value)} placeholder="e.g. august_launch" />
                   </div>
                   <div className="form-group">
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Content / Ad Label</label>
-                    <input className="form-control" value={campContent} onChange={e => setCampContent(e.target.value)} placeholder="e.g. video_1" />
+                    <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Content / Ad Label</label>
+                    <input className="form-control" style={{ fontSize: '0.85rem' }} value={campContent} onChange={e => setCampContent(e.target.value)} placeholder="e.g. video_1" />
                   </div>
                 </div>
                 <button
                   className="btn btn-primary"
-                  style={{ padding: '10px 24px', fontWeight: 700 }}
+                  style={{ padding: '10px 24px', fontWeight: 700, fontSize: '0.88rem' }}
                   onClick={() => {
                     try {
                       const url = buildTrackingUrl(campBaseUrl, campPlatform, 'social', campCampaign, campContent);
@@ -2743,19 +2777,27 @@ export default function AdminPage() {
                     }
                   }}
                 >
+                  <Link2 size={15} style={{ marginRight: '6px' }} />
                   Generate Link
                 </button>
                 {campGenerated && (
-                  <div style={{ marginTop: '16px', padding: '14px 16px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <code style={{ flex: 1, fontSize: '0.8rem', wordBreak: 'break-all', color: 'var(--text-primary)' }}>{campGenerated}</code>
-                    <button
-                      className="btn btn-outline"
-                      style={{ padding: '6px 14px', fontSize: '0.8rem', flexShrink: 0 }}
-                      onClick={() => { navigator.clipboard.writeText(campGenerated); setCampCopied(true); setTimeout(() => setCampCopied(false), 2000); }}
-                    >
-                      {campCopied ? <><Check size={14} /> Copied!</> : <><Copy size={14} /> Copy</>}
-                    </button>
+                  <div style={{ marginTop: '16px', padding: '14px 16px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '8px' }}>Generated URL</div>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <code style={{ flex: 1, fontSize: '0.78rem', wordBreak: 'break-all', color: 'var(--primary)', lineHeight: 1.5 }}>{campGenerated}</code>
+                      <button
+                        className="btn btn-outline"
+                        style={{ padding: '6px 14px', fontSize: '0.8rem', flexShrink: 0, fontWeight: 700 }}
+                        onClick={() => { navigator.clipboard.writeText(campGenerated); setCampCopied(true); setTimeout(() => setCampCopied(false), 2000); }}
+                      >
+                        {campCopied ? <><Check size={13} style={{ marginRight: '4px' }} /> Copied!</> : <><Copy size={13} style={{ marginRight: '4px' }} /> Copy</>}
+                      </button>
+                    </div>
                   </div>
+                )}
+              </div>
+            </div>
+          ) : null}
                 )}
               </div>
 
@@ -3058,7 +3100,7 @@ export default function AdminPage() {
                     <label>Status</label>
                     <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} required className="form-control" style={{ backgroundColor: 'var(--bg-surface)' }}>
                       <option value="available">Available</option>
-                      <option value="rented">Rented / Occupied</option>
+                      <option value="rented">Occupied / Sold / Taken</option>
                     </select>
                   </div>
                 </div>
