@@ -648,6 +648,8 @@ export default function AdminPage() {
       setEditPricePeriod('acre');
     } else if (descLower.includes('outright sale')) {
       setEditPricePeriod('outright sale');
+    } else if (descLower.includes('priceperiod: per day') || descLower.includes('priceperiod: day') || descLower.includes('per day')) {
+      setEditPricePeriod('day');
     } else {
       setEditPricePeriod('semester');
     }
@@ -2985,6 +2987,7 @@ export default function AdminPage() {
                         <option value="outright sale">Outright Sale (Total)</option>
                         <option value="year">per year</option>
                         <option value="month">per month</option>
+                        <option value="day">per day</option>
                         <option value="item">per item</option>
                       </select>
                     </div>
