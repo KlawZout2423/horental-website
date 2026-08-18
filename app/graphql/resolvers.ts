@@ -537,6 +537,21 @@ export const resolvers = {
       });
     },
 
+    togglePropertyFeatured: async (_: any, { id }: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (fullUser?.role !== 'admin') throw new Error('Not authorized');
+
+      const property = await prisma.property.findUnique({ where: { id } });
+      if (!property) throw new Error('Property not found');
+
+      return prisma.property.update({
+        where: { id },
+        data: { isFeatured: !property.isFeatured },
+        include: { owner: true, company: true, images: { orderBy: { order: 'asc' } } },
+      });
+    },
+
     createCompany: async (_: any, { name, logoUrl, contact, momoAccount }: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
       const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
@@ -645,6 +660,30 @@ export const resolvers = {
 
       createAuditLog('CLEARED_AUDIT_LOGS', `Admin ${adminUser.name} deleted audit logs older than ${days === 0 ? 'all' : days + ' days'} (${deletedCount} removed)`, adminUser.email);
       return { success: true, message: `Successfully deleted ${deletedCount} audit log(s).` };
+    },
+
+    deleteAuditLogs: async (_: any, { ids }: { ids: number[] }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Only admins can delete audit logs.');
+
+      const res = await prisma.auditLog.deleteMany({
+        where: { id: { in: ids } }
+      });
+      createAuditLog('DELETED_AUDIT_LOGS', `Admin ${adminUser.name} deleted ${res.count} audit log(s)`, adminUser.email);
+      return { success: true, message: `Successfully deleted ${res.count} security log(s).` };
+    },
+
+    deleteContactLogs: async (_: any, { ids }: { ids: number[] }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Only admins can delete contact logs.');
+
+      const res = await prisma.contactLog.deleteMany({
+        where: { id: { in: ids } }
+      });
+      createAuditLog('DELETED_CONTACT_LOGS', `Admin ${adminUser.name} deleted ${res.count} contact inquiry log(s)`, adminUser.email);
+      return { success: true, message: `Successfully deleted ${res.count} contact log(s).` };
     },
 
     recordPageVisit: async (_: any, { path, utmSource, utmMedium, utmCampaign, utmContent, referrer }: {

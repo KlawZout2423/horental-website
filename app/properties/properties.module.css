@@ -20,210 +20,276 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 310px 1fr;
   gap: 32px;
   align-items: start;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr;
     margin-bottom: 40px;
   }
 }
 
-/* Sidebar scroll area — transparent on desktop, scrollable on mobile */
+/* Sidebar scroll area */
 .sidebarScrollArea {
-  display: contents;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding-right: 4px;
+  max-height: calc(100vh - 180px);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(150, 150, 150, 0.25) transparent;
+}
+
+.sidebarScrollArea::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebarScrollArea::-webkit-scrollbar-thumb {
+  background-color: rgba(150, 150, 150, 0.25);
+  border-radius: 4px;
 }
 
 /* Sidebar filter styles */
 .sidebar {
-  padding: 24px;
-  border-radius: var(--radius-md);
+  padding: 20px;
+  border-radius: 16px;
   border: 1px solid var(--border);
   background-color: var(--bg-surface);
   position: sticky;
-  top: 94px;
-  box-shadow: var(--shadow-sm);
+  top: 86px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 14px;
+  max-height: calc(100vh - 100px);
+  overflow: hidden;
 }
 
 .filterSectionTitle {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 800;
   color: var(--text-primary);
-  margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.filterIconBadge {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background-color: var(--primary-light);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .resetButton {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--primary);
-  background: none;
-  border: none;
+  background: var(--primary-light);
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  border-radius: 6px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
 }
 
 .resetButton:hover {
-  text-decoration: underline;
+  background-color: var(--primary);
+  color: #ffffff;
 }
 
 .filterGroup {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .filterGroup label {
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .selectInput {
   width: 100%;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background-color: var(--bg-surface-secondary);
   color: var(--text-primary);
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.selectInput:focus {
+  border-color: var(--primary);
 }
 
 .priceRangeInputs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .priceInput {
   width: 100%;
-  padding: 10px;
-  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background-color: var(--bg-surface-secondary);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--text-primary);
-}
-
-/* Radio button filters */
-.radioList {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.radioOption {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.radioOption input {
-  cursor: pointer;
-}
-
-/* Checkbox group multi-select filters */
-.checkboxList {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.checkboxOption {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.88rem;
-  color: var(--text-primary);
-  cursor: pointer;
-  user-select: none;
-  transition: color 0.2s ease;
-}
-
-.checkboxOption:hover {
-  color: var(--primary);
-}
-
-.checkboxOption input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--primary);
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-/* Compact Multi-Select Filter Pills */
-.pillGrid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.filterPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 9999px;
-  background-color: var(--bg-surface-secondary);
-  border: 1px solid var(--border);
-  font-size: 0.8rem;
   font-weight: 600;
+  outline: none;
+}
+
+.priceInput:focus {
+  border-color: var(--primary);
+}
+
+/* Modern Segmented Switch */
+.segmentedControl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background-color: var(--bg-surface-secondary);
+  padding: 3px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  gap: 3px;
+}
+
+.segmentedBtn {
+  padding: 6px 4px;
+  font-size: 0.76rem;
+  font-family: inherit;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
-  user-select: none;
 }
 
-.filterPill:hover {
-  border-color: var(--primary-light-hover);
-  color: var(--primary);
-  background-color: var(--primary-light);
+.segmentedBtn:hover {
+  color: var(--text-primary);
 }
 
-.filterPillActive {
+.segmentedBtnActive {
   background-color: var(--primary) !important;
   color: #ffffff !important;
-  border-color: var(--primary) !important;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(193, 18, 31, 0.25);
+  font-weight: 700 !important;
+  box-shadow: 0 1px 4px rgba(193, 18, 31, 0.3) !important;
 }
 
-.filterPillActive:hover {
-  background-color: var(--primary-hover) !important;
-  color: #ffffff !important;
+/* Filter Card Section & Organized Feature Tiles */
+.filterCardSection {
+  background-color: var(--bg-surface-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.filterAccordion {
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
-  margin-top: 4px;
-}
-
-.filterAccordionSummary {
+.filterCardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-  padding: 4px 0;
 }
 
-.filterAccordionSummary::-webkit-details-marker {
-  display: none;
+.filterCardTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sectionBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--primary);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.featureCard {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background-color: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.76rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  user-select: none;
+}
+
+.featureCard:hover {
+  border-color: var(--primary-light-hover, #ffb3b8);
+  color: var(--primary);
+  background-color: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+.featureCardActive {
+  background-color: var(--primary-light) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary-dark) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px rgba(193, 18, 31, 0.15);
+}
+
+.featureCardIcon {
+  font-size: 0.92rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.featureCardLabel {
+  font-size: 0.74rem;
+  font-weight: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
+}
+
+.featureCheckIcon {
+  color: var(--primary);
+  flex-shrink: 0;
 }
 
 .activeFilterCount {
@@ -232,12 +298,11 @@
   justify-content: center;
   background-color: var(--primary);
   color: #ffffff;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  margin-left: 6px;
 }
 
 

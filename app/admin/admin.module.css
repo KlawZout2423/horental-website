@@ -503,6 +503,19 @@
   to { opacity: 1; }
 }
 
+.desktopOnlyStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .desktopOnlyStats {
+    display: none !important;
+  }
+}
+
 /* Desktop vs Mobile display utilities */
 @media (max-width: 768px) {
   .desktopOnlyTable {

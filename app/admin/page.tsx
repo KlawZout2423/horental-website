@@ -22,6 +22,8 @@ import {
   ADMIN_RESET_USER_PASSWORD,
   GET_AUDIT_LOGS,
   DELETE_OLD_AUDIT_LOGS,
+  DELETE_AUDIT_LOGS,
+  DELETE_CONTACT_LOGS,
   GET_LANDLORD_REGISTRATIONS,
   UPDATE_LANDLORD_REGISTRATION_STATUS,
   DELETE_LANDLORD_REGISTRATION,
@@ -131,6 +133,9 @@ export default function AdminPage() {
   const [campCopied, setCampCopied] = useState(false);
   const [auditLogView, setAuditLogView] = useState<'all' | 'system' | 'contacts'>('all');
   const [auditFilter, setAuditFilter] = useState<'all' | 'call' | 'whatsapp' | 'book_viewing' | 'sms'>('all');
+  const [selectedAuditLogIds, setSelectedAuditLogIds] = useState<number[]>([]);
+  const [selectedContactLogIds, setSelectedContactLogIds] = useState<number[]>([]);
+  const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set());
   const [loadingData, setLoadingData] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [landlordRegistrations, setLandlordRegistrations] = useState<LandlordRegistration[]>([]);
@@ -252,12 +257,80 @@ export default function AdminPage() {
     }
   }, [user, authLoading, router]);
 
-  // Load Admin Data on Mount
+  // Load initial data (stats + properties + users) immediately on mount
   useEffect(() => {
     if (user && user.role === 'admin') {
-      loadAdminDashboardData();
+      loadInitialData();
     }
   }, [user]);
+
+  // Lazy-load tab-specific data when user switches tabs
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    if (activeTab === 'audits' && !loadedTabs.has('audits')) {
+      loadAuditData();
+    } else if (activeTab === 'reports' && !loadedTabs.has('reports')) {
+      loadReportsData();
+    } else if (activeTab === 'landlords' && !loadedTabs.has('landlords')) {
+      loadLandlordsData();
+    }
+  }, [activeTab, user]);
+
+  async function loadInitialData() {
+    setLoadingData(true);
+    try {
+      const [statsData, usersData, propertiesData, logsData] = await Promise.all([
+        graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS),
+        graphqlRequest<{ users: User[] }>(GET_USERS),
+        graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES),
+        graphqlRequest<{ contactLogs: ContactLogItem[] }>(GET_CONTACT_LOGS).catch(() => ({ contactLogs: [] })),
+      ]);
+      if (statsData) setStats(statsData.dashboardStats);
+      if (usersData) setUsers(usersData.users);
+      if (propertiesData) setProperties(propertiesData.properties);
+      if (logsData) setContactLogs(logsData.contactLogs);
+      setLoadedTabs(prev => new Set([...prev, 'analytics', 'properties', 'users', 'moderation']));
+    } catch (err: any) {
+      console.error('Error loading admin data:', err);
+      setMessage({ text: getFriendlyErrorMessage(err, 'Failed to fetch dashboard data.'), isError: true });
+    } finally {
+      setLoadingData(false);
+    }
+  }
+
+  async function loadAuditData() {
+    try {
+      const [auditLogsData, logsData] = await Promise.all([
+        graphqlRequest<{ auditLogs: AuditLogItem[] }>(GET_AUDIT_LOGS).catch(() => ({ auditLogs: [] })),
+        graphqlRequest<{ contactLogs: ContactLogItem[] }>(GET_CONTACT_LOGS).catch(() => ({ contactLogs: [] })),
+      ]);
+      if (auditLogsData) setAuditLogs(auditLogsData.auditLogs || []);
+      if (logsData) setContactLogs(logsData.contactLogs || []);
+      setLoadedTabs(prev => new Set([...prev, 'audits']));
+    } catch (err: any) {
+      console.error('Error loading audit logs:', err);
+    }
+  }
+
+  async function loadReportsData() {
+    try {
+      const reportsData = await graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] }));
+      if (reportsData) setReports(reportsData.reports);
+      setLoadedTabs(prev => new Set([...prev, 'reports']));
+    } catch (err: any) {
+      console.error('Error loading reports:', err);
+    }
+  }
+
+  async function loadLandlordsData() {
+    try {
+      const landlordData = await graphqlRequest<{ landlordRegistrations: LandlordRegistration[] }>(GET_LANDLORD_REGISTRATIONS).catch(() => ({ landlordRegistrations: [] }));
+      if (landlordData) setLandlordRegistrations(landlordData.landlordRegistrations || []);
+      setLoadedTabs(prev => new Set([...prev, 'landlords']));
+    } catch (err: any) {
+      console.error('Error loading landlord registrations:', err);
+    }
+  }
 
   async function loadAdminDashboardData(showSpinner = true) {
     if (showSpinner && properties.length === 0) {
@@ -564,6 +637,92 @@ export default function AdminPage() {
       if (freshLogs) setAuditLogs(freshLogs.auditLogs || []);
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to cleanup audit logs.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleSelectAuditLog = (id: number) => {
+    setSelectedAuditLogIds((prev) =>
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllAuditLogs = () => {
+    if (selectedAuditLogIds.length === auditLogs.length) {
+      setSelectedAuditLogIds([]);
+    } else {
+      setSelectedAuditLogIds(auditLogs.map((l) => l.id));
+    }
+  };
+
+  const handleDeleteSelectedAuditLogs = async (specificIds?: number[]) => {
+    const idsToDelete = specificIds || selectedAuditLogIds;
+    if (idsToDelete.length === 0) return;
+    if (!confirm(`Delete ${idsToDelete.length} selected security audit log(s)? This cannot be undone.`)) return;
+    setActionLoading(true);
+    try {
+      const DELETE_AUDIT_LOGS_MUTATION = `
+        mutation DeleteAuditLogs($ids: [Int!]!) {
+          deleteAuditLogs(ids: $ids) {
+            success
+            message
+          }
+        }
+      `;
+      const res = await graphqlRequest<{ deleteAuditLogs: { success: boolean; message: string } }>(
+        DELETE_AUDIT_LOGS_MUTATION,
+        { ids: idsToDelete }
+      );
+      setMessage({ text: res.deleteAuditLogs.message, isError: false });
+      setSelectedAuditLogIds((prev) => prev.filter((id) => !idsToDelete.includes(id)));
+      const freshLogs = await graphqlRequest<{ auditLogs: AuditLogItem[] }>(GET_AUDIT_LOGS);
+      if (freshLogs) setAuditLogs(freshLogs.auditLogs || []);
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to delete selected security logs.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleSelectContactLog = (id: number) => {
+    setSelectedContactLogIds((prev) =>
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllContactLogs = (filteredList: ContactLogItem[]) => {
+    if (selectedContactLogIds.length === filteredList.length && filteredList.length > 0) {
+      setSelectedContactLogIds([]);
+    } else {
+      setSelectedContactLogIds(filteredList.map((l) => l.id));
+    }
+  };
+
+  const handleDeleteSelectedContactLogs = async (specificIds?: number[]) => {
+    const idsToDelete = specificIds || selectedContactLogIds;
+    if (idsToDelete.length === 0) return;
+    if (!confirm(`Delete ${idsToDelete.length} selected landlord contact inquiry log(s)? This cannot be undone.`)) return;
+    setActionLoading(true);
+    try {
+      const DELETE_CONTACT_LOGS_MUTATION = `
+        mutation DeleteContactLogs($ids: [Int!]!) {
+          deleteContactLogs(ids: $ids) {
+            success
+            message
+          }
+        }
+      `;
+      const res = await graphqlRequest<{ deleteContactLogs: { success: boolean; message: string } }>(
+        DELETE_CONTACT_LOGS_MUTATION,
+        { ids: idsToDelete }
+      );
+      setMessage({ text: res.deleteContactLogs.message, isError: false });
+      setSelectedContactLogIds((prev) => prev.filter((id) => !idsToDelete.includes(id)));
+      const freshLogs = await graphqlRequest<{ contactLogs: ContactLogItem[] }>(GET_CONTACT_LOGS);
+      if (freshLogs) setContactLogs(freshLogs.contactLogs || []);
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to delete selected contact logs.', isError: true });
     } finally {
       setActionLoading(false);
     }
@@ -1732,30 +1891,66 @@ export default function AdminPage() {
             </>
           ) : activeTab === 'audits' ? (
             <>
-              {/* Category selector & Cleanup Bar */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              {/* Audit Stats Overview Banner - Desktop & Computers Only */}
+              <div className={styles.desktopOnlyStats}>
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: 'var(--shadow-sm)' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.12)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Activity size={22} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Log Entries</div>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{auditLogs.length + contactLogs.length}</div>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: 'var(--shadow-sm)' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.12)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CheckCircle size={22} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Security Audits</div>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{auditLogs.length}</div>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: 'var(--shadow-sm)' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(193, 18, 31, 0.12)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users size={22} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Landlord Contacts</div>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{contactLogs.length}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category selector & Modern Cleanup Action Bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '14px', background: 'var(--bg-surface)', padding: '14px 18px', borderRadius: '14px', border: '1px solid var(--border)' }}>
                 {/* Desktop Buttons Filter */}
-                <div className={styles.desktopFilters} style={{ gap: '8px', flexWrap: 'wrap' }}>
+                <div className={styles.desktopFilters} style={{ gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <button
                     onClick={() => setAuditLogView('all')}
                     className={`btn ${auditLogView === 'all' ? 'btn-primary' : 'btn-outline'}`}
-                    style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 700, borderRadius: '20px' }}
+                    style={{ padding: '7px 16px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    All Logs ({auditLogs.length + contactLogs.length})
+                    <span>📁 All Logs</span>
+                    <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: '8px', background: auditLogView === 'all' ? 'rgba(255,255,255,0.2)' : 'var(--bg-surface-secondary)' }}>{auditLogs.length + contactLogs.length}</span>
                   </button>
                   <button
                     onClick={() => setAuditLogView('system')}
                     className={`btn ${auditLogView === 'system' ? 'btn-primary' : 'btn-outline'}`}
-                    style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 700, borderRadius: '20px' }}
+                    style={{ padding: '7px 16px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    🛡️ System Security Audits ({auditLogs.length})
+                    <span>🛡️ Security Audits</span>
+                    <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: '8px', background: auditLogView === 'system' ? 'rgba(255,255,255,0.2)' : 'var(--bg-surface-secondary)' }}>{auditLogs.length}</span>
                   </button>
                   <button
                     onClick={() => setAuditLogView('contacts')}
                     className={`btn ${auditLogView === 'contacts' ? 'btn-primary' : 'btn-outline'}`}
-                    style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 700, borderRadius: '20px' }}
+                    style={{ padding: '7px 16px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    📞 Landlord Contacts ({contactLogs.length})
+                    <span>📞 Landlord Contacts</span>
+                    <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: '8px', background: auditLogView === 'contacts' ? 'rgba(255,255,255,0.2)' : 'var(--bg-surface-secondary)' }}>{contactLogs.length}</span>
                   </button>
                 </div>
 
@@ -1775,13 +1970,17 @@ export default function AdminPage() {
                 </div>
 
                 {/* Log Cleanup Action Buttons */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-surface-secondary, #F1F5F9)', padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Clean Audit History:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-surface-secondary)', padding: '6px 10px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', paddingRight: '4px', borderRight: '1px solid var(--border)' }}>
+                    <Trash2 size={13} style={{ color: 'var(--text-muted)' }} />
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Clean:</span>
+                  </div>
                   <button
                     onClick={() => handleDeleteOldAuditLogs(7)}
                     disabled={actionLoading}
                     className="btn btn-outline"
-                    style={{ padding: '4px 8px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '6px', color: 'var(--text-primary)' }}
+                    style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 700, borderRadius: '6px', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+                    title="Delete security audit logs older than 7 days"
                   >
                     &gt; 7 Days
                   </button>
@@ -1789,7 +1988,8 @@ export default function AdminPage() {
                     onClick={() => handleDeleteOldAuditLogs(30)}
                     disabled={actionLoading}
                     className="btn btn-outline"
-                    style={{ padding: '4px 8px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '6px', color: 'var(--text-primary)' }}
+                    style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 700, borderRadius: '6px', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+                    title="Delete security audit logs older than 30 days"
                   >
                     &gt; 30 Days
                   </button>
@@ -1797,7 +1997,8 @@ export default function AdminPage() {
                     onClick={() => handleDeleteOldAuditLogs(0)}
                     disabled={actionLoading}
                     className="btn btn-outline"
-                    style={{ padding: '4px 8px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '6px', color: 'var(--danger)' }}
+                    style={{ padding: '4px 10px', fontSize: '0.74rem', fontWeight: 700, borderRadius: '6px', backgroundColor: 'rgba(239, 68, 68, 0.08)', color: '#EF4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                    title="Purge all security audit history"
                   >
                     Clear All
                   </button>
@@ -1807,49 +2008,112 @@ export default function AdminPage() {
               {/* System Security Audit Logs Section */}
               {(auditLogView === 'all' || auditLogView === 'system') && (
                 <div style={{ marginBottom: '32px' }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    🛡️ System & Account Security Audit Trail
-                  </h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🛡️ System & Account Security Audit Trail
+                    </h3>
+                  </div>
+
+                  {/* Batch Selection Action Bar for Security Audits */}
+                  {selectedAuditLogIds.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', marginBottom: '14px', animation: 'fadeIn 0.2s ease' }}>
+                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <CheckCircle size={15} /> {selectedAuditLogIds.length} security log(s) selected
+                      </span>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                          onClick={() => handleDeleteSelectedAuditLogs()}
+                          disabled={actionLoading}
+                          className="btn"
+                          style={{ background: '#EF4444', color: '#FFFFFF', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={13} /> Delete Selected ({selectedAuditLogIds.length})
+                        </button>
+                        <button
+                          onClick={() => setSelectedAuditLogIds([])}
+                          className="btn btn-outline"
+                          style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
                     <table className={styles.table}>
                       <thead>
                         <tr>
+                          <th style={{ width: '40px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={auditLogs.length > 0 && selectedAuditLogIds.length === auditLogs.length}
+                              onChange={handleSelectAllAuditLogs}
+                              aria-label="Select all security audit logs"
+                              style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                            />
+                          </th>
                           <th>Timestamp</th>
                           <th>Action</th>
                           <th>Details</th>
                           <th>User / Email</th>
+                          <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {auditLogs.length === 0 ? (
                           <tr>
-                            <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                            <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
                               No security audit logs recorded yet. Crucial actions (logins, password resets, role updates) will appear here.
                             </td>
                           </tr>
                         ) : (
-                          auditLogs.map((log) => (
-                            <tr key={log.id}>
-                              <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                                {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                              </td>
-                              <td>
-                                <span className={`badge ${
-                                  log.action.includes('RESET') ? 'badge-primary' :
-                                  log.action.includes('LOGIN') ? 'badge-available' :
-                                  log.action.includes('ROLE') ? 'badge-primary' : 'badge-available'
-                                }`} style={{ fontSize: '0.68rem', padding: '3px 8px', fontWeight: 700 }}>
-                                  {log.action}
-                                </span>
-                              </td>
-                              <td style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                                {log.details}
-                              </td>
-                              <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
-                                {log.userEmail || 'System'}
-                              </td>
-                            </tr>
-                          ))
+                          auditLogs.map((log) => {
+                            const isSelected = selectedAuditLogIds.includes(log.id);
+                            return (
+                              <tr key={log.id} style={{ backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.04)' : undefined }}>
+                                <td style={{ textAlign: 'center' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handleToggleSelectAuditLog(log.id)}
+                                    aria-label={`Select log ${log.id}`}
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                  />
+                                </td>
+                                <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                                  {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                </td>
+                                <td>
+                                  <span className={`badge ${
+                                    log.action.includes('RESET') ? 'badge-primary' :
+                                    log.action.includes('LOGIN') ? 'badge-available' :
+                                    log.action.includes('ROLE') ? 'badge-primary' : 'badge-available'
+                                  }`} style={{ fontSize: '0.68rem', padding: '3px 8px', fontWeight: 700 }}>
+                                    {log.action}
+                                  </span>
+                                </td>
+                                <td style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
+                                  {log.details}
+                                </td>
+                                <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
+                                  {log.userEmail || 'System'}
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                  <button
+                                    onClick={() => handleDeleteSelectedAuditLogs([log.id])}
+                                    disabled={actionLoading}
+                                    title="Delete this audit log"
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
@@ -1860,24 +2124,45 @@ export default function AdminPage() {
                     {auditLogs.length === 0 ? (
                       <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>No security audit logs recorded yet.</p>
                     ) : (
-                      auditLogs.map((log) => (
-                        <div key={log.id} className={styles.adminCardItem}>
-                          <div className={styles.adminCardHeader}>
-                            <div>
-                              <div className={styles.adminCardTitle} style={{ fontSize: '0.9rem' }}>{log.details}</div>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                              </span>
+                      auditLogs.map((log) => {
+                        const isSelected = selectedAuditLogIds.includes(log.id);
+                        return (
+                          <div key={log.id} className={styles.adminCardItem} style={{ border: isSelected ? '1px solid var(--primary)' : undefined }}>
+                            <div className={styles.adminCardHeader}>
+                              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => handleToggleSelectAuditLog(log.id)}
+                                  style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                />
+                                <div>
+                                  <div className={styles.adminCardTitle} style={{ fontSize: '0.9rem' }}>{log.details}</div>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                    {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                  </span>
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>{log.action}</span>
+                                <button
+                                  onClick={() => handleDeleteSelectedAuditLogs([log.id])}
+                                  disabled={actionLoading}
+                                  title="Delete log"
+                                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '2px', cursor: 'pointer' }}
+                                >
+                                  <Trash2 size={15} style={{ color: '#EF4444' }} />
+                                </button>
+                              </div>
                             </div>
-                            <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>{log.action}</span>
+                            {log.userEmail && (
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', paddingLeft: '28px' }}>
+                                User: {log.userEmail}
+                              </div>
+                            )}
                           </div>
-                          {log.userEmail && (
-                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                              User: {log.userEmail}
-                            </div>
-                          )}
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -1886,9 +2171,37 @@ export default function AdminPage() {
               {/* Landlord Contacts Section */}
               {(auditLogView === 'all' || auditLogView === 'contacts') && (
                 <div>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    📞 Landlord Inquiries & Contact Logs
-                  </h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      📞 Landlord Inquiries & Contact Logs
+                    </h3>
+                  </div>
+
+                  {/* Batch Selection Action Bar for Contact Leads */}
+                  {selectedContactLogIds.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', marginBottom: '14px', animation: 'fadeIn 0.2s ease' }}>
+                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <CheckCircle size={15} /> {selectedContactLogIds.length} contact lead(s) selected
+                      </span>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                          onClick={() => handleDeleteSelectedContactLogs()}
+                          disabled={actionLoading}
+                          className="btn"
+                          style={{ background: '#EF4444', color: '#FFFFFF', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={13} /> Delete Selected ({selectedContactLogIds.length})
+                        </button>
+                        <button
+                          onClick={() => setSelectedContactLogIds([])}
+                          className="btn btn-outline"
+                          style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Lead Filters */}
                   {/* Desktop Lead Buttons */}
@@ -1943,46 +2256,85 @@ export default function AdminPage() {
                     <table className={styles.table}>
                       <thead>
                         <tr>
+                          {(() => {
+                            const filtered = contactLogs.filter((l) => auditFilter === 'all' || l.actionType === auditFilter);
+                            return (
+                              <th style={{ width: '40px', textAlign: 'center' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={filtered.length > 0 && selectedContactLogIds.length === filtered.length}
+                                  onChange={() => handleSelectAllContactLogs(filtered)}
+                                  aria-label="Select all contact inquiry logs"
+                                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                />
+                              </th>
+                            );
+                          })()}
                           <th>Timestamp</th>
                           <th>Customer Name</th>
                           <th>Customer Phone</th>
                           <th>Action Type</th>
                           <th>Landlord Number</th>
                           <th>Property Title</th>
+                          <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {contactLogs.filter((l) => auditFilter === 'all' || l.actionType === auditFilter).length === 0 ? (
                           <tr>
-                            <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                            <td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
                               No matching contact lead records found.
                             </td>
                           </tr>
                         ) : (
                           contactLogs
                             .filter((l) => auditFilter === 'all' || l.actionType === auditFilter)
-                            .map((log) => (
-                              <tr key={log.id}>
-                                <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                                  {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                                </td>
-                                <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
-                                <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
-                                <td>
-                                  <span className="badge badge-available" style={{ fontSize: '0.68rem', padding: '3px 8px', textTransform: 'capitalize' }}>
-                                    {log.actionType === 'call' && '📞 Phone Call'}
-                                    {log.actionType === 'whatsapp' && '💬 WhatsApp'}
-                                    {log.actionType === 'book_viewing' && '📅 Viewing'}
-                                    {log.actionType === 'sms' && '📱 SMS Lead'}
-                                    {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
-                                  </span>
-                                </td>
-                                <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
-                                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                  {log.property ? log.property.title : 'N/A'}
-                                </td>
-                              </tr>
-                            ))
+                            .map((log) => {
+                              const isSelected = selectedContactLogIds.includes(log.id);
+                              return (
+                                <tr key={log.id} style={{ backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.04)' : undefined }}>
+                                  <td style={{ textAlign: 'center' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => handleToggleSelectContactLog(log.id)}
+                                      aria-label={`Select contact log ${log.id}`}
+                                      style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                    />
+                                  </td>
+                                  <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                                    {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                  </td>
+                                  <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
+                                  <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
+                                  <td>
+                                    <span className="badge badge-available" style={{ fontSize: '0.68rem', padding: '3px 8px', textTransform: 'capitalize' }}>
+                                      {log.actionType === 'call' && '📞 Phone Call'}
+                                      {log.actionType === 'whatsapp' && '💬 WhatsApp'}
+                                      {log.actionType === 'book_viewing' && '📅 Viewing'}
+                                      {log.actionType === 'sms' && '📱 SMS Lead'}
+                                      {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
+                                    </span>
+                                  </td>
+                                  <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
+                                  <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                    {log.property ? log.property.title : 'N/A'}
+                                  </td>
+                                  <td style={{ textAlign: 'center' }}>
+                                    <button
+                                      onClick={() => handleDeleteSelectedContactLogs([log.id])}
+                                      disabled={actionLoading}
+                                      title="Delete this contact record"
+                                      style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                      onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
+                                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
                         )}
                       </tbody>
                     </table>
@@ -1995,59 +2347,76 @@ export default function AdminPage() {
                     ) : (
                       contactLogs
                         .filter((l) => auditFilter === 'all' || l.actionType === auditFilter)
-                        .map((log) => (
-                          <div key={log.id} className={styles.adminCardItem}>
-                            <div className={styles.adminCardHeader}>
-                              <div>
-                                <div className={styles.adminCardTitle} style={{ fontSize: '0.98rem', fontWeight: 800 }}>{log.customerName}</div>
-                                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                  👤 Phone: <a href={`tel:${log.customerPhone}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>{log.customerPhone}</a>
+                        .map((log) => {
+                          const isSelected = selectedContactLogIds.includes(log.id);
+                          return (
+                            <div key={log.id} className={styles.adminCardItem} style={{ border: isSelected ? '1px solid var(--primary)' : undefined }}>
+                              <div className={styles.adminCardHeader}>
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handleToggleSelectContactLog(log.id)}
+                                    style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                  />
+                                  <div>
+                                    <div className={styles.adminCardTitle} style={{ fontSize: '0.98rem', fontWeight: 800 }}>{log.customerName}</div>
+                                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                      👤 Phone: <a href={`tel:${log.customerPhone}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>{log.customerPhone}</a>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span className={`badge ${
+                                    log.actionType === 'whatsapp' ? 'badge-pending' :
+                                    log.actionType === 'book_viewing' ? 'badge-primary' : 'badge-available'
+                                  }`} style={{ fontSize: '0.65rem' }}>
+                                    {log.actionType}
+                                  </span>
+                                  <button
+                                    onClick={() => handleDeleteSelectedContactLogs([log.id])}
+                                    disabled={actionLoading}
+                                    title="Delete contact record"
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '2px', cursor: 'pointer' }}
+                                  >
+                                    <Trash2 size={15} style={{ color: '#EF4444' }} />
+                                  </button>
                                 </div>
                               </div>
-                              <span className={`badge ${
-                                log.actionType === 'whatsapp' ? 'badge-pending' :
-                                log.actionType === 'book_viewing' ? 'badge-primary' : 'badge-available'
-                              }`} style={{ fontSize: '0.65rem', padding: '3px 8px', textTransform: 'none', fontWeight: 700 }}>
-                                {log.actionType === 'call' && '📞 Call'}
-                                {log.actionType === 'whatsapp' && '💬 WhatsApp'}
-                                {log.actionType === 'book_viewing' && '📅 Viewing'}
-                                {log.actionType === 'sms' && '📱 SMS Lead'}
-                                {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
-                              </span>
-                            </div>
-                            
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                                <span>🏢 Property:</span>
-                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
-                                  {log.property ? (
-                                    <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
-                                      {log.property.title}
-                                    </Link>
-                                  ) : 'N/A'}
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                                <span>📞 Landlord Contact:</span>
-                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                  <a href={`tel:${log.landlordPhone}`} style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{log.landlordPhone}</a>
-                                  <a href={`tel:${log.landlordPhone}`} title="Call Landlord" style={{ color: 'var(--primary)', fontSize: '0.9rem', display: 'inline-flex' }}>
-                                    📞
-                                  </a>
-                                  <a href={`https://wa.me/${log.landlordPhone.startsWith('0') ? '233' + log.landlordPhone.substring(1) : log.landlordPhone}`} target="_blank" rel="noopener noreferrer" title="WhatsApp Landlord" style={{ color: '#25D366', fontSize: '0.9rem', display: 'inline-flex' }}>
-                                    💬
-                                  </a>
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                <span>🕒 Time:</span>
-                                <span>
-                                  {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                                </span>
+                              
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', paddingLeft: '28px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                  <span>🏢 Property:</span>
+                                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
+                                    {log.property ? (
+                                      <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
+                                        {log.property.title}
+                                      </Link>
+                                    ) : 'N/A'}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                  <span>📞 Landlord Contact:</span>
+                                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    <a href={`tel:${log.landlordPhone}`} style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{log.landlordPhone}</a>
+                                    <a href={`tel:${log.landlordPhone}`} title="Call Landlord" style={{ color: 'var(--primary)', fontSize: '0.9rem', display: 'inline-flex' }}>
+                                      📞
+                                    </a>
+                                    <a href={`https://wa.me/${log.landlordPhone.startsWith('0') ? '233' + log.landlordPhone.substring(1) : log.landlordPhone}`} target="_blank" rel="noopener noreferrer" title="WhatsApp Landlord" style={{ color: '#25D366', fontSize: '0.9rem', display: 'inline-flex' }}>
+                                      💬
+                                    </a>
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                  <span>🕒 Time:</span>
+                                  <span>
+                                    {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                     )}
                   </div>
                 </div>
@@ -2799,6 +3168,12 @@ export default function AdminPage() {
                 )}
               </div>
             </div>
+          </div>
+          </div>
+          </div>
+          </div>
+          </div>
+          </div>
           ) : null}
         </div>
       </main>

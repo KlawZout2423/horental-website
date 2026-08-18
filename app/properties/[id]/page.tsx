@@ -235,6 +235,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         if (actionType === 'call') {
           window.location.href = `tel:${cleanPhone}`;
         } else {
+          const waPhone = cleanPhone.startsWith('0') ? '233' + cleanPhone.substring(1) : cleanPhone;
           const landlordName = property!.landlordName || property!.owner?.name || 'Landlord';
           const price = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
           const msg = encodeURIComponent(
@@ -245,7 +246,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
             `Could you please provide more details and arrange a viewing?\n\n` +
             `Thank you.`
           );
-          window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+          window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
         }
       } catch (err: any) {
         console.error('Failed to log contact audit record:', err);
@@ -253,6 +254,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         if (actionType === 'call') {
           window.location.href = `tel:${cleanPhone}`;
         } else {
+          const waPhone = cleanPhone.startsWith('0') ? '233' + cleanPhone.substring(1) : cleanPhone;
           const landlordName = property!.landlordName || property!.owner?.name || 'Landlord';
           const price = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
           const msg = encodeURIComponent(
@@ -262,7 +264,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
             `💰 Price: ${price}\n\n` +
             `Could you please provide more details and arrange a viewing?\n\nThank you.`
           );
-          window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+          window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
         }
       } finally {
         setIsLoggingContact(false);
@@ -300,6 +302,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
       if (connectActionType === 'call') {
         window.location.href = `tel:${cleanPhone}`;
       } else {
+        const waPhone = cleanPhone.startsWith('0') ? '233' + cleanPhone.substring(1) : cleanPhone;
         const landlordName = property.landlordName || property.owner?.name || 'Landlord';
         const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
         const msg = encodeURIComponent(
@@ -309,7 +312,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
           `💰 Price: ${price}\n\n` +
           `Could you please provide more details and arrange a viewing?\n\nThank you.`
         );
-        window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+        window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
       }
 
       setCustomerName('');
@@ -321,7 +324,8 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
       if (connectActionType === 'call') {
         window.location.href = `tel:${cleanPhone}`;
       } else {
-        window.open(`https://wa.me/${cleanPhone}`, '_blank');
+        const waPhone = cleanPhone.startsWith('0') ? '233' + cleanPhone.substring(1) : cleanPhone;
+        window.open(`https://wa.me/${waPhone}`, '_blank');
       }
     } finally {
       setIsLoggingContact(false);

@@ -3,13 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, MapPin, SlidersHorizontal, RefreshCcw, Star, Heart, X, ChevronDown } from 'lucide-react';
+import { Search, MapPin, SlidersHorizontal, RefreshCcw, Star, Heart, X, ChevronDown, Check, Droplets, Zap, ShieldCheck, Sparkles } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { graphqlRequest, GET_PROPERTIES } from '../../lib/graphql';
 import { trackVisit } from '../../lib/trackVisit';
 import styles from './properties.module.css';
 import AuthPromptModal from '../../components/AuthPromptModal';
-import AdSense from '../../components/AdSense';
+
 
 import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImageUrl, getStatusLabel } from '../../lib/types';
 
@@ -301,13 +301,23 @@ export default function PropertiesClient() {
         {/* Sidebar Filters */}
         <aside className={`${styles.sidebar} ${showMobileFilters ? styles.showMobile : ''}`}>
           <div className={styles.filterSectionTitle}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <SlidersHorizontal size={16} /> Filters
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button onClick={handleResetFilters} className={styles.resetButton}>
-                Reset All
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className={styles.filterIconBadge}>
+                <SlidersHorizontal size={15} />
+              </div>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>Filters</span>
+              {((searchQuery.trim() ? 1 : 0) + (propertyType !== 'All' ? 1 : 0) + (minPrice || maxPrice ? 1 : 0) + (availability !== 'All' ? 1 : 0) + selectedWaterTypes.length + selectedMeterTypes.length + selectedAmenities.length) > 0 && (
+                <span className={styles.activeFilterCount}>
+                  {(searchQuery.trim() ? 1 : 0) + (propertyType !== 'All' ? 1 : 0) + (minPrice || maxPrice ? 1 : 0) + (availability !== 'All' ? 1 : 0) + selectedWaterTypes.length + selectedMeterTypes.length + selectedAmenities.length}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {((searchQuery.trim() ? 1 : 0) + (propertyType !== 'All' ? 1 : 0) + (minPrice || maxPrice ? 1 : 0) + (availability !== 'All' ? 1 : 0) + selectedWaterTypes.length + selectedMeterTypes.length + selectedAmenities.length) > 0 && (
+                <button onClick={handleResetFilters} className={styles.resetButton} title="Clear all active filters">
+                  <RefreshCcw size={11} style={{ marginRight: '4px', display: 'inline' }} /> Reset
+                </button>
+              )}
               <button
                 onClick={() => setShowMobileFilters(false)}
                 className={styles.closeMobileFilterBtn}
@@ -328,20 +338,20 @@ export default function PropertiesClient() {
                 <input
                   id="search-keyword"
                   type="text"
-                  placeholder="Search location, hostel or property..."
+                  placeholder="Search location, hostel..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="form-control"
-                  style={{ paddingLeft: '36px', paddingRight: searchQuery ? '36px' : '12px' }}
+                  style={{ paddingLeft: '34px', paddingRight: searchQuery ? '32px' : '10px', fontSize: '0.84rem' }}
                 />
-                <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                <Search size={15} style={{ position: 'absolute', left: '11px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
                     style={{
                       position: 'absolute',
-                      right: '10px',
+                      right: '8px',
                       background: 'transparent',
                       border: 'none',
                       color: 'var(--text-muted)',
@@ -353,7 +363,7 @@ export default function PropertiesClient() {
                     }}
                     aria-label="Clear search keyword"
                   >
-                    <X size={15} />
+                    <X size={14} />
                   </button>
                 )}
               </div>
@@ -367,10 +377,10 @@ export default function PropertiesClient() {
                 value={propertyType}
                 onChange={(e) => setPropertyType(e.target.value)}
                 className={styles.selectInput}
-                style={{ backgroundColor: 'var(--bg-surface)' }}
+                style={{ backgroundColor: 'var(--bg-surface)', fontSize: '0.84rem' }}
               >
                 <option value="All">All Categories</option>
-                <option value="self-contained">Self-Contained (All)</option>
+                <option value="self-contained">Self-Contained (All SC)</option>
                 {PROPERTY_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
@@ -381,7 +391,14 @@ export default function PropertiesClient() {
 
             {/* Price Range Filter */}
             <div className={styles.filterGroup}>
-              <label id="price-range-label">Price Range (GH₵)</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label id="price-range-label">Budget (GH₵)</label>
+                {(minPrice || maxPrice) && (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--primary)', fontWeight: 700 }}>
+                    {minPrice ? `GH₵${minPrice}` : '0'} – {maxPrice ? `GH₵${maxPrice}` : 'Max'}
+                  </span>
+                )}
+              </div>
               <div className={styles.priceRangeInputs}>
                 <input
                   type="number"
@@ -391,7 +408,7 @@ export default function PropertiesClient() {
                   className={styles.priceInput}
                   aria-label="Minimum price in GH₵"
                 />
-                <span style={{ color: 'var(--text-muted)' }}>-</span>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>–</span>
                 <input
                   type="number"
                   placeholder="Max"
@@ -401,7 +418,7 @@ export default function PropertiesClient() {
                   aria-label="Maximum price in GH₵"
                 />
               </div>
-              <div style={{ marginTop: '12px' }}>
+              <div style={{ marginTop: '6px' }}>
                 <input
                   type="range"
                   min="0"
@@ -413,13 +430,13 @@ export default function PropertiesClient() {
                     width: '100%',
                     accentColor: 'var(--primary)',
                     cursor: 'pointer',
-                    height: '6px',
+                    height: '5px',
                     borderRadius: '3px',
                     backgroundColor: 'var(--border)'
                   }}
                   aria-label="Maximum price slider"
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                   <span>GH₵0</span>
                   <span>Max: {maxPrice ? `GH₵${Number(maxPrice).toLocaleString()}` : 'Any'}</span>
                   <span>GH₵{maxPossiblePrice.toLocaleString()}</span>
@@ -427,90 +444,128 @@ export default function PropertiesClient() {
               </div>
             </div>
 
-            {/* Availability Status Filter */}
+            {/* Availability Status - Modern Segmented Switch */}
             <div className={styles.filterGroup}>
               <label>Availability</label>
-              <div className={styles.radioList}>
-                <label className={styles.radioOption}>
-                  <input type="radio" name="availability" checked={availability === 'All'} onChange={() => setAvailability('All')} />
-                  All Properties
-                </label>
-                <label className={styles.radioOption}>
-                  <input type="radio" name="availability" checked={availability === 'Available'} onChange={() => setAvailability('Available')} />
-                  Available Only
-                </label>
-                <label className={styles.radioOption}>
-                  <input type="radio" name="availability" checked={availability === 'Rented'} onChange={() => setAvailability('Rented')} />
-                  Rented / Occupied / Sold
-                </label>
+              <div className={styles.segmentedControl}>
+                {[
+                  { label: 'All', value: 'All' },
+                  { label: 'Available', value: 'Available' },
+                  { label: 'Rented', value: 'Rented' },
+                ].map((tab) => (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    className={`${styles.segmentedBtn} ${availability === tab.value ? styles.segmentedBtnActive : ''}`}
+                    onClick={() => setAvailability(tab.value)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Water Supply */}
-            <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>💧 Water Supply</span>
-                {selectedWaterTypes.length > 0 && <span className={styles.activeFilterCount}>{selectedWaterTypes.length}</span>}
-              </label>
-              <div className={styles.pillGrid}>
+            {/* Feature Group 1: Water Supply */}
+            <div className={styles.filterCardSection}>
+              <div className={styles.filterCardHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Droplets size={14} style={{ color: '#06B6D4' }} />
+                  <span className={styles.filterCardTitle}>Water Supply</span>
+                </div>
+                {selectedWaterTypes.length > 0 && (
+                  <span className={styles.sectionBadge}>{selectedWaterTypes.length}</span>
+                )}
+              </div>
+              <div className={styles.featureGrid}>
                 {[
-                  { label: 'Ghana Water', value: 'Ghana Water' },
-                  { label: 'Polytank / Tank', value: 'Polytank' },
-                  { label: 'Borehole', value: 'Borehole' },
-                  { label: 'Well Water', value: 'Well' },
+                  { label: 'Ghana Water', icon: '💧', value: 'Ghana Water' },
+                  { label: 'Polytank', icon: '🪣', value: 'Polytank' },
+                  { label: 'Borehole', icon: '🏗️', value: 'Borehole' },
+                  { label: 'Well Water', icon: '🚰', value: 'Well' },
                 ].map((item) => {
                   const isSelected = selectedWaterTypes.includes(item.value);
                   return (
-                    <button key={item.value} type="button" className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`} onClick={() => handleToggleWaterFilter(item.value)}>
-                      {isSelected ? '✓ ' : ''}{item.label}
+                    <button
+                      key={item.value}
+                      type="button"
+                      className={`${styles.featureCard} ${isSelected ? styles.featureCardActive : ''}`}
+                      onClick={() => handleToggleWaterFilter(item.value)}
+                    >
+                      <span className={styles.featureCardIcon}>{item.icon}</span>
+                      <span className={styles.featureCardLabel}>{item.label}</span>
+                      {isSelected && <Check size={12} className={styles.featureCheckIcon} />}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Electricity */}
-            <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>⚡ Electricity &amp; Metering</span>
-                {selectedMeterTypes.length > 0 && <span className={styles.activeFilterCount}>{selectedMeterTypes.length}</span>}
-              </label>
-              <div className={styles.pillGrid}>
+            {/* Feature Group 2: Electricity & Metering */}
+            <div className={styles.filterCardSection}>
+              <div className={styles.filterCardHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Zap size={14} style={{ color: '#F59E0B' }} />
+                  <span className={styles.filterCardTitle}>Electricity &amp; Meter</span>
+                </div>
+                {selectedMeterTypes.length > 0 && (
+                  <span className={styles.sectionBadge}>{selectedMeterTypes.length}</span>
+                )}
+              </div>
+              <div className={styles.featureGrid}>
                 {[
-                  { label: 'ECG Prepaid', value: 'Prepaid' },
-                  { label: 'ECG Separate', value: 'Postpaid' },
-                  { label: 'ECG Shared', value: 'Shared' },
+                  { label: 'ECG Prepaid', icon: '⚡', value: 'Prepaid' },
+                  { label: 'ECG Separate', icon: '🔌', value: 'Postpaid' },
+                  { label: 'ECG Shared', icon: '🤝', value: 'Shared' },
                 ].map((item) => {
                   const isSelected = selectedMeterTypes.includes(item.value);
                   return (
-                    <button key={item.value} type="button" className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`} onClick={() => handleToggleMeterFilter(item.value)}>
-                      {isSelected ? '✓ ' : ''}{item.label}
+                    <button
+                      key={item.value}
+                      type="button"
+                      className={`${styles.featureCard} ${isSelected ? styles.featureCardActive : ''}`}
+                      onClick={() => handleToggleMeterFilter(item.value)}
+                    >
+                      <span className={styles.featureCardIcon}>{item.icon}</span>
+                      <span className={styles.featureCardLabel}>{item.label}</span>
+                      {isSelected && <Check size={12} className={styles.featureCheckIcon} />}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Amenities */}
-            <div className={styles.filterGroup} style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>✨ Comforts &amp; Security</span>
-                {selectedAmenities.length > 0 && <span className={styles.activeFilterCount}>{selectedAmenities.length}</span>}
-              </label>
-              <div className={styles.pillGrid}>
+            {/* Feature Group 3: Comforts & Security */}
+            <div className={styles.filterCardSection}>
+              <div className={styles.filterCardHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ShieldCheck size={14} style={{ color: '#10B981' }} />
+                  <span className={styles.filterCardTitle}>Amenities &amp; Security</span>
+                </div>
+                {selectedAmenities.length > 0 && (
+                  <span className={styles.sectionBadge}>{selectedAmenities.length}</span>
+                )}
+              </div>
+              <div className={styles.featureGrid}>
                 {[
-                  { label: 'High-Speed WiFi', value: 'WiFi' },
-                  { label: 'Air Conditioning', value: 'AC' },
-                  { label: 'Study Desk', value: 'Study Desk' },
-                  { label: 'Furnished / Bed', value: 'Furnished' },
-                  { label: 'CCTV Security', value: 'CCTV' },
-                  { label: 'Gated & Fenced', value: 'Gated & Fenced' },
-                  { label: 'Parking Space', value: 'Parking' },
+                  { label: 'WiFi', icon: '📶', value: 'WiFi' },
+                  { label: 'AC', icon: '❄️', value: 'AC' },
+                  { label: 'Furnished', icon: '🛋️', value: 'Furnished' },
+                  { label: 'Study Desk', icon: '📚', value: 'Study Desk' },
+                  { label: 'CCTV Camera', icon: '📹', value: 'CCTV' },
+                  { label: 'Gated / Fenced', icon: '🚪', value: 'Gated & Fenced' },
+                  { label: 'Parking', icon: '🚗', value: 'Parking' },
                 ].map((item) => {
                   const isSelected = selectedAmenities.includes(item.value);
                   return (
-                    <button key={item.value} type="button" className={`${styles.filterPill} ${isSelected ? styles.filterPillActive : ''}`} onClick={() => handleToggleAmenityFilter(item.value)}>
-                      {isSelected ? '✓ ' : ''}{item.label}
+                    <button
+                      key={item.value}
+                      type="button"
+                      className={`${styles.featureCard} ${isSelected ? styles.featureCardActive : ''}`}
+                      onClick={() => handleToggleAmenityFilter(item.value)}
+                    >
+                      <span className={styles.featureCardIcon}>{item.icon}</span>
+                      <span className={styles.featureCardLabel}>{item.label}</span>
+                      {isSelected && <Check size={12} className={styles.featureCheckIcon} />}
                     </button>
                   );
                 })}
@@ -585,8 +640,7 @@ export default function PropertiesClient() {
             <div className={styles.grid}>
               {filteredProperties.map((p, index) => {
                 const isSaved = savedIds.includes(p.id);
-                const feedAdSlotId = process.env.NEXT_PUBLIC_ADSENSE_FEED_SLOT_ID || "1488358944";
-                const feedAdLayoutKey = process.env.NEXT_PUBLIC_ADSENSE_FEED_LAYOUT_KEY || "-63+cs-z-69+ot";
+
                 return (
                   <React.Fragment key={p.id}>
                     <Link
@@ -714,32 +768,7 @@ export default function PropertiesClient() {
                         <span className={styles.viewDetailsBtn}>View Details &rarr;</span>
                       </div>
                     </Link>
-                    {(index + 1) % 6 === 0 && (
-                      <div 
-                        className={`${styles.propertyCard} animate-slide-up`} 
-                        style={{ 
-                          animationDelay: `${(index + 1) * 50}ms`,
-                          padding: '16px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          minHeight: '360px',
-                          backgroundColor: 'var(--bg-surface)',
-                          borderRadius: '12px',
-                          border: '1px dashed var(--border)',
-                          overflow: 'hidden'
-                        }}
-                      >
-                        <AdSense 
-                          adSlot={feedAdSlotId} 
-                          adLayoutKey={feedAdLayoutKey}
-                          adFormat="fluid" 
-                          responsive="true" 
-                          style={{ display: 'block', width: '100%', height: '100%' }} 
-                        />
-                      </div>
-                    )}
+
                   </React.Fragment>
                 );
               })}

@@ -486,6 +486,24 @@ export const DELETE_OLD_AUDIT_LOGS = `
   }
 `;
 
+export const DELETE_AUDIT_LOGS = `
+  mutation DeleteAuditLogs($ids: [Int!]!) {
+    deleteAuditLogs(ids: $ids) {
+      success
+      message
+    }
+  }
+`;
+
+export const DELETE_CONTACT_LOGS = `
+  mutation DeleteContactLogs($ids: [Int!]!) {
+    deleteContactLogs(ids: $ids) {
+      success
+      message
+    }
+  }
+`;
+
 export const CHANGE_PASSWORD_MUTATION = `
   mutation ChangePassword($newPassword: String!) {
     changePassword(newPassword: $newPassword) {

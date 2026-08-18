@@ -265,6 +265,7 @@ export const typeDefs = `#graphql
         addProperty(input: PropertyInput!): Property!
         updateProperty(id: Int!, input: PropertyInput!): Property!
         deleteProperty(id: Int!): Property!
+        togglePropertyFeatured(id: Int!): Property!
         createCompany(name: String!, logoUrl: String, contact: String!, momoAccount: String): Company!
         createPartner(input: PartnerInput!): AuthPayload!
         updatePropertyCompany(id: Int!, companyId: Int!): Property!
@@ -273,6 +274,8 @@ export const typeDefs = `#graphql
         createContactLog(customerName: String!, customerPhone: String!, actionType: String!, propertyId: Int!, landlordPhone: String!): ContactLog!
         recordPageVisit(path: String!, utmSource: String, utmMedium: String, utmCampaign: String, utmContent: String, referrer: String): Boolean!
         deleteOldAuditLogs(days: Int!): BasicPayload!
+        deleteAuditLogs(ids: [Int!]!): BasicPayload!
+        deleteContactLogs(ids: [Int!]!): BasicPayload!
         createLandlordRegistration(input: LandlordRegistrationInput!): LandlordRegistration!
         updateLandlordRegistrationStatus(id: Int!, status: String!): LandlordRegistration!
         deleteLandlordRegistration(id: Int!): LandlordRegistration!

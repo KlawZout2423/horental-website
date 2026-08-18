@@ -467,7 +467,7 @@ export default function Home() {
             </div>
           ) : (
             <div className={styles.gridCards}>
-              {filteredProperties.slice(0, 6).map((p, index) => {
+              {filteredProperties.slice(0, 10).map((p, index) => {
                 const isSaved = savedIds.includes(p.id);
                 return (
                   <Link 
