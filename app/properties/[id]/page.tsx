@@ -235,7 +235,17 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         if (actionType === 'call') {
           window.location.href = `tel:${cleanPhone}`;
         } else {
-          window.open(`https://wa.me/${cleanPhone}?text=Hi, I am interested in your property "${property!.title}" on HO Rentals.`, '_blank');
+          const landlordName = property!.landlordName || property!.owner?.name || 'Landlord';
+          const price = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
+          const msg = encodeURIComponent(
+            `Hi ${landlordName},\n\nI found your property on HO Rentals and I'm interested.\n\n` +
+            `📌 *${property!.title}*\n` +
+            `📍 Location: ${property!.location}\n` +
+            `💰 Price: ${price}\n\n` +
+            `Could you please provide more details and arrange a viewing?\n\n` +
+            `Thank you.`
+          );
+          window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
         }
       } catch (err: any) {
         console.error('Failed to log contact audit record:', err);
@@ -243,7 +253,16 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         if (actionType === 'call') {
           window.location.href = `tel:${cleanPhone}`;
         } else {
-          window.open(`https://wa.me/${cleanPhone}`, '_blank');
+          const landlordName = property!.landlordName || property!.owner?.name || 'Landlord';
+          const price = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
+          const msg = encodeURIComponent(
+            `Hi ${landlordName},\n\nI found your property on HO Rentals and I'm interested.\n\n` +
+            `📌 *${property!.title}*\n` +
+            `📍 Location: ${property!.location}\n` +
+            `💰 Price: ${price}\n\n` +
+            `Could you please provide more details and arrange a viewing?\n\nThank you.`
+          );
+          window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
         }
       } finally {
         setIsLoggingContact(false);
@@ -281,7 +300,16 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
       if (connectActionType === 'call') {
         window.location.href = `tel:${cleanPhone}`;
       } else {
-        window.open(`https://wa.me/${cleanPhone}?text=Hi, I am interested in your property "${property.title}" on HO Rentals.`, '_blank');
+        const landlordName = property.landlordName || property.owner?.name || 'Landlord';
+        const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
+        const msg = encodeURIComponent(
+          `Hi ${landlordName},\n\nI found your property on HO Rentals and I'm interested.\n\n` +
+          `📌 *${property.title}*\n` +
+          `📍 Location: ${property.location}\n` +
+          `💰 Price: ${price}\n\n` +
+          `Could you please provide more details and arrange a viewing?\n\nThank you.`
+        );
+        window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
       }
 
       setCustomerName('');
