@@ -161,8 +161,8 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
             </div>
             <div style={{ textAlign: 'left' }}>
               <h1 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', lineHeight: 1.2 }}>{agent.name}</h1>
-              <div className={styles.agentBadge} style={{ marginBottom: 0, marginTop: '4px' }}>
-                <ShieldCheck size={12} /> Verified Rental Agent
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10B981', fontSize: '0.74rem', fontWeight: 700, marginTop: '3px' }}>
+                <ShieldCheck size={12} /> Verified Agent
               </div>
             </div>
           </div>

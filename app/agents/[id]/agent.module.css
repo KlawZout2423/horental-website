@@ -125,8 +125,7 @@
   flex-shrink: 0;
   box-shadow: 0 3px 8px rgba(193, 18, 31, 0.15);
   overflow: hidden;
-  border: 2px solid var(--bg-surface);
-  outline: 2px solid var(--primary);
+  border: 2px solid var(--primary);
   margin: 0;
 }
 
