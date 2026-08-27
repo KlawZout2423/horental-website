@@ -11,59 +11,79 @@ model User {
   name               String
   email              String   @unique
   password           String
-  role               String   @default("user")
+  role               String   @default("user") // "admin" | "agent" | "landlord" | "tenant"
   phone              String?
   bio                String?
   profileImage       String?
   agentLocation      String?
   agentWhatsapp      String?
+  verificationStatus String   @default("unverified") // "unverified" | "pending" | "verified" | "rejected"
   resetOtpCode       String?
   resetOtpExpires    DateTime?
   mustChangePassword Boolean  @default(false)
   companyId          Int?
+  subscriptionId     Int?
   createdAt          DateTime @default(now())
 
-  properties Property[]
-  company    Company?   @relation(fields: [companyId], references: [id])
+  properties          Property[]            @relation("UserProperties")
+  landlordProperties  Property[]            @relation("LandlordProperties")
+  company             Company?              @relation(fields: [companyId], references: [id])
+  subscription        Subscription?         @relation(fields: [subscriptionId], references: [id])
+  verificationRequests VerificationRequest[]
+  landlordLinks       LandlordAgentLink[]   @relation("LandlordLinks")
+  agentLinks          LandlordAgentLink[]   @relation("AgentLinks")
+  fraudAlerts         FraudAlert[]
 }
 
 model Company {
-  id           Int      @id @default(autoincrement())
-  name         String   @unique
-  logoUrl      String?
-  contact      String
-  isOwnCompany Boolean  @default(false)
-  momoAccount  String?
-  createdAt    DateTime @default(now())
+  id                 Int      @id @default(autoincrement())
+  name               String   @unique
+  logoUrl            String?
+  contact            String
+  isOwnCompany       Boolean  @default(false)
+  momoAccount        String?
+  tier               String   @default("free") // "free" | "pro_agent" | "agency_ultra"
+  domain             String?
+  maxListings        Int      @default(5)
+  maxAgents          Int      @default(1)
+  subscriptionStatus String   @default("active")
+  createdAt          DateTime @default(now())
 
   users      User[]
   properties Property[]
 }
 
 model Property {
-  id          Int      @id @default(autoincrement())
-  title       String
-  location    String
-  price       Float
-  description String?
-  imageUrl    String?
-  status      String   @default("available")
-  type        String?
-  contact     String?
-  landlordName String?
-  digitalAddress String?
-  landmarks   String?
-  latitude    Float?
-  longitude   Float?
-  ownerId     Int
-  companyId   Int
-  isFeatured  Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id                 Int      @id @default(autoincrement())
+  title              String
+  location           String
+  price              Float
+  description        String?
+  imageUrl           String?
+  status             String   @default("available")
+  type               String?
+  contact            String?
+  landlordName       String?
+  digitalAddress     String?
+  landmarks          String?
+  latitude           Float?
+  longitude          Float?
+  verificationStatus String   @default("pending") // "pending" | "verified" | "rejected"
+  isSaaSManaged      Boolean  @default(false)
+  commissionRate     Float?
+  ownerId            Int
+  landlordId         Int?
+  companyId          Int
+  isFeatured         Boolean  @default(false)
+  createdAt          DateTime @default(now())
 
-  owner       User            @relation(fields: [ownerId], references: [id])
-  company     Company         @relation(fields: [companyId], references: [id])
-  images      PropertyImage[]
-  contactLogs ContactLog[]
+  owner        User            @relation("UserProperties", fields: [ownerId], references: [id])
+  landlord     User?           @relation("LandlordProperties", fields: [landlordId], references: [id])
+  company      Company         @relation(fields: [companyId], references: [id])
+  images       PropertyImage[]
+  contactLogs  ContactLog[]
+  leadInquiries LeadInquiry[]
+  fraudAlerts  FraudAlert[]
 
   @@index([status, isFeatured])
   @@index([price])
@@ -82,6 +102,75 @@ model PropertyImage {
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 }
 
+model Subscription {
+  id                        Int       @id @default(autoincrement())
+  name                      String
+  price                     Float
+  billingCycle              String    @default("monthly") // "monthly" | "yearly"
+  status                    String    @default("active")
+  paystackCustomerCode      String?
+  paystackSubscriptionCode  String?
+  momoNumber                String?
+  currentPeriodStart        DateTime  @default(now())
+  currentPeriodEnd          DateTime?
+  createdAt                 DateTime  @default(now())
+
+  users User[]
+}
+
+model VerificationRequest {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  idType        String   @default("ghana_card")
+  idNumber      String
+  documentUrls  String[]
+  status        String   @default("pending") // "pending" | "verified" | "rejected"
+  reviewerNotes String?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LandlordAgentLink {
+  id              Int      @id @default(autoincrement())
+  landlordId      Int
+  agentId         Int
+  status          String   @default("pending") // "pending" | "approved" | "rejected"
+  commissionShare Float?
+  createdAt       DateTime @default(now())
+
+  landlord User @relation("LandlordLinks", fields: [landlordId], references: [id], onDelete: Cascade)
+  agent    User @relation("AgentLinks", fields: [agentId], references: [id], onDelete: Cascade)
+}
+
+model LeadInquiry {
+  id          Int      @id @default(autoincrement())
+  propertyId  Int
+  tenantName  String
+  tenantPhone String
+  channel     String   @default("whatsapp") // "whatsapp" | "call" | "inquiry"
+  status      String   @default("new") // "new" | "contacted" | "closed"
+  createdAt   DateTime @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}
+
+model FraudAlert {
+  id         Int      @id @default(autoincrement())
+  propertyId Int?
+  userId     Int?
+  reason     String
+  severity   String   @default("medium") // "low" | "medium" | "high"
+  status     String   @default("open") // "open" | "resolved"
+  createdAt  DateTime @default(now())
+
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
 
 model ContactLog {
   id            Int      @id @default(autoincrement())
@@ -92,8 +181,8 @@ model ContactLog {
   landlordPhone String
   createdAt     DateTime @default(now())
 
-  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
   @@index([createdAt])
 }
 
@@ -113,12 +202,12 @@ model PageVisit {
 }
 
 model PasswordResetRequest {
-  id          Int      @id @default(autoincrement())
-  name        String
-  identifier  String   // email or phone
-  message     String?
-  status      String   @default("pending") // pending | resolved
-  createdAt   DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  name       String
+  identifier String // email or phone
+  message    String?
+  status     String   @default("pending") // pending | resolved
+  createdAt  DateTime @default(now())
 
   @@index([createdAt])
   @@index([status])
@@ -137,35 +226,33 @@ model AuditLog {
 }
 
 model LandlordRegistration {
-  id              Int      @id @default(autoincrement())
-  name            String
-  dob             String?
-  gender          String?
-  nationalId      String?
-  homeAddress     String?
-  city            String
-  region          String?
-  phone1          String
-  phone2          String?
-  email           String?
-  occupation      String?
-  propAddress     String
-  propCity        String?
-  propLandmark    String?
-  propRegion      String?
-  propGps         String?
-  rent            Float
-  advance         String?
-  rooms           Int?
-  availableFrom   String?
-  propType        String?
-  amenities       String[]
-  plan            String?
-  photos          String[]
-  status          String   @default("Pending Verification")
-  agreementSigned Boolean  @default(true)
+  id               Int      @id @default(autoincrement())
+  name             String
+  dob              String?
+  gender           String?
+  nationalId       String?
+  homeAddress      String?
+  city             String
+  region           String?
+  phone1           String
+  phone2           String?
+  email            String?
+  occupation       String?
+  propAddress      String
+  propCity         String?
+  propLandmark     String?
+  propRegion       String?
+  propGps          String?
+  rent             Float
+  advance          String?
+  rooms            Int?
+  availableFrom    String?
+  propType         String?
+  amenities        String[]
+  plan             String?
+  photos           String[]
+  status           String   @default("Pending Verification")
+  agreementSigned  Boolean  @default(true)
   socialMediaBoost Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
 }
-
-
