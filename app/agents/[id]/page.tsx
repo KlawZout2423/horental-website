@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Phone, MessageCircle, ShieldCheck, MapPin, Building, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Phone, MessageCircle, ShieldCheck, MapPin, Building, PlusCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../../../lib/auth';
 import { graphqlRequest, GET_AGENT, GET_AGENT_PROPERTIES } from '../../../lib/graphql';
 import { Property, getPricePeriodLabel, getOptimizedImageUrl } from '../../../lib/types';
@@ -28,6 +28,7 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [profileExpanded, setProfileExpanded] = useState(false);
 
   useEffect(() => {
     async function loadAgentData() {
@@ -104,81 +105,106 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
         <ArrowLeft size={16} /> Back to Browse
       </Link>
 
-      {/* Agent Info Banner */}
-      <div className={styles.profileCard}>
-        <div className={styles.avatarContainer}>
-          {agent.profileImage ? (
-            <img src={agent.profileImage} alt={agent.name} className={styles.avatarImage} />
-          ) : (
-            agent.name.charAt(0).toUpperCase()
-          )}
+      <div className={styles.pageLayout}>
+        {/* Sidebar Column */}
+        <aside className={styles.sidebar}>
+          {/* Agent Info Banner — collapse/expand on mobile */}
+          <div className={styles.profileCard}>
+
+        {/* ── Always-visible collapsed strip ── */}
+        <div
+          className={styles.collapsedStrip}
+          onClick={() => setProfileExpanded(v => !v)}
+          role="button"
+          aria-expanded={profileExpanded}
+          aria-label="Toggle agent profile"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+            <div className={styles.avatarContainer}>
+              {agent.profileImage ? (
+                <img src={agent.profileImage} alt={agent.name} className={styles.avatarImage} />
+              ) : (
+                agent.name.charAt(0).toUpperCase()
+              )}
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <h1 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', lineHeight: 1.2 }}>{agent.name}</h1>
+              <div className={styles.agentBadge} style={{ marginBottom: 0, marginTop: '4px' }}>
+                <ShieldCheck size={12} /> Verified Rental Agent
+              </div>
+            </div>
+          </div>
+          {/* Toggle icon — only visible on mobile */}
+          <span className={styles.toggleIcon}>
+            {profileExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          </span>
         </div>
 
-        <div className={styles.profileInfo}>
-          <div className={styles.agentBadge}>
-            <ShieldCheck size={14} />
-            Verified Rental Agent
-          </div>
+        {/* ── Expandable detail section ── */}
+        <div className={`${styles.expandableSection} ${profileExpanded ? styles.expandableOpen : ''}`}>
+          <div className={styles.profileInfo}>
+            <p className={styles.agentBio}>
+              {agent.bio ||
+                `Independent rental agent on HO Rentals. Contact directly to arrange viewings and inquiries for the listings below.`}
+            </p>
 
-          <h1 className={styles.agentName}>{agent.name}</h1>
-
-          <p className={styles.agentBio}>
-            {agent.bio ||
-              `Independent rental agent on HO Rentals. Contact directly to arrange viewings and inquiries for the listings below.`}
-          </p>
-
-          {/* Stats Row */}
-          <div style={{ display: 'flex', gap: '16px', margin: '14px 0', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Total Listed</span>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{properties.length}</strong>
+            {/* Stats Row */}
+            <div style={{ display: 'flex', gap: '16px', margin: '14px 0', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Total Listed</span>
+                <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{properties.length}</strong>
+              </div>
+              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Available</span>
+                <strong style={{ fontSize: '0.95rem', color: '#10B981' }}>
+                  {properties.filter((p) => p.status === 'available').length}
+                </strong>
+              </div>
+              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Rented / Occupied</span>
+                <strong style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+                  {properties.filter((p) => p.status === 'rented' || p.status === 'occupied').length}
+                </strong>
+              </div>
             </div>
-            <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Available</span>
-              <strong style={{ fontSize: '0.95rem', color: '#10B981' }}>
-                {properties.filter((p) => p.status === 'available').length}
-              </strong>
-            </div>
-            <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Rented / Occupied</span>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-                {properties.filter((p) => p.status === 'rented' || p.status === 'occupied').length}
-              </strong>
-            </div>
-          </div>
 
-          <div className={styles.contactRow}>
-            {isOwnProfile ? (
-              <Link
-                href="/upload"
-                className="btn btn-primary"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', borderRadius: '30px', fontWeight: 700, textDecoration: 'none' }}
-              >
-                <PlusCircle size={18} /> + Add New Listing to My Portfolio
-              </Link>
-            ) : (
-              agent.phone && (
-                <>
-                  <a
-                    href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals.`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${styles.contactBtn} ${styles.whatsappBtn}`}
-                  >
-                    <MessageCircle size={16} /> WhatsApp Agent
-                  </a>
-                  <a
-                    href={`tel:${agent.phone}`}
-                    className={`${styles.contactBtn} ${styles.callBtn}`}
-                  >
-                    <Phone size={16} /> Call {agent.phone}
-                  </a>
-                </>
-              )
-            )}
+            <div className={styles.contactRow}>
+              {isOwnProfile ? (
+                <Link
+                  href="/upload"
+                  className="btn btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', borderRadius: '30px', fontWeight: 700, textDecoration: 'none' }}
+                >
+                  <PlusCircle size={18} /> + Add New Listing to My Portfolio
+                </Link>
+              ) : (
+                agent.phone && (
+                  <>
+                    <a
+                      href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`${styles.contactBtn} ${styles.whatsappBtn}`}
+                    >
+                      <MessageCircle size={16} /> WhatsApp Agent
+                    </a>
+                    <a
+                      href={`tel:${agent.phone}`}
+                      className={`${styles.contactBtn} ${styles.callBtn}`}
+                    >
+                      <Phone size={16} /> Call {agent.phone}
+                    </a>
+                  </>
+                )
+              )}
+            </div>
           </div>
         </div>
       </div>
+      </aside>
+
+      {/* Listings Column */}
+      <main className={styles.mainContent}>
 
       {/* Properties Listed Section Header */}
       <div className={styles.sectionHeader} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
@@ -256,6 +282,8 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
           ))}
         </div>
       )}
+      </main>
+      </div>
     </div>
   );
 }
