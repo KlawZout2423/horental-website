@@ -30,7 +30,7 @@ export const resolvers = {
       if (!user) return null;
       return prisma.user.findUnique({
         where: { id: user.id },
-        select: { id: true, name: true, email: true, role: true, phone: true, bio: true, profileImage: true, agentLocation: true, agentWhatsapp: true, mustChangePassword: true }
+        select: { id: true, name: true, email: true, role: true, phone: true, mustChangePassword: true }
       });
     },
 
@@ -45,26 +45,40 @@ export const resolvers = {
     },
 
     properties: async (_: any, { type }: { type?: string }, { user }: { user: { id: number } | null }) => {
-      const dbUser = user ? await prisma.user.findUnique({ where: { id: user.id } }) : null;
-      const isAdmin = dbUser?.role === 'admin';
+      let isAdmin = false;
+      if (user) {
+        try {
+          const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+          isAdmin = dbUser?.role === 'admin';
+        } catch {
+          isAdmin = false;
+        }
+      }
 
-      const where: any = type ? { type } : {};
+      const where: any = {};
+      if (type && type !== 'All') {
+        where.type = type;
+      }
 
       if (!isAdmin) {
-        // Hide pending_approval properties unless the logged-in user is the owner
         where.OR = [
-          { status: { not: 'pending_approval' } },
-          user ? { ownerId: user.id } : undefined
-        ].filter(Boolean);
+          { status: { notIn: ['pending_approval', 'pending_verification'] } },
+          { status: 'available' },
+          { status: null },
+          ...(user ? [{ ownerId: user.id }] : [])
+        ];
       }
 
       return prisma.property.findMany({
         where,
         include: {
-          owner: true,
+          owner: {
+            select: { id: true, name: true, email: true, role: true, phone: true }
+          },
           company: true,
           images: { orderBy: { order: 'asc' } },
         },
+        orderBy: { createdAt: 'desc' }
       });
     },
 
@@ -72,7 +86,9 @@ export const resolvers = {
       const prop = await prisma.property.findUnique({
         where: { id },
         include: {
-          owner: true,
+          owner: {
+            select: { id: true, name: true, email: true, role: true, phone: true }
+          },
           company: true,
           images: { orderBy: { order: 'asc' } },
         },
