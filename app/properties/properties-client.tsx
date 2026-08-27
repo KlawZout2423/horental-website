@@ -122,14 +122,19 @@ export default function PropertiesClient() {
     }
 
     // Filter by property type
-    if (propertyType !== 'All') {
+    if (propertyType === 'All') {
+      // Exclude agent properties from the default "All" filter
+      result = result.filter((p) => p.owner?.role !== 'agent');
+    } else if (propertyType.toLowerCase() === 'agents') {
+      result = result.filter((p) => p.owner?.role === 'agent');
+    } else {
       if (propertyType.toLowerCase() === 'self-contained') {
         result = result.filter((p) => {
           const type = p.type.toLowerCase();
-          return type.includes('sc') || type.includes('self contained') || type.includes('self-contained');
+          return (type.includes('sc') || type.includes('self contained') || type.includes('self-contained')) && p.owner?.role !== 'agent';
         });
       } else {
-        result = result.filter((p) => p.type.toLowerCase() === propertyType.toLowerCase());
+        result = result.filter((p) => p.type.toLowerCase() === propertyType.toLowerCase() && p.owner?.role !== 'agent');
       }
     }
 

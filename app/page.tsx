@@ -152,14 +152,21 @@ export default function Home() {
   useEffect(() => {
     let result = properties;
 
-    if (activeTypeFilter !== 'All' && activeTypeFilter !== 'agents') {
+    if (activeTypeFilter === 'All') {
+      // Exclude agent-submitted properties from the "All" chip
+      result = result.filter((p) => p.owner?.role !== 'agent');
+    } else if (activeTypeFilter === 'agents') {
+      // Handled separately by rendering Agent Profile Cards Grid
+      result = result.filter((p) => p.owner?.role === 'agent');
+    } else {
+      // Category chips (Student Hostel, Single Room, etc.) exclude agent properties
       if (activeTypeFilter === 'self-contained') {
         result = result.filter((p) => {
           const type = p.type.toLowerCase();
-          return type.includes('sc') || type.includes('self contained') || type.includes('self-contained');
+          return (type.includes('sc') || type.includes('self contained') || type.includes('self-contained')) && p.owner?.role !== 'agent';
         });
       } else {
-        result = result.filter((p) => p.type.toLowerCase() === activeTypeFilter.toLowerCase());
+        result = result.filter((p) => p.type.toLowerCase() === activeTypeFilter.toLowerCase() && p.owner?.role !== 'agent');
       }
     }
 
