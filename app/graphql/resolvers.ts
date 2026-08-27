@@ -658,9 +658,14 @@ export const resolvers = {
         throw new Error('Not authorized to upload properties');
       }
 
-      // Agents MUST have a profile picture uploaded before posting properties
-      if (fullUser?.role === 'agent' && (!fullUser?.profileImage || !fullUser.profileImage.trim())) {
-        throw new Error('Profile picture required: As a rental agent, you must upload your profile photo before posting properties so tenants can verify your identity.');
+      // Agents MUST have complete profile details (profile picture & bio) before posting properties
+      if (fullUser?.role === 'agent') {
+        if (!fullUser?.profileImage || !fullUser.profileImage.trim()) {
+          throw new Error('Profile picture required: As a rental agent, you must upload your profile photo before posting properties so tenants can verify your identity.');
+        }
+        if (!fullUser?.bio || !fullUser.bio.trim()) {
+          throw new Error('Agent bio required: Please enter your agent profile bio/description before posting property listings.');
+        }
       }
 
       const defaultCompany = await prisma.company.findFirst({ where: { isOwnCompany: true } });

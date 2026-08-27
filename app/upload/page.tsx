@@ -294,67 +294,86 @@ export default function UploadPage({
     }
   };
 
-  // Agent Profile Picture Upload states
-  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
-  const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
-  const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
-  const [profilePicSuccess, setProfilePicSuccess] = useState(false);
+  // Agent Profile setup modal states
+  const [showAgentSetupModal, setShowAgentSetupModal] = useState(false);
+  const [agentBioInput, setAgentBioInput] = useState('');
+  const [agentLocationInput, setAgentLocationInput] = useState('');
+  const [agentWhatsappInput, setAgentWhatsappInput] = useState('');
+  const [agentPhotoFile, setAgentPhotoFile] = useState<File | null>(null);
+  const [agentPhotoPreview, setAgentPhotoPreview] = useState<string | null>(null);
+  const [savingAgentProfile, setSavingAgentProfile] = useState(false);
+  const [agentModalError, setAgentModalError] = useState<string | null>(null);
 
-  const isAgentWithoutPhoto = user?.role === 'agent' && (!user?.profileImage || !user.profileImage.trim());
+  // Auto open setup modal if agent has incomplete profile details
+  useEffect(() => {
+    if (user?.role === 'agent') {
+      setAgentBioInput(user.bio || '');
+      setAgentLocationInput(user.agentLocation || 'Ho, Volta Region');
+      setAgentWhatsappInput(user.agentWhatsapp || user.phone || '');
+      setAgentPhotoPreview(user.profileImage || null);
 
-  const handleProfilePicSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setProfilePicFile(file);
-      setProfilePicPreview(URL.createObjectURL(file));
-      setProfilePicSuccess(false);
+      if (!user.profileImage || !user.bio || !user.agentLocation || !user.agentWhatsapp) {
+        setShowAgentSetupModal(true);
+      }
     }
-  };
+  }, [user]);
 
-  const handleSaveProfilePic = async () => {
-    if (!profilePicFile || !user) return;
-    setUploadingProfilePic(true);
-    setError(null);
+  const handleSaveFullAgentProfile = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setAgentModalError(null);
+
+    if (!agentBioInput.trim()) {
+      setAgentModalError('Please enter a short bio or description for your agent profile.');
+      return;
+    }
+
+    if (!user?.profileImage && !agentPhotoFile && !agentPhotoPreview) {
+      setAgentModalError('Please select a profile photo for your agent profile card.');
+      return;
+    }
+
+    setSavingAgentProfile(true);
     try {
-      const formData = new FormData();
-      formData.append('image', profilePicFile);
+      let photoUrl = user?.profileImage || '';
+      if (agentPhotoFile) {
+        const formData = new FormData();
+        formData.append('image', agentPhotoFile);
 
-      const uploadRes = await fetch('/api/upload', {
-        method: 'POST',
-        credentials: 'same-origin',
-        body: formData,
-      });
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: formData,
+        });
 
-      if (!uploadRes.ok) {
-        throw new Error('Failed to upload profile photo.');
+        if (!uploadRes.ok) {
+          throw new Error('Failed to upload profile photo. Please try again.');
+        }
+
+        const uploadData = await uploadRes.json();
+        photoUrl = uploadData.imageUrl || uploadData.url || photoUrl;
       }
 
-      const uploadData = await uploadRes.json();
-      const photoUrl = uploadData.imageUrl || uploadData.url;
-
-      if (!photoUrl) {
-        throw new Error('No image URL returned from upload server.');
-      }
+      const formattedWa = formatGhanaPhone(agentWhatsappInput);
 
       const updatedProfile = await graphqlRequest<{ updateAgentProfile: User }>(
         UPDATE_AGENT_PROFILE,
         {
-          bio: user.bio || 'Verified Rental Agent on HO Rentals',
-          profileImage: photoUrl,
-          agentLocation: user.agentLocation || '',
-          agentWhatsapp: user.agentWhatsapp || ''
+          bio: sanitizeInput(agentBioInput.trim()),
+          profileImage: photoUrl || null,
+          agentLocation: sanitizeInput(agentLocationInput.trim()),
+          agentWhatsapp: formattedWa,
         }
       );
 
       if (updatedProfile?.updateAgentProfile) {
         updateUser(updatedProfile.updateAgentProfile);
-        setProfilePicSuccess(true);
+        setShowAgentSetupModal(false);
       }
     } catch (err: any) {
-      console.error('Profile pic upload error:', err);
-      setError(err.message || 'Failed to save profile photo.');
+      console.error('Save agent profile error:', err);
+      setAgentModalError(err.message || 'Failed to save agent details.');
     } finally {
-      setUploadingProfilePic(false);
+      setSavingAgentProfile(false);
     }
   };
 
@@ -370,95 +389,221 @@ export default function UploadPage({
 
   const formContent = (
     <>
-      {/* Agent Profile Picture Required Card */}
+      {/* Agent Setup Prompt Modal */}
+      {showAgentSetupModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(6px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+          overflowY: 'auto'
+        }}>
+          <div className="card glass animate-fade-in" style={{
+            maxWidth: '540px',
+            width: '100%',
+            backgroundColor: 'var(--bg-surface)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '28px',
+            border: '1px solid var(--border)',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ background: 'var(--primary)', color: '#fff', borderRadius: '50%', width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', flexShrink: 0 }}>
+                🏢
+              </div>
+              <div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Agent Details & Photo Required
+                </h2>
+                <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600 }}>
+                  Please confirm your profile details before posting listings
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.5 }}>
+              Your profile photo, bio, location, and WhatsApp line will be displayed on property cards and agent cards so tenants can verify your identity and contact you directly.
+            </p>
+
+            {agentModalError && (
+              <div style={{ backgroundColor: 'var(--danger-light)', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '12px 16px', borderRadius: 'var(--radius-sm)', marginBottom: '16px', fontSize: '0.88rem' }}>
+                {agentModalError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveFullAgentProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Photo Uploader */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: 'var(--bg-surface-secondary)', padding: '14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', border: '2px solid var(--primary)' }}>
+                  {agentPhotoPreview ? (
+                    <img src={agentPhotoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    '👤'
+                  )}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>
+                    Agent Profile Photo *
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="modalAgentPhotoInput"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const file = e.target.files[0];
+                        setAgentPhotoFile(file);
+                        setAgentPhotoPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                  <label htmlFor="modalAgentPhotoInput" className="btn btn-secondary" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <UploadCloud size={14} /> {agentPhotoPreview ? 'Change Photo' : 'Select Photo File'}
+                  </label>
+                </div>
+              </div>
+
+              {/* Bio Input */}
+              <div className="form-group">
+                <label htmlFor="agentBioInput" style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Agent Bio / Description *
+                </label>
+                <textarea
+                  id="agentBioInput"
+                  rows={3}
+                  placeholder="e.g. Independent verified rental agent in Ho. Specializing in student hostels near UHAS, HTU, and commercial apartments across Volta Region."
+                  value={agentBioInput}
+                  onChange={(e) => setAgentBioInput(e.target.value)}
+                  className="form-control"
+                  style={{ fontSize: '0.88rem' }}
+                  required
+                />
+              </div>
+
+              {/* Location Input */}
+              <div className="form-group">
+                <label htmlFor="agentLocationInput" style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Primary Operating Location / City
+                </label>
+                <input
+                  id="agentLocationInput"
+                  type="text"
+                  placeholder="e.g. Ho, Sokode, Volta Region"
+                  value={agentLocationInput}
+                  onChange={(e) => setAgentLocationInput(e.target.value)}
+                  className="form-control"
+                  style={{ fontSize: '0.88rem' }}
+                />
+              </div>
+
+              {/* WhatsApp Line Input */}
+              <div className="form-group">
+                <label htmlFor="agentWhatsappInput" style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  WhatsApp Phone Number for Inquiries
+                </label>
+                <input
+                  id="agentWhatsappInput"
+                  type="text"
+                  placeholder="e.g. 0241234567"
+                  value={agentWhatsappInput}
+                  onChange={(e) => setAgentWhatsappInput(e.target.value)}
+                  className="form-control"
+                  style={{ fontSize: '0.88rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="submit"
+                  disabled={savingAgentProfile}
+                  className="btn btn-primary"
+                  style={{ flex: 1, padding: '12px', fontSize: '0.92rem', fontWeight: 700 }}
+                >
+                  {savingAgentProfile ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <Loader className="animate-spin" size={16} /> Saving Details...
+                    </span>
+                  ) : (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <Sparkles size={16} /> Save Profile & Post Listing
+                    </span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Agent Verified Profile Badge Card Header */}
       {user?.role === 'agent' && (
         <div style={{
-          backgroundColor: isAgentWithoutPhoto ? '#FFFBEB' : 'var(--bg-surface-secondary)',
-          border: isAgentWithoutPhoto ? '2px solid #F59E0B' : '1px solid var(--border)',
+          backgroundColor: 'var(--bg-surface-secondary)',
+          border: '1px solid var(--border)',
           borderRadius: 'var(--radius-md)',
-          padding: '20px',
+          padding: '18px 20px',
           marginBottom: '24px',
-          boxShadow: isAgentWithoutPhoto ? '0 4px 12px rgba(245, 158, 11, 0.15)' : 'none'
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '16px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div style={{
-              width: '64px',
-              height: '64px',
+              width: '54px',
+              height: '54px',
               borderRadius: '50%',
               overflow: 'hidden',
               flexShrink: 0,
-              border: '3px solid var(--primary)',
+              border: '2px solid var(--primary)',
               backgroundColor: 'var(--bg-surface)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '1.8rem'
+              fontSize: '1.6rem'
             }}>
-              {profilePicPreview || user?.profileImage ? (
-                <img
-                  src={profilePicPreview || user?.profileImage}
-                  alt={user.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+              {user?.profileImage ? (
+                <img src={user.profileImage} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 '👤'
               )}
             </div>
 
-            <div style={{ flex: 1, minWidth: '220px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                  Agent Profile Photo {isAgentWithoutPhoto ? '(Required Before Listing)' : ''}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Agent: {user.name}
                 </h3>
-                {user?.profileImage && (
-                  <span style={{ fontSize: '0.75rem', backgroundColor: '#10B981', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: 700 }}>
-                    Verified Photo
-                  </span>
-                )}
+                <span style={{ fontSize: '0.72rem', backgroundColor: '#10B981', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: 700 }}>
+                  Verified Agent
+                </span>
               </div>
-
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 12px 0', lineHeight: 1.4 }}>
-                {isAgentWithoutPhoto
-                  ? 'As a rental agent, your profile photo is displayed on property cards and agent cards so tenants can verify your identity.'
-                  : 'Your agent photo will be displayed on property cards & agent profile cards.'}
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                {user.bio || 'Verified Rental Agent on HO Rentals'}
               </p>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfilePicSelect}
-                  id="agentProfilePicInput"
-                  style={{ display: 'none' }}
-                />
-                <label
-                  htmlFor="agentProfilePicInput"
-                  className="btn btn-secondary"
-                  style={{ cursor: 'pointer', padding: '7px 14px', fontSize: '0.82rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <UploadCloud size={15} /> {user?.profileImage ? 'Change Photo' : 'Select Photo File'}
-                </label>
-
-                {profilePicFile && !profilePicSuccess && (
-                  <button
-                    type="button"
-                    onClick={handleSaveProfilePic}
-                    disabled={uploadingProfilePic}
-                    className="btn btn-primary"
-                    style={{ padding: '7px 16px', fontSize: '0.82rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    {uploadingProfilePic ? <Loader className="animate-spin" size={15} /> : <Sparkles size={15} />} Upload & Save Photo
-                  </button>
-                )}
-
-                {profilePicSuccess && (
-                  <span style={{ color: '#10B981', fontWeight: 700, fontSize: '0.82rem' }}>
-                    ✅ Profile photo updated!
-                  </span>
-                )}
-              </div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAgentSetupModal(true)}
+            className="btn btn-secondary"
+            style={{ padding: '8px 14px', fontSize: '0.82rem', fontWeight: 600 }}
+          >
+            ✏️ Edit Agent Profile
+          </button>
         </div>
       )}
 
