@@ -36,7 +36,7 @@ const TYPE_CHIPS = [
   { label: 'Lands', type: 'Lands' },
   { label: 'Shops', type: 'Shops' },
   { label: 'Short Stay', type: 'Short Stay' },
-  { label: '🏢 Agent Listings', type: 'agents' }
+  { label: '🤝 Verified Agents', type: 'agents' }
 ];
 
 const SELF_CONTAINED_OPTIONS = [

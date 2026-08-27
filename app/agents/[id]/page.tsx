@@ -121,6 +121,26 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
               `Independent rental agent on HO Rentals. Contact directly to arrange viewings and inquiries for the listings below.`}
           </p>
 
+          {/* Stats Row */}
+          <div style={{ display: 'flex', gap: '16px', margin: '14px 0', flexWrap: 'wrap' }}>
+            <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Total Listed</span>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{properties.length}</strong>
+            </div>
+            <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Available</span>
+              <strong style={{ fontSize: '0.95rem', color: '#10B981' }}>
+                {properties.filter((p) => p.status === 'available').length}
+              </strong>
+            </div>
+            <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Rented / Occupied</span>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+                {properties.filter((p) => p.status === 'rented' || p.status === 'occupied').length}
+              </strong>
+            </div>
+          </div>
+
           <div className={styles.contactRow}>
             {agent.phone && (
               <>
@@ -144,10 +164,10 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Agent Listings Section */}
+      {/* Properties Listed Section */}
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>
-          Agent Listings ({properties.length})
+          Properties listed by {agent.name} ({properties.length})
         </h2>
       </div>
 
@@ -172,6 +192,9 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
                     alt={p.title}
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                   />
+                  <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(16, 185, 129, 0.9)', color: '#fff', padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <ShieldCheck size={12} /> Verified Property
+                  </div>
                   <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.65)', color: '#fff', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>
                     {p.type}
                   </div>
