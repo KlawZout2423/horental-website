@@ -658,6 +658,11 @@ export const resolvers = {
         throw new Error('Not authorized to upload properties');
       }
 
+      // Agents MUST have a profile picture uploaded before posting properties
+      if (fullUser?.role === 'agent' && (!fullUser?.profileImage || !fullUser.profileImage.trim())) {
+        throw new Error('Profile picture required: As a rental agent, you must upload your profile photo before posting properties so tenants can verify your identity.');
+      }
+
       const defaultCompany = await prisma.company.findFirst({ where: { isOwnCompany: true } });
       if (!defaultCompany) throw new Error('Default company not found');
 

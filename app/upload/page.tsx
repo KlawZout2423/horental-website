@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
-import { graphqlRequest, CREATE_PROPERTY } from '../../lib/graphql';
+import { graphqlRequest, CREATE_PROPERTY, UPDATE_AGENT_PROFILE } from '../../lib/graphql';
 import { UploadCloud, Image as ImageIcon, Sparkles, Loader } from 'lucide-react';
-import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../lib/types';
+import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, User } from '../../lib/types';
 import styles from './upload.module.css';
 
 export default function UploadPage({
@@ -15,7 +15,7 @@ export default function UploadPage({
   isEmbedded?: boolean;
   onSuccess?: () => void;
 }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, updateUser } = useAuth();
   const router = useRouter();
 
   // Form states
@@ -148,6 +148,11 @@ export default function UploadPage({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (user?.role === 'agent' && (!user?.profileImage || !user.profileImage.trim())) {
+      setError('Profile picture required: As an agent, you must upload your profile photo above before posting property listings.');
+      return;
+    }
 
     if (imageFiles.length === 0) {
       setError('Please upload at least one image of your property.');
@@ -289,6 +294,70 @@ export default function UploadPage({
     }
   };
 
+  // Agent Profile Picture Upload states
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
+  const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
+  const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
+  const [profilePicSuccess, setProfilePicSuccess] = useState(false);
+
+  const isAgentWithoutPhoto = user?.role === 'agent' && (!user?.profileImage || !user.profileImage.trim());
+
+  const handleProfilePicSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setProfilePicFile(file);
+      setProfilePicPreview(URL.createObjectURL(file));
+      setProfilePicSuccess(false);
+    }
+  };
+
+  const handleSaveProfilePic = async () => {
+    if (!profilePicFile || !user) return;
+    setUploadingProfilePic(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append('image', profilePicFile);
+
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('Failed to upload profile photo.');
+      }
+
+      const uploadData = await uploadRes.json();
+      const photoUrl = uploadData.imageUrl || uploadData.url;
+
+      if (!photoUrl) {
+        throw new Error('No image URL returned from upload server.');
+      }
+
+      const updatedProfile = await graphqlRequest<{ updateAgentProfile: User }>(
+        UPDATE_AGENT_PROFILE,
+        {
+          bio: user.bio || 'Verified Rental Agent on HO Rentals',
+          profileImage: photoUrl,
+          agentLocation: user.agentLocation || '',
+          agentWhatsapp: user.agentWhatsapp || ''
+        }
+      );
+
+      if (updatedProfile?.updateAgentProfile) {
+        updateUser(updatedProfile.updateAgentProfile);
+        setProfilePicSuccess(true);
+      }
+    } catch (err: any) {
+      console.error('Profile pic upload error:', err);
+      setError(err.message || 'Failed to save profile photo.');
+    } finally {
+      setUploadingProfilePic(false);
+    }
+  };
+
   if (authLoading || !user) {
     if (isEmbedded) return null;
     return (
@@ -301,6 +370,98 @@ export default function UploadPage({
 
   const formContent = (
     <>
+      {/* Agent Profile Picture Required Card */}
+      {user?.role === 'agent' && (
+        <div style={{
+          backgroundColor: isAgentWithoutPhoto ? '#FFFBEB' : 'var(--bg-surface-secondary)',
+          border: isAgentWithoutPhoto ? '2px solid #F59E0B' : '1px solid var(--border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '20px',
+          marginBottom: '24px',
+          boxShadow: isAgentWithoutPhoto ? '0 4px 12px rgba(245, 158, 11, 0.15)' : 'none'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              flexShrink: 0,
+              border: '3px solid var(--primary)',
+              backgroundColor: 'var(--bg-surface)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.8rem'
+            }}>
+              {profilePicPreview || user?.profileImage ? (
+                <img
+                  src={profilePicPreview || user?.profileImage}
+                  alt={user.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                '👤'
+              )}
+            </div>
+
+            <div style={{ flex: 1, minWidth: '220px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Agent Profile Photo {isAgentWithoutPhoto ? '(Required Before Listing)' : ''}
+                </h3>
+                {user?.profileImage && (
+                  <span style={{ fontSize: '0.75rem', backgroundColor: '#10B981', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: 700 }}>
+                    Verified Photo
+                  </span>
+                )}
+              </div>
+
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 12px 0', lineHeight: 1.4 }}>
+                {isAgentWithoutPhoto
+                  ? 'As a rental agent, your profile photo is displayed on property cards and agent cards so tenants can verify your identity.'
+                  : 'Your agent photo will be displayed on property cards & agent profile cards.'}
+              </p>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfilePicSelect}
+                  id="agentProfilePicInput"
+                  style={{ display: 'none' }}
+                />
+                <label
+                  htmlFor="agentProfilePicInput"
+                  className="btn btn-secondary"
+                  style={{ cursor: 'pointer', padding: '7px 14px', fontSize: '0.82rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <UploadCloud size={15} /> {user?.profileImage ? 'Change Photo' : 'Select Photo File'}
+                </label>
+
+                {profilePicFile && !profilePicSuccess && (
+                  <button
+                    type="button"
+                    onClick={handleSaveProfilePic}
+                    disabled={uploadingProfilePic}
+                    className="btn btn-primary"
+                    style={{ padding: '7px 16px', fontSize: '0.82rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    {uploadingProfilePic ? <Loader className="animate-spin" size={15} /> : <Sparkles size={15} />} Upload & Save Photo
+                  </button>
+                )}
+
+                {profilePicSuccess && (
+                  <span style={{ color: '#10B981', fontWeight: 700, fontSize: '0.82rem' }}>
+                    ✅ Profile photo updated!
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div style={{ backgroundColor: 'var(--danger-light)', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '16px', borderRadius: 'var(--radius-md)', marginBottom: '24px', fontSize: '0.95rem' }}>
           {error}
