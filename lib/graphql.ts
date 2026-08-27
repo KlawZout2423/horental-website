@@ -60,7 +60,10 @@ export async function graphqlRequest<T = any>(
     return body.data;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
-    console.error('GraphQL Request Error:', message);
+    // Only log unexpected errors — not user-facing validation errors like duplicate accounts
+    if (!message.includes('already exists') && !message.includes('Invalid credentials') && !message.includes('Not authenticated') && !message.includes('Not authorized')) {
+      console.error('GraphQL Request Error:', message);
+    }
     throw new Error(message);
   }
 }
@@ -75,6 +78,10 @@ export const ME_QUERY = `
       email
       phone
       role
+      bio
+      profileImage
+      agentLocation
+      agentWhatsapp
       mustChangePassword
     }
   }
@@ -135,6 +142,7 @@ export const GET_PROPERTIES = `
         id
         name
         email
+        role
       }
       company {
         id
@@ -173,6 +181,7 @@ export const GET_PROPERTY_BY_ID = `
         id
         name
         email
+        role
       }
       gallery {
         id
@@ -585,7 +594,69 @@ export const PUBLISH_LANDLORD_REGISTRATION = `
     }
   }
 `;
+export const GET_AGENT = `
+  query GetAgent($id: Int!) {
+    user(id: $id) {
+      id
+      name
+      email
+      phone
+      role
+      bio
+      profileImage
+    }
+  }
+`;
 
+export const GET_AGENT_PROPERTIES = `
+  query GetAgentProperties($userId: Int!) {
+    agentProperties(userId: $userId) {
+      id
+      title
+      type
+      status
+      price
+      location
+      imageUrl
+      isFeatured
+      createdAt
+      owner {
+        id
+        name
+        role
+      }
+    }
+  }
+`;
 
+export const UPDATE_AGENT_PROFILE = `
+  mutation UpdateAgentProfile($bio: String!, $profileImage: String, $agentLocation: String, $agentWhatsapp: String) {
+    updateAgentProfile(bio: $bio, profileImage: $profileImage, agentLocation: $agentLocation, agentWhatsapp: $agentWhatsapp) {
+      id
+      name
+      email
+      role
+      phone
+      bio
+      profileImage
+      agentLocation
+      agentWhatsapp
+    }
+  }
+`;
 
-
+export const GET_MY_PROPERTIES = `
+  query GetMyProperties {
+    agentProperties: properties {
+      id
+      title
+      type
+      status
+      price
+      location
+      imageUrl
+      isFeatured
+      createdAt
+    }
+  }
+`;

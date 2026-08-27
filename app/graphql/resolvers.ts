@@ -3,14 +3,11 @@ import jwt from 'jsonwebtoken';
 import prisma from '../../lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../lib/types';
+import { getJwtSecret } from '../../lib/env';
+import { collectPayment } from '../../lib/momo';
 
 const COMMISSION_FEE = 5;
 
-// Mock / placeholder for payment collection
-async function collectPayment(phone: string, amount: number, transactionId: string, description: string) {
-  // Implement actual MoMo payment logic here
-  return true;
-}
 
 // Helper to record audit logs for crucial system events
 async function createAuditLog(action: string, details: string, userEmail?: string | null) {
@@ -33,18 +30,34 @@ export const resolvers = {
       if (!user) return null;
       return prisma.user.findUnique({
         where: { id: user.id },
-        select: { id: true, name: true, email: true, role: true, phone: true, mustChangePassword: true }
+        select: { id: true, name: true, email: true, role: true, phone: true, bio: true, profileImage: true, agentLocation: true, agentWhatsapp: true, mustChangePassword: true }
       });
     },
 
-    users: async () => {
+    users: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
       return prisma.user.findMany({
         select: { id: true, name: true, email: true, role: true, phone: true, mustChangePassword: true },
       });
     },
 
-    properties: async (_: any, { type }: { type?: string }) => {
-      const where = type ? { type } : {};
+    properties: async (_: any, { type }: { type?: string }, { user }: { user: { id: number } | null }) => {
+      const dbUser = user ? await prisma.user.findUnique({ where: { id: user.id } }) : null;
+      const isAdmin = dbUser?.role === 'admin';
+
+      const where: any = type ? { type } : {};
+
+      if (!isAdmin) {
+        // Hide pending_approval properties unless the logged-in user is the owner
+        where.OR = [
+          { status: { not: 'pending_approval' } },
+          user ? { ownerId: user.id } : undefined
+        ].filter(Boolean);
+      }
+
       return prisma.property.findMany({
         where,
         include: {
@@ -55,8 +68,8 @@ export const resolvers = {
       });
     },
 
-    property: async (_: any, { id }: { id: number }) => {
-      return prisma.property.findUnique({
+    property: async (_: any, { id }: { id: number }, { user }: { user: { id: number } | null }) => {
+      const prop = await prisma.property.findUnique({
         where: { id },
         include: {
           owner: true,
@@ -64,9 +77,64 @@ export const resolvers = {
           images: { orderBy: { order: 'asc' } },
         },
       });
+      if (!prop) return null;
+      if (prop.status === 'pending_approval') {
+        if (!user) return null;
+        const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+        if (dbUser?.role !== 'admin' && prop.ownerId !== user.id) {
+          return null;
+        }
+      }
+      return prop;
     },
 
-    dashboardStats: async () => {
+    // Public: fetch a single user by ID (restricted to agent profile pages or self/admin query)
+    user: async (_: any, { id }: { id: number }, { user }: { user: { id: number } | null }) => {
+      const targetUser = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, name: true, email: true, role: true, phone: true, bio: true, profileImage: true, agentLocation: true, agentWhatsapp: true },
+      });
+      if (!targetUser) return null;
+
+      // Allow if:
+      // 1. Requester is an admin
+      if (user) {
+        const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+        if (dbUser?.role === 'admin') return targetUser;
+        // 2. Requester is querying their own profile
+        if (user.id === id) return targetUser;
+      }
+
+      // 3. Otherwise, public access is only allowed for agent/partner/admin profiles
+      if (targetUser.role === 'agent' || targetUser.role === 'partner' || targetUser.role === 'admin') {
+        return targetUser;
+      }
+
+      // Hide normal customer profiles from public access
+      return null;
+    },
+
+    // Public: fetch all approved properties submitted by a specific agent
+    agentProperties: async (_: any, { userId }: { userId: number }) => {
+      return prisma.property.findMany({
+        where: {
+          ownerId: userId,
+          status: 'available',
+        },
+        include: {
+          owner: true,
+          company: true,
+          images: { orderBy: { order: 'asc' } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    },
+
+    dashboardStats: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
       try {
         const totalProperties = await prisma.property.count();
         const totalUsers = await prisma.user.count();
@@ -307,19 +375,39 @@ export const resolvers = {
       const sanitizedName = sanitizeInput(input.name);
       const formattedPhone = formatGhanaPhone(input.phone);
 
-      const hashed = await bcrypt.hash(input.password, 10);
-      const user = await prisma.user.create({
-        data: {
-          name: sanitizedName,
-          email: input.email,
-          password: hashed,
-          phone: formattedPhone,
-        },
-      });
+      // Check if this phone number is already registered
+      const existingByPhone = await prisma.user.findFirst({ where: { phone: formattedPhone } });
+      if (existingByPhone) {
+        throw new Error('An account with this phone number already exists. Please log in instead.');
+      }
 
-      const JWT_SECRET = process.env.JWT_SECRET || 'horentals-super-secret-jwt-key-2026';
-      const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
-      return { token, user };
+      // Check if this email is already registered (email is derived from phone on the frontend)
+      const existingByEmail = await prisma.user.findUnique({ where: { email: input.email } });
+      if (existingByEmail) {
+        throw new Error('An account with this phone number already exists. Please log in instead.');
+      }
+
+      try {
+        const hashed = await bcrypt.hash(input.password, 10);
+        const user = await prisma.user.create({
+          data: {
+            name: sanitizedName,
+            email: input.email,
+            password: hashed,
+            phone: formattedPhone,
+          },
+        });
+
+        const JWT_SECRET = getJwtSecret();
+        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
+        return { token, user };
+      } catch (err: any) {
+        // Prisma unique constraint error (P2002) — fallback safety net
+        if (err?.code === 'P2002') {
+          throw new Error('An account with this phone number already exists. Please log in instead.');
+        }
+        throw err;
+      }
     },
 
     login: async (_: any, { email, password }: any) => {
@@ -332,7 +420,7 @@ export const resolvers = {
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) throw new Error('Invalid credentials');
 
-      const JWT_SECRET = process.env.JWT_SECRET || 'horentals-super-secret-jwt-key-2026';
+      const JWT_SECRET = getJwtSecret();
       const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
       createAuditLog('USER_LOGIN', `User ${user.name} (${user.email}) logged in`, user.email);
       return { token, user };
@@ -435,12 +523,15 @@ export const resolvers = {
       if (!user) throw new Error('Not authenticated');
 
       const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
-      if (fullUser?.role !== 'admin' && fullUser?.role !== 'partner') {
+      if (fullUser?.role !== 'admin' && fullUser?.role !== 'partner' && fullUser?.role !== 'agent') {
         throw new Error('Not authorized to upload properties');
       }
 
       const defaultCompany = await prisma.company.findFirst({ where: { isOwnCompany: true } });
       if (!defaultCompany) throw new Error('Default company not found');
+
+      // Agents force properties to pending_approval status, partners/admins default to available
+      const status = fullUser?.role === 'agent' ? 'pending_approval' : (input.status || 'available');
 
       return prisma.property.create({
         data: {
@@ -455,7 +546,7 @@ export const resolvers = {
           contact: formatGhanaPhone(input.contact),
           landlordName: input.landlordName ? sanitizeInput(input.landlordName) : null,
           type: input.type,
-          status: input.status || 'available',
+          status,
           imageUrl: input.imageUrl,
           isFeatured: input.isFeatured ?? false,
           ownerId: user.id,
@@ -495,6 +586,15 @@ export const resolvers = {
       if (updateData.latitude !== undefined && updateData.latitude !== null) updateData.latitude = parseFloat(updateData.latitude);
       if (updateData.longitude !== undefined && updateData.longitude !== null) updateData.longitude = parseFloat(updateData.longitude);
 
+      // Force status back to pending_approval if edited by an agent (non-admin)
+      if (fullUser?.role !== 'admin') {
+        if (fullUser?.role === 'agent') {
+          updateData.status = 'pending_approval';
+        } else {
+          delete updateData.status;
+        }
+      }
+
       await prisma.property.update({ where: { id }, data: updateData });
 
       // Update gallery images
@@ -514,6 +614,21 @@ export const resolvers = {
         where: { id },
         include: { owner: true, company: true, images: { orderBy: { order: 'asc' } } },
       });
+    },
+
+    updatePropertyStatus: async (_: any, { id, status }: { id: number; status: string }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Not authorized to update property status');
+
+      const updated = await prisma.property.update({
+        where: { id },
+        data: { status: sanitizeInput(status) },
+        include: { owner: true, company: true, images: { orderBy: { order: 'asc' } } },
+      });
+
+      createAuditLog('PROPERTY_STATUS_UPDATED', `Admin ${adminUser.email} updated status of property #${id} to ${status}`, adminUser.email);
+      return updated;
     },
 
     deleteProperty: async (_: any, { id }: any, { user }: { user: { id: number } | null }) => {
@@ -592,12 +707,16 @@ export const resolvers = {
         },
       });
 
-      const JWT_SECRET = process.env.JWT_SECRET || 'horentals-super-secret-jwt-key-2026';
+      const JWT_SECRET = getJwtSecret();
       const token = jwt.sign({ id: partner.id }, JWT_SECRET, { expiresIn: '7d' });
       return { token, user: partner };
     },
 
-    updatePropertyCompany: async (_: any, { id, companyId }: any) => {
+    updatePropertyCompany: async (_: any, { id, companyId }: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
       return prisma.property.update({
         where: { id },
         data: { companyId },
@@ -840,6 +959,27 @@ export const resolvers = {
       if (adminUser?.role !== 'admin') throw new Error('Not authorized');
 
       return { id: typeof id === 'string' ? parseInt(id, 10) : id };
+    },
+
+    updateAgentProfile: async (_: any, { bio, profileImage, agentLocation, agentWhatsapp }: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (dbUser?.role !== 'agent' && dbUser?.role !== 'admin') throw new Error('Only agents can update their profile.');
+      if (!bio?.trim()) throw new Error('Bio is required.');
+
+      const updated = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          bio: sanitizeInput(bio.trim()),
+          profileImage: profileImage?.trim() || null,
+          agentLocation: agentLocation ? sanitizeInput(agentLocation.trim()) : null,
+          agentWhatsapp: agentWhatsapp ? formatGhanaPhone(agentWhatsapp.trim()) : null,
+        },
+        select: { id: true, name: true, email: true, role: true, phone: true, bio: true, profileImage: true, agentLocation: true, agentWhatsapp: true, mustChangePassword: true },
+      });
+
+      createAuditLog('AGENT_PROFILE_UPDATED', `Agent ${dbUser.name} (${dbUser.email}) updated their profile`, dbUser.email);
+      return updated;
     },
   },
 

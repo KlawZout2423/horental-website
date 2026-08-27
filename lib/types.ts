@@ -3,7 +3,11 @@ export interface User {
   name: string;
   email: string;
   phone: string;
-  role: 'admin' | 'user' | 'partner' | string;
+  role: 'admin' | 'user' | 'agent' | 'partner' | string;
+  bio?: string;
+  profileImage?: string;
+  agentLocation?: string;
+  agentWhatsapp?: string;
   mustChangePassword?: boolean;
 }
 
@@ -30,6 +34,16 @@ export interface Property {
     caption?: string;
     order?: number;
   }>;
+  owner?: {
+    id: string;
+    name: string;
+    email?: string;
+    role?: string;
+  };
+  company?: {
+    id: string;
+    name: string;
+  };
 }
 
 /**

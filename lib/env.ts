@@ -7,6 +7,8 @@ export interface EnvConfig {
   DATABASE_URL?: string;
   JWT_SECRET?: string;
   NEXT_PUBLIC_API_URL?: string;
+  PAYSTACK_SECRET_KEY?: string;
+  NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY?: string;
 }
 
 export function validateEnv(): EnvConfig {
@@ -14,7 +16,10 @@ export function validateEnv(): EnvConfig {
     DATABASE_URL: process.env.DATABASE_URL,
     JWT_SECRET: process.env.JWT_SECRET,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY,
+    NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
   };
+
 
   const missing: string[] = [];
 
@@ -32,3 +37,19 @@ export function validateEnv(): EnvConfig {
 }
 
 export const env = validateEnv();
+
+/**
+ * Returns the configured JWT_SECRET.
+ * Enforces requirement in production mode; falls back safely in development.
+ */
+export function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET environment variable is missing in production!');
+    }
+    return 'horentals-super-secret-jwt-key-2026';
+  }
+  return secret;
+}
+
