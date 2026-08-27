@@ -271,6 +271,8 @@ export default function Home() {
               <div className={styles.searchInputWrapper}>
                 <Search size={18} className={styles.searchIcon} />
                 <input
+                  id="hero-search-input"
+                  name="searchQuery"
                   type="text"
                   placeholder="Search location, campus (UHAS, HTU), or property title..."
                   value={searchQuery}
@@ -306,6 +308,8 @@ export default function Home() {
             <div className={styles.mobileSearchInputWrapper}>
               <Search size={16} className={styles.searchIcon} />
               <input
+                id="mobile-search-input"
+                name="searchQuery"
                 type="text"
                 placeholder="Search properties..."
                 value={searchQuery}

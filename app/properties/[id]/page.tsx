@@ -921,6 +921,8 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Your Name</label>
                 <input
+                  id="connect-customer-name"
+                  name="customerName"
                   type="text"
                   placeholder="e.g. John Doe"
                   value={customerName}
@@ -928,12 +930,15 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                   required
                   className="form-control"
                   style={{ padding: '12px' }}
+                  autoComplete="name"
                 />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Your Phone Number</label>
                 <input
+                  id="connect-customer-phone"
+                  name="customerPhone"
                   type="tel"
                   placeholder="e.g. 0241234567"
                   value={customerPhone}
@@ -942,6 +947,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                   maxLength={10}
                   className="form-control"
                   style={{ padding: '12px' }}
+                  autoComplete="tel"
                 />
               </div>
 
