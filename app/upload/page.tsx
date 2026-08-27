@@ -149,11 +149,6 @@ export default function UploadPage({
     e.preventDefault();
     setError(null);
 
-    if (user?.role === 'agent' && (!user?.profileImage || !user.profileImage.trim())) {
-      setError('Profile picture required: As an agent, you must upload your profile photo above before posting property listings.');
-      return;
-    }
-
     if (imageFiles.length === 0) {
       setError('Please upload at least one image of your property.');
       return;
@@ -304,18 +299,13 @@ export default function UploadPage({
   const [savingAgentProfile, setSavingAgentProfile] = useState(false);
   const [agentModalError, setAgentModalError] = useState<string | null>(null);
 
-  // Auto open setup modal only ONCE if agent has never entered bio/photo
+  // Sync agent inputs from user session
   useEffect(() => {
     if (user?.role === 'agent') {
       setAgentBioInput(user.bio || '');
       setAgentLocationInput(user.agentLocation || 'Ho, Volta Region');
       setAgentWhatsappInput(user.agentWhatsapp || user.phone || '');
       setAgentPhotoPreview(user.profileImage || null);
-
-      // Only auto-prompt once if bio OR profile image is missing
-      if (!user.bio || !user.profileImage) {
-        setShowAgentSetupModal(true);
-      }
     }
   }, [user?.id, user?.bio, user?.profileImage]);
 
