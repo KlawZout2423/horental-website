@@ -49,18 +49,23 @@
 /* ── Desktop: always expanded, no toggle ── */
 @media (min-width: 768px) {
   .profileCard {
-    padding: 32px;
+    flex-direction: row;
     align-items: center;
-    text-align: center;
+    justify-content: space-between;
+    padding: 24px 32px;
+    gap: 32px;
   }
 
   .collapsedStrip {
     pointer-events: none;
     cursor: default;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    padding: 0 0 16px;
-    gap: 10px;
+    padding: 0;
+    gap: 16px;
+    background: transparent !important;
+    width: auto;
+    flex-shrink: 0;
   }
 
   .collapsedStrip:hover {
@@ -72,19 +77,43 @@
   }
 
   .expandableSection {
-    max-height: 1000px !important;
-    padding: 0 !important;
+    max-height: none !important;
     overflow: visible;
+    padding: 0 !important;
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .profileInfo {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 32px;
+  }
+
+  .agentBio {
+    margin: 0;
+    text-align: left;
+    max-width: 380px;
+    flex: 1;
   }
 
   .avatarContainer {
-    width: 150px;
-    height: 150px;
-    font-size: 3.5rem;
-    box-shadow: 0 6px 24px rgba(193, 18, 31, 0.3);
-    border: 4px solid var(--bg-surface);
-    outline: 3px solid var(--primary);
-    margin: 0 auto 20px;
+    width: 80px;
+    height: 80px;
+    font-size: 2.2rem;
+    box-shadow: 0 4px 14px rgba(193, 18, 31, 0.2);
+    border: 3px solid var(--bg-surface);
+    outline: 2px solid var(--primary);
+    margin: 0;
+  }
+
+  .contactRow {
+    justify-content: flex-end;
   }
 }
 
@@ -240,7 +269,7 @@
 .pageLayout {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
 }
 
 .sidebar {
@@ -248,19 +277,5 @@
 }
 
 .mainContent {
-  flex: 1;
-}
-
-@media (min-width: 992px) {
-  .pageLayout {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 40px;
-    align-items: flex-start;
-  }
-
-  .sidebar {
-    position: sticky;
-    top: 96px;
-  }
+  width: 100%;
 }
