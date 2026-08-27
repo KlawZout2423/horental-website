@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
+import jwt from 'jsonwebtoken';
 
 /**
  * POST /api/admin/reset-traffic-views
@@ -8,19 +9,21 @@ import prisma from '../../../../lib/prisma';
 export async function POST(req: NextRequest) {
   try {
     const authCookie = req.cookies.get('auth_token')?.value;
-    const userDataCookie = req.cookies.get('user_data')?.value;
 
-    if (!authCookie || !userDataCookie) {
+    if (!authCookie) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    let userObj: any = {};
     try {
-      userObj = JSON.parse(decodeURIComponent(userDataCookie));
-    } catch {}
-
-    if (userObj.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden. Admin privileges required.' }, { status: 403 });
+      const JWT_SECRET = process.env.JWT_SECRET || 'horentals-super-secret-jwt-key-2026';
+      const decoded = jwt.verify(authCookie, JWT_SECRET) as { id: number };
+      
+      const dbUser = await prisma.user.findUnique({ where: { id: decoded.id } });
+      if (!dbUser || dbUser.role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden. Admin privileges required.' }, { status: 403 });
+      }
+    } catch (err) {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
     const deleted = await prisma.pageVisit.deleteMany({});

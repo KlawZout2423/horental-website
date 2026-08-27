@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
 import prisma from '../../../../lib/prisma';
+import jwt from 'jsonwebtoken';
 
 // Automatically load Cloudinary configuration from process.env (CLOUDINARY_URL)
 cloudinary.config();
@@ -14,19 +15,21 @@ export async function POST(req: NextRequest) {
   try {
     // 1. Verify admin authorization
     const authCookie = req.cookies.get('auth_token')?.value;
-    const userDataCookie = req.cookies.get('user_data')?.value;
 
-    if (!authCookie || !userDataCookie) {
+    if (!authCookie) {
       return NextResponse.json({ error: 'Unauthorized. Admin session required.' }, { status: 401 });
     }
 
-    let userObj: any = {};
     try {
-      userObj = JSON.parse(decodeURIComponent(userDataCookie));
-    } catch {}
-
-    if (userObj.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden. Admin privileges required.' }, { status: 403 });
+      const JWT_SECRET = process.env.JWT_SECRET || 'horentals-super-secret-jwt-key-2026';
+      const decoded = jwt.verify(authCookie, JWT_SECRET) as { id: number };
+      
+      const dbUser = await prisma.user.findUnique({ where: { id: decoded.id } });
+      if (!dbUser || dbUser.role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden. Admin privileges required.' }, { status: 403 });
+      }
+    } catch (err) {
+      return NextResponse.json({ error: 'Unauthorized. Admin session required.' }, { status: 401 });
     }
 
     // 2. Fetch all active image URLs from database (Properties, Gallery, Company Logos)

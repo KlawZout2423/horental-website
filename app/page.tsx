@@ -22,7 +22,8 @@ const TYPE_CHIPS = [
   { label: 'Furnitures', type: 'Furnitures' },
   { label: 'Lands', type: 'Lands' },
   { label: 'Shops', type: 'Shops' },
-  { label: 'Short Stay', type: 'Short Stay' }
+  { label: 'Short Stay', type: 'Short Stay' },
+  { label: '🏢 Agent Listings', type: 'agents' }
 ];
 
 const SELF_CONTAINED_OPTIONS = [
@@ -131,7 +132,9 @@ export default function Home() {
     let result = properties;
 
     if (activeTypeFilter !== 'All') {
-      if (activeTypeFilter === 'self-contained') {
+      if (activeTypeFilter === 'agents') {
+        result = result.filter((p) => p.owner?.role === 'agent');
+      } else if (activeTypeFilter === 'self-contained') {
         result = result.filter((p) => {
           const type = p.type.toLowerCase();
           return type.includes('sc') || type.includes('self contained') || type.includes('self-contained');
@@ -460,9 +463,11 @@ export default function Home() {
                 >
                   Clear Active Filters
                 </button>
-                <Link href="/upload" className="btn btn-primary">
-                  Post Your Listing
-                </Link>
+                {user && (user.role === 'agent' || user.role === 'partner' || user.role === 'admin') && (
+                  <Link href="/upload" className="btn btn-primary">
+                    Post Your Listing
+                  </Link>
+                )}
               </div>
             </div>
           ) : (

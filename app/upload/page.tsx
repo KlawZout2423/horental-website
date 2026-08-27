@@ -124,7 +124,7 @@ export default function UploadPage({
     if (!authLoading) {
       if (!user) {
         router.push('/login?redirect=/upload');
-      } else if (user.role !== 'admin' && user.role !== 'partner') {
+      } else if (user.role !== 'admin' && user.role !== 'partner' && user.role !== 'agent') {
         router.push('/');
       }
     }

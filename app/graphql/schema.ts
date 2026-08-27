@@ -61,6 +61,10 @@ export const typeDefs = `#graphql
         email: String!
         role: String!
         phone: String
+        bio: String
+        profileImage: String
+        agentLocation: String
+        agentWhatsapp: String
         mustChangePassword: Boolean
     }
 
@@ -237,6 +241,8 @@ export const typeDefs = `#graphql
     type Query {
         me: User
         users: [User!]!
+        user(id: Int!): User
+        agentProperties(userId: Int!): [Property!]!
         properties(type: String): [Property!]!
         property(id: Int!): Property
         companies: [Company!]!
@@ -264,6 +270,7 @@ export const typeDefs = `#graphql
         resolvePasswordResetRequest(id: Int!): BasicPayload!
         addProperty(input: PropertyInput!): Property!
         updateProperty(id: Int!, input: PropertyInput!): Property!
+        updatePropertyStatus(id: Int!, status: String!): Property!
         deleteProperty(id: Int!): Property!
         togglePropertyFeatured(id: Int!): Property!
         createCompany(name: String!, logoUrl: String, contact: String!, momoAccount: String): Company!
@@ -282,5 +289,6 @@ export const typeDefs = `#graphql
         publishLandlordRegistration(id: Int!): Property!
         updateReportStatus(id: Int!, status: String!): Report!
         deleteReport(id: Int!): Report!
+        updateAgentProfile(bio: String!, profileImage: String, agentLocation: String, agentWhatsapp: String): User!
     }
 `;

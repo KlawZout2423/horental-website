@@ -4,6 +4,8 @@ import { typeDefs } from './schema';
 import { resolvers } from './resolvers';
 import jwt from 'jsonwebtoken';
 
+import { getJwtSecret } from '../../lib/env';
+
 const server = new ApolloServer({
   typeDefs,
   resolvers,
@@ -40,9 +42,10 @@ const apolloHandler = startServerAndCreateNextHandler(server, {
     if (!token) return { user: null };
 
     try {
-      const JWT_SECRET = process.env.JWT_SECRET || 'horentals-super-secret-jwt-key-2026';
+      const JWT_SECRET = getJwtSecret();
       const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
       return { user: { id: decoded.id } };
+
     } catch (e) {
       return { user: null };
     }

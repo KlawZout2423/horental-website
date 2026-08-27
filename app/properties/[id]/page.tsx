@@ -23,6 +23,7 @@ interface PropertyOwner {
   id: string;
   name: string;
   email: string;
+  role: string;
 }
 
 interface Property {
@@ -797,6 +798,29 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               <span className={styles.infoValue}>{maskPhoneNumber(property.contact)}</span>
             </div>
 
+            {property.owner?.role === 'agent' && (
+              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+                <Link
+                  href={`/agents/${property.owner.id}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: 'var(--bg-surface-secondary)',
+                    border: '1px solid var(--border)',
+                    textDecoration: 'none',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.85rem',
+                    fontWeight: 600
+                  }}
+                >
+                  <span>🏢 Listed by Agent: <strong>{property.owner.name}</strong></span>
+                  <span style={{ color: 'var(--primary)', fontSize: '0.78rem' }}>View Profile &rarr;</span>
+                </Link>
+              </div>
+            )}
           </div>
 
           <div className={styles.contactActions}>

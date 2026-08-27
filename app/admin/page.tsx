@@ -14,6 +14,7 @@ import {
   DELETE_USER, 
   UPDATE_USER_ROLE, 
   UPDATE_PROPERTY,
+  UPDATE_PROPERTY_STATUS,
   GET_CONTACT_LOGS,
   TOGGLE_FEATURED,
   GET_REPORTS,
@@ -248,7 +249,8 @@ export default function AdminPage() {
   };
 
   // Filter Helper lists
-  const approvedProperties = properties;
+  const approvedProperties = properties.filter((p) => p.status !== 'pending_approval');
+  const pendingProperties = properties.filter((p) => p.status === 'pending_approval');
 
   // Security Redirect: Only allow Admin role
   useEffect(() => {
@@ -517,6 +519,30 @@ export default function AdminPage() {
       setMessage({ text: `Property status updated to ${newStatus}.`, isError: false });
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to update property status.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApproveProperty = async (id: string) => {
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      const parsedId = parseInt(id, 10);
+      if (isNaN(parsedId)) throw new Error('Invalid property ID format');
+
+      await graphqlRequest(UPDATE_PROPERTY_STATUS, { id: parsedId, status: 'available' });
+
+      setProperties((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, status: 'available' } : p))
+      );
+
+      const statsData = await graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS);
+      if (statsData) setStats(statsData.dashboardStats);
+
+      setMessage({ text: '🎉 Listing approved and published successfully!', isError: false });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to approve property.', isError: true });
     } finally {
       setActionLoading(false);
     }
@@ -1014,6 +1040,26 @@ export default function AdminPage() {
               <span>Active Listings</span>
               <span className={styles.navCountBadge}>{approvedProperties.length}</span>
             </button>
+            <button
+              onClick={() => setActiveTab('moderation')}
+              className={`${styles.navItem} ${activeTab === 'moderation' ? styles.activeNavItem : ''}`}
+              style={{
+                borderLeft: pendingProperties.length > 0 ? '3px solid #F59E0B' : undefined,
+                backgroundColor: activeTab === 'moderation' ? undefined : (pendingProperties.length > 0 ? 'rgba(245, 158, 11, 0.08)' : undefined)
+              }}
+            >
+              <CheckCircle size={16} style={{ color: pendingProperties.length > 0 ? '#F59E0B' : undefined }} />
+              <span style={{ fontWeight: pendingProperties.length > 0 ? 700 : 500 }}>Pending Approvals</span>
+              <span 
+                className={styles.navCountBadge}
+                style={{ 
+                  backgroundColor: pendingProperties.length > 0 ? '#F59E0B' : undefined,
+                  color: pendingProperties.length > 0 ? '#FFFFFF' : undefined
+                }}
+              >
+                {pendingProperties.length}
+              </span>
+            </button>
 
             <button
               onClick={() => setActiveTab('users')}
@@ -1118,6 +1164,7 @@ export default function AdminPage() {
             <span className={styles.breadcrumbActive}>
               {activeTab === 'analytics' && 'Analytics'}
               {activeTab === 'properties' && 'Properties'}
+              {activeTab === 'moderation' && 'Pending Approvals'}
               {activeTab === 'users' && 'Users'}
               {activeTab === 'audits' && 'Audit Logs'}
               {activeTab === 'traffic' && 'Traffic Analytics'}
@@ -1190,6 +1237,12 @@ export default function AdminPage() {
                     className={`${styles.navItem} ${activeTab === 'properties' ? styles.activeNavItem : ''}`}
                   >
                     <Building size={16} /> Active Listings ({approvedProperties.length})
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('moderation'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'moderation' ? styles.activeNavItem : ''}`}
+                  >
+                    <CheckCircle size={16} /> Pending Approvals ({pendingProperties.length})
                   </button>
                   <button
                     onClick={() => { setActiveTab('users'); setIsMobileDrawerOpen(false); }}
@@ -1266,6 +1319,7 @@ export default function AdminPage() {
               <h1 className={styles.pageTitle}>
                 {activeTab === 'analytics' && 'Overview Analytics'}
                 {activeTab === 'properties' && 'Property Listings'}
+                {activeTab === 'moderation' && 'Pending Agent Approvals'}
                 {activeTab === 'users' && 'Account Manager'}
                 {activeTab === 'audits' && 'Contact Inquiry Audits'}
             {activeTab === 'traffic' && 'Traffic & Campaign Analytics'}
@@ -1275,6 +1329,7 @@ export default function AdminPage() {
               <p className={styles.pageSubtitle}>
                 {activeTab === 'analytics' && 'Overview statistics, inventory performance, and user-submitted listing flags.'}
                 {activeTab === 'properties' && 'View, search, edit availability, and delete published property listings.'}
+                {activeTab === 'moderation' && 'Review, approve, or reject property listings posted by independent agents.'}
                 {activeTab === 'users' && 'Manage registered accounts and adjust credentials and system roles.'}
                 {activeTab === 'audits' && 'Real-time record of customer call and WhatsApp inquiries to landlords.'}
             {activeTab === 'traffic' && 'View traffic sources, visit trends, top listings, and generate campaign tracking links.'}
@@ -1775,6 +1830,141 @@ export default function AdminPage() {
                 )}
               </div>
             </>
+          ) : activeTab === 'moderation' ? (
+            <>
+              {/* Desktop Table View */}
+              <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Listing Info</th>
+                      <th>Type</th>
+                      <th>Price (GH₵)</th>
+                      <th>Location</th>
+                      <th>Agent Name</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingProperties.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                          No pending approvals found. All agent listings are reviewed!
+                        </td>
+                      </tr>
+                    ) : (
+                      pendingProperties.map((p) => (
+                        <tr key={p.id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <img 
+                                src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'} 
+                                alt={p.title} 
+                                style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)', flexShrink: 0 }}
+                              />
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.title}</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Posted: {p.createdAt ? new Date(parseInt(p.createdAt) || p.createdAt).toLocaleDateString() : 'N/A'}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ textTransform: 'capitalize', fontWeight: 600, color: 'var(--text-secondary)' }}>{p.type}</td>
+                          <td style={{ fontWeight: 700 }}>{p.price.toLocaleString()}</td>
+                          <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{p.location}</td>
+                          <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{p.owner?.name || p.landlordName || 'Unknown Agent'}</td>
+                          <td>
+                            <div className={styles.actionsCell} style={{ justifyContent: 'flex-end', gap: '8px' }}>
+                              <Link
+                                href={`/properties/${p.id}`}
+                                target="_blank"
+                                className="btn btn-outline"
+                                style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', borderColor: 'var(--primary-light)' }}
+                              >
+                                Preview
+                              </Link>
+                              <button
+                                onClick={() => handleApproveProperty(p.id)}
+                                disabled={actionLoading}
+                                className="btn"
+                                style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProperty(p.id)}
+                                disabled={actionLoading}
+                                className="btn btn-outline"
+                                style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card List View */}
+              <div className={styles.mobileCardList}>
+                {pendingProperties.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No pending approvals found. All agent listings are reviewed!</p>
+                ) : (
+                  pendingProperties.map((p) => (
+                    <div key={p.id} className={styles.adminCardItem}>
+                      <div className={styles.adminCardHeader}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <img
+                            src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'}
+                            alt={p.title}
+                            style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}
+                          />
+                          <div>
+                            <div className={styles.adminCardTitle}>{p.title}</div>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textTransform: 'capitalize', fontWeight: 600 }}>{p.type} • {p.location}</span>
+                          </div>
+                        </div>
+                        <span className="badge badge-pending">Pending</span>
+                      </div>
+
+                      <div className={styles.adminCardMeta}>
+                        <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1rem' }}>GH₵ {p.price.toLocaleString()}</span>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Agent: <strong>{p.owner?.name || p.landlordName || 'Unknown'}</strong></span>
+                      </div>
+
+                      <div className={styles.adminCardActions}>
+                        <Link
+                          href={`/properties/${p.id}`}
+                          target="_blank"
+                          className="btn btn-outline"
+                          style={{ padding: '8px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                        >
+                          Preview
+                        </Link>
+                        <button
+                          onClick={() => handleApproveProperty(p.id)}
+                          disabled={actionLoading}
+                          className="btn"
+                          style={{ padding: '8px 12px', fontSize: '0.8rem', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700 }}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProperty(p.id)}
+                          disabled={actionLoading}
+                          className="btn btn-outline"
+                          style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--danger)' }}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           ) : activeTab === 'users' ? (
             <>
               {/* Desktop Table View */}
@@ -1816,6 +2006,7 @@ export default function AdminPage() {
                               className={styles.selectRole}
                             >
                               <option value="user">User</option>
+                              <option value="agent">Agent</option>
                               <option value="admin">Admin</option>
                             </select>
                           </td>
@@ -1873,6 +2064,7 @@ export default function AdminPage() {
                           style={{ flex: 1 }}
                         >
                           <option value="user">User</option>
+                          <option value="agent">Agent</option>
                           <option value="admin">Admin</option>
                         </select>
                         <button
@@ -3168,11 +3360,6 @@ export default function AdminPage() {
                 )}
               </div>
             </div>
-          </div>
-          </div>
-          </div>
-          </div>
-          </div>
           </div>
           ) : null}
         </div>

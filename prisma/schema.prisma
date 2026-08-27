@@ -13,6 +13,10 @@ model User {
   password           String
   role               String   @default("user")
   phone              String?
+  bio                String?
+  profileImage       String?
+  agentLocation      String?
+  agentWhatsapp      String?
   resetOtpCode       String?
   resetOtpExpires    DateTime?
   mustChangePassword Boolean  @default(false)
