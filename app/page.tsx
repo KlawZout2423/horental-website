@@ -226,28 +226,19 @@ export default function Home() {
 
   return (
     <div className="animate-fade-in">
-      
       {/* Hero Banner */}
       <header className={styles.hero}>
         <div className={styles.heroWrapper}>
           <div className={styles.heroLeft}>
-            <div className={styles.heroBadge} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '40px', backgroundColor: 'rgba(99, 102, 241, 0.25)', border: '1px solid rgba(168, 85, 247, 0.4)', fontSize: '0.85rem', fontWeight: 700, color: '#ffffff', marginBottom: '12px', backdropFilter: 'blur(10px)' }}>
-              <Sparkles size={14} style={{ color: '#a855f7' }} /> HO Rentals SaaS Platform
-            </div>
-            <h1 className={styles.title}>The Modern Real Estate & Rental SaaS Engine</h1>
+            <h1 className={styles.title}>Find Verified Rooms & Apartments in Ho</h1>
             <p className={styles.subtitle}>
               Verified rooms, apartments, student hostels, shops & commercial spaces across Ho, Volta Region and Ghana. Zero middleman markups.
             </p>
 
             <div style={{ display: 'flex', gap: '12px', margin: '8px 0 16px', flexWrap: 'wrap' }}>
-              <Link href="/dashboard" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '30px', fontWeight: 700, background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', border: 'none', color: '#fff' }}>
-                <Building2 size={16} /> Landlord & Agent SaaS Portal &rarr;
-              </Link>
-              <a href="#properties" className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '30px', fontWeight: 600, color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
+              <a href="#properties" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', borderRadius: '30px', fontWeight: 600, color: '#fff' }}>
                 <Search size={16} /> Browse Rentals
               </a>
-            </div>
-
             <form onSubmit={handleSearchSubmit} className={styles.searchContainer}>
               <div className={styles.searchInputWrapper}>
                 <Search size={18} className={styles.searchIcon} />
