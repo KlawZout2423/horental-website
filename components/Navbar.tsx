@@ -85,6 +85,7 @@ export default function Navbar() {
         <div className={styles.navLinks}>
           <Link href="/" className={isActive('/')}>Home</Link>
           <Link href="/properties" className={isActive('/properties')}>Search Rentals</Link>
+          <Link href="/dashboard" className={isActive('/dashboard')}>SaaS Portal</Link>
           <Link href="/about" className={isActive('/about')}>About Us</Link>
           <Link href="/favorites" className={isActive('/favorites')}>Favorites</Link>
           {user && (user.role === 'admin' || user.role === 'agent') && (
