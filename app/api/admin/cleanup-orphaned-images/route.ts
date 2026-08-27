@@ -24,7 +24,10 @@ export async function POST(req: NextRequest) {
       const JWT_SECRET = process.env.JWT_SECRET || 'horentals-super-secret-jwt-key-2026';
       const decoded = jwt.verify(authCookie, JWT_SECRET) as { id: number };
       
-      const dbUser = await prisma.user.findUnique({ where: { id: decoded.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: { id: true, role: true }
+      });
       if (!dbUser || dbUser.role !== 'admin') {
         return NextResponse.json({ error: 'Forbidden. Admin privileges required.' }, { status: 403 });
       }

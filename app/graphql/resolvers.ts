@@ -36,7 +36,10 @@ export const resolvers = {
 
     users: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true, email: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return prisma.user.findMany({
@@ -48,7 +51,10 @@ export const resolvers = {
       let isAdmin = false;
       if (user) {
         try {
-          const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { id: true, role: true }
+          });
           isAdmin = dbUser?.role === 'admin';
         } catch {
           isAdmin = false;
@@ -96,7 +102,10 @@ export const resolvers = {
       if (!prop) return null;
       if (prop.status === 'pending_approval') {
         if (!user) return null;
-        const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { id: true, role: true }
+        });
         if (dbUser?.role !== 'admin' && prop.ownerId !== user.id) {
           return null;
         }
@@ -108,14 +117,17 @@ export const resolvers = {
     user: async (_: any, { id }: { id: number }, { user }: { user: { id: number } | null }) => {
       const targetUser = await prisma.user.findUnique({
         where: { id },
-        select: { id: true, name: true, email: true, role: true, phone: true, bio: true, profileImage: true, agentLocation: true, agentWhatsapp: true },
+        select: { id: true, name: true, email: true, role: true, phone: true },
       });
       if (!targetUser) return null;
 
       // Allow if:
       // 1. Requester is an admin
       if (user) {
-        const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { id: true, role: true }
+        });
         if (dbUser?.role === 'admin') return targetUser;
         // 2. Requester is querying their own profile
         if (user.id === id) return targetUser;
@@ -138,7 +150,9 @@ export const resolvers = {
           status: 'available',
         },
         include: {
-          owner: true,
+          owner: {
+            select: { id: true, name: true, email: true, role: true, phone: true }
+          },
           company: true,
           images: { orderBy: { order: 'asc' } },
         },
@@ -148,7 +162,10 @@ export const resolvers = {
 
     dashboardStats: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       try {
@@ -195,7 +212,10 @@ export const resolvers = {
 
     pageVisitAnalytics: async (_: any, { period }: { period?: string }, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       const now = new Date();
@@ -337,7 +357,10 @@ export const resolvers = {
 
     contactLogs: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return prisma.contactLog.findMany({
@@ -348,7 +371,10 @@ export const resolvers = {
 
     passwordResetRequests: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return prisma.passwordResetRequest.findMany({
@@ -358,7 +384,10 @@ export const resolvers = {
 
     auditLogs: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return prisma.auditLog.findMany({
@@ -369,7 +398,10 @@ export const resolvers = {
 
     landlordRegistrations: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return prisma.landlordRegistration.findMany({
@@ -379,7 +411,10 @@ export const resolvers = {
 
     reports: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return [];
