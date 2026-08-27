@@ -184,7 +184,6 @@ export const resolvers = {
       return prisma.user.findMany({
         where: {
           role: 'agent',
-          profileImage: { not: null },
         },
         select: {
           id: true,
@@ -202,12 +201,12 @@ export const resolvers = {
       });
     },
 
-    // Public: fetch all approved properties submitted by a specific agent
+    // Public/Agent: fetch properties submitted by a specific agent
     agentProperties: async (_: any, { userId }: { userId: number }) => {
       return prisma.property.findMany({
         where: {
           ownerId: userId,
-          status: 'available',
+          status: { in: ['available', 'rented', 'pending_approval'] },
         },
         select: PROPERTY_SAFE_SELECT,
         orderBy: { createdAt: 'desc' },
