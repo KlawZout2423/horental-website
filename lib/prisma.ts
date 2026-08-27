@@ -16,7 +16,10 @@ if (globalForPrisma.prisma) {
   // Use connection pooling with standard node-postgres
   const dbUrl = process.env.DATABASE_URL || '';
   console.log('[Prisma Init] Initializing Prisma with DATABASE_URL:', dbUrl.replace(/:[^:@]+@/, ':***@'));
-  const pool = new pg.Pool({ connectionString: dbUrl });
+  const pool = new pg.Pool({
+    connectionString: dbUrl,
+    ssl: dbUrl.includes('supabase') || dbUrl.includes('pooler') ? { rejectUnauthorized: false } : false,
+  });
   const adapter = new PrismaPg(pool);
   
   prismaInstance = new PrismaClient({

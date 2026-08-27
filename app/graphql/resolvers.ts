@@ -8,6 +8,56 @@ import { collectPayment } from '../../lib/momo';
 
 const COMMISSION_FEE = 5;
 
+const USER_SAFE_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  password: true,
+  role: true,
+  phone: true,
+  mustChangePassword: true,
+  createdAt: true,
+};
+
+const PROPERTY_SAFE_SELECT = {
+  id: true,
+  title: true,
+  location: true,
+  price: true,
+  description: true,
+  imageUrl: true,
+  status: true,
+  type: true,
+  contact: true,
+  landlordName: true,
+  digitalAddress: true,
+  landmarks: true,
+  latitude: true,
+  longitude: true,
+  isFeatured: true,
+  createdAt: true,
+  ownerId: true,
+  companyId: true,
+  owner: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      phone: true,
+    }
+  },
+  company: {
+    select: {
+      id: true,
+      name: true,
+      logoUrl: true,
+      contact: true,
+      isOwnCompany: true,
+    }
+  },
+  images: { orderBy: { order: 'asc' as const } },
+};
 
 // Helper to record audit logs for crucial system events
 async function createAuditLog(action: string, details: string, userEmail?: string | null) {
@@ -30,7 +80,7 @@ export const resolvers = {
       if (!user) return null;
       return prisma.user.findUnique({
         where: { id: user.id },
-        select: { id: true, name: true, email: true, role: true, phone: true, mustChangePassword: true }
+        select: USER_SAFE_SELECT,
       });
     },
 
@@ -43,7 +93,7 @@ export const resolvers = {
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return prisma.user.findMany({
-        select: { id: true, name: true, email: true, role: true, phone: true, mustChangePassword: true },
+        select: USER_SAFE_SELECT,
       });
     },
 
@@ -70,20 +120,13 @@ export const resolvers = {
         where.OR = [
           { status: { notIn: ['pending_approval', 'pending_verification'] } },
           { status: 'available' },
-          { status: null },
           ...(user ? [{ ownerId: user.id }] : [])
         ];
       }
 
       return prisma.property.findMany({
         where,
-        include: {
-          owner: {
-            select: { id: true, name: true, email: true, role: true, phone: true }
-          },
-          company: true,
-          images: { orderBy: { order: 'asc' } },
-        },
+        select: PROPERTY_SAFE_SELECT,
         orderBy: { createdAt: 'desc' }
       });
     },
@@ -91,13 +134,7 @@ export const resolvers = {
     property: async (_: any, { id }: { id: number }, { user }: { user: { id: number } | null }) => {
       const prop = await prisma.property.findUnique({
         where: { id },
-        include: {
-          owner: {
-            select: { id: true, name: true, email: true, role: true, phone: true }
-          },
-          company: true,
-          images: { orderBy: { order: 'asc' } },
-        },
+        select: PROPERTY_SAFE_SELECT,
       });
       if (!prop) return null;
       if (prop.status === 'pending_approval') {
@@ -149,13 +186,7 @@ export const resolvers = {
           ownerId: userId,
           status: 'available',
         },
-        include: {
-          owner: {
-            select: { id: true, name: true, email: true, role: true, phone: true }
-          },
-          company: true,
-          images: { orderBy: { order: 'asc' } },
-        },
+        select: PROPERTY_SAFE_SELECT,
         orderBy: { createdAt: 'desc' },
       });
     },
@@ -489,6 +520,7 @@ export const resolvers = {
             password: hashed,
             phone: formattedPhone,
           },
+          select: USER_SAFE_SELECT,
         });
 
         const JWT_SECRET = getJwtSecret();
@@ -505,9 +537,15 @@ export const resolvers = {
 
     login: async (_: any, { email, password }: any) => {
       const cleanInput = (email || '').trim();
-      let user = await prisma.user.findUnique({ where: { email: cleanInput } });
+      let user = await prisma.user.findUnique({
+        where: { email: cleanInput },
+        select: USER_SAFE_SELECT,
+      });
       if (!user) {
-        user = await prisma.user.findFirst({ where: { phone: cleanInput } });
+        user = await prisma.user.findFirst({
+          where: { phone: cleanInput },
+          select: USER_SAFE_SELECT,
+        });
       }
       if (!user) throw new Error('Invalid credentials');
       const valid = await bcrypt.compare(password, user.password);
