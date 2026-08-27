@@ -179,6 +179,29 @@ export const resolvers = {
       return null;
     },
 
+    // Public: fetch all verified agents
+    agents: async () => {
+      return prisma.user.findMany({
+        where: {
+          role: 'agent',
+          profileImage: { not: null },
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          phone: true,
+          bio: true,
+          profileImage: true,
+          agentLocation: true,
+          agentWhatsapp: true,
+          verificationStatus: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    },
+
     // Public: fetch all approved properties submitted by a specific agent
     agentProperties: async (_: any, { userId }: { userId: number }) => {
       return prisma.property.findMany({

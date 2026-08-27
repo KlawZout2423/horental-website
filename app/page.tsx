@@ -4,13 +4,26 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../lib/auth';
-import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart, Building2, Zap, UserCheck } from 'lucide-react';
-import { graphqlRequest, GET_PROPERTIES } from '../lib/graphql';
+import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart, Building2, Zap, UserCheck, Building } from 'lucide-react';
+import { graphqlRequest, GET_PROPERTIES, GET_AGENTS } from '../lib/graphql';
 import { trackVisit } from '../lib/trackVisit';
 import styles from './page.module.css';
 import AuthPromptModal from '../components/AuthPromptModal';
 
 import { Property, getPricePeriodLabel, getOptimizedImageUrl, getStatusLabel } from '../lib/types';
+
+interface AgentUser {
+  id: number | string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: string;
+  bio?: string;
+  profileImage?: string;
+  agentLocation?: string;
+  agentWhatsapp?: string;
+  verificationStatus?: string;
+}
 
 const TYPE_CHIPS = [
   { label: 'All', type: 'All' },
@@ -52,6 +65,7 @@ export default function Home() {
   // Data State
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
+  const [agents, setAgents] = useState<AgentUser[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Search & Filter state
@@ -101,27 +115,34 @@ export default function Home() {
     }
   }, [showSelfContainedDropdown]);
 
-  // Fetch properties from database
+  // Fetch properties & agents from database
   useEffect(() => {
-    async function fetchProperties() {
+    async function fetchData() {
       try {
-        const data = await graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES);
-        if (data && data.properties) {
-          // Show ALL properties, featured ones sorted to the top
-          const sorted = [...data.properties].sort((a, b) => {
+        const [propsRes, agentsRes] = await Promise.all([
+          graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES),
+          graphqlRequest<{ agents: AgentUser[] }>(GET_AGENTS)
+        ]);
+
+        if (propsRes && propsRes.properties) {
+          const sorted = [...propsRes.properties].sort((a, b) => {
             if (a.isFeatured === b.isFeatured) return 0;
             return a.isFeatured ? -1 : 1;
           });
           setProperties(sorted);
           setFilteredProperties(sorted);
         }
+
+        if (agentsRes && agentsRes.agents) {
+          setAgents(agentsRes.agents);
+        }
       } catch (e) {
-        console.error('Error fetching properties:', e);
+        console.error('Error fetching data:', e);
       } finally {
         setLoading(false);
       }
     }
-    fetchProperties();
+    fetchData();
 
     // Log unique page visit with UTM + referrer (24h cooldown)
     trackVisit('/', 'visit_landing_timestamp');
@@ -131,10 +152,8 @@ export default function Home() {
   useEffect(() => {
     let result = properties;
 
-    if (activeTypeFilter !== 'All') {
-      if (activeTypeFilter === 'agents') {
-        result = result.filter((p) => p.owner?.role === 'agent');
-      } else if (activeTypeFilter === 'self-contained') {
+    if (activeTypeFilter !== 'All' && activeTypeFilter !== 'agents') {
+      if (activeTypeFilter === 'self-contained') {
         result = result.filter((p) => {
           const type = p.type.toLowerCase();
           return type.includes('sc') || type.includes('self contained') || type.includes('self-contained');
@@ -389,6 +408,102 @@ export default function Home() {
                 </div>
               ))}
             </div>
+          ) : activeTypeFilter === 'agents' ? (
+            agents.length === 0 ? (
+              <div className={styles.noListingsCard}>
+                <Building size={48} style={{ color: 'var(--text-muted)', marginBottom: '16px' }} />
+                <h3>No Verified Agents Listed Yet</h3>
+                <p>No verified rental agents are available at the moment.</p>
+              </div>
+            ) : (
+              <div className={styles.gridCards}>
+                {agents.map((agent, index) => {
+                  const agentProps = properties.filter(
+                    (p) => String(p.owner?.id) === String(agent.id)
+                  );
+                  const count = agentProps.length;
+
+                  return (
+                    <div
+                      key={agent.id}
+                      className={`${styles.propertyCard} animate-slide-up`}
+                      style={{
+                        animationDelay: `${index * 80}ms`,
+                        padding: '22px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        backgroundColor: 'var(--bg-surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-md)',
+                        boxShadow: 'var(--shadow-sm)'
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
+                          <div style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '50%',
+                            overflow: 'hidden',
+                            backgroundColor: 'var(--bg-surface-secondary)',
+                            border: '2px solid var(--primary)',
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1.4rem'
+                          }}>
+                            {agent.profileImage ? (
+                              <img src={agent.profileImage} alt={agent.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              agent.name.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                                {agent.name}
+                              </h3>
+                              <ShieldCheck size={16} style={{ color: '#10B981', flexShrink: 0 }} />
+                            </div>
+                            <span style={{ fontSize: '0.76rem', color: 'var(--primary)', fontWeight: 700 }}>
+                              Verified Rental Agent
+                            </span>
+                          </div>
+                        </div>
+
+                        {agent.agentLocation && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                            <MapPin size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                            <span>{agent.agentLocation}</span>
+                          </div>
+                        )}
+
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 16px 0', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {agent.bio || 'Verified independent rental agent on HO Rentals. Contact directly to arrange viewings.'}
+                        </p>
+                      </div>
+
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          🏢 {count} Active {count === 1 ? 'Listing' : 'Listings'}
+                        </span>
+
+                        <Link
+                          href={`/agents/${agent.id}`}
+                          className="btn btn-primary btn-sm"
+                          style={{ padding: '7px 14px', fontSize: '0.8rem', borderRadius: '20px', textDecoration: 'none', fontWeight: 700 }}
+                        >
+                          View Agent Profile →
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
           ) : filteredProperties.length === 0 ? (
             <div className={styles.noListingsCard}>
               <div className={styles.noListingsIllustration}>

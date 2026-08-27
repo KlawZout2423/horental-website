@@ -604,6 +604,25 @@ export const GET_AGENT = `
       role
       bio
       profileImage
+      agentLocation
+      agentWhatsapp
+    }
+  }
+`;
+
+export const GET_AGENTS = `
+  query GetAgents {
+    agents {
+      id
+      name
+      email
+      phone
+      role
+      bio
+      profileImage
+      agentLocation
+      agentWhatsapp
+      verificationStatus
     }
   }
 `;

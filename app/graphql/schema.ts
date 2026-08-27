@@ -305,6 +305,7 @@ export const typeDefs = `#graphql
     type Query {
         me: User
         users: [User!]!
+        agents: [User!]!
         user(id: Int!): User
         agentProperties(userId: Int!): [Property!]!
         properties(type: String): [Property!]!
