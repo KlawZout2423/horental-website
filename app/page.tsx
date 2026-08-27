@@ -436,7 +436,7 @@ export default function Home() {
                       className={`${styles.propertyCard} animate-slide-up`}
                       style={{
                         animationDelay: `${index * 80}ms`,
-                        padding: 0,
+                        padding: '28px 24px 22px',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -444,35 +444,26 @@ export default function Home() {
                         border: '1px solid var(--border)',
                         borderRadius: 'var(--radius-md)',
                         boxShadow: 'var(--shadow-sm)',
-                        overflow: 'hidden',
                         textAlign: 'center',
+                        gap: '10px',
                       }}
                     >
-                      {/* Large centred profile photo */}
-                      <div style={{
-                        width: '100%',
-                        height: '200px',
-                        background: 'linear-gradient(135deg, var(--primary) 0%, #0e7490 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        position: 'relative',
-                        flexShrink: 0,
-                      }}>
+                      {/* Centered photo with verified tick */}
+                      <div style={{ position: 'relative', display: 'inline-block', marginBottom: '4px' }}>
                         <div style={{
-                          width: '120px',
-                          height: '120px',
+                          width: '110px',
+                          height: '110px',
                           borderRadius: '50%',
                           overflow: 'hidden',
-                          border: '4px solid rgba(255,255,255,0.9)',
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                          border: '3px solid var(--primary)',
                           background: 'var(--bg-surface-secondary)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '2.8rem',
+                          fontSize: '2.6rem',
                           fontWeight: 900,
                           color: 'var(--primary)',
+                          boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
                         }}>
                           {agent.profileImage ? (
                             <img src={agent.profileImage} alt={agent.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -480,65 +471,73 @@ export default function Home() {
                             agent.name.charAt(0).toUpperCase()
                           )}
                         </div>
-                        {/* Verified badge pinned top-right */}
+                        {/* Green verified tick on photo */}
                         <div style={{
                           position: 'absolute',
-                          top: '12px',
-                          right: '12px',
+                          bottom: '4px',
+                          right: '4px',
+                          width: '26px',
+                          height: '26px',
+                          borderRadius: '50%',
                           background: '#10B981',
-                          color: '#fff',
-                          fontSize: '0.68rem',
-                          fontWeight: 800,
-                          padding: '3px 8px',
-                          borderRadius: '20px',
+                          border: '2px solid var(--bg-surface)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '4px',
-                          letterSpacing: '0.03em',
+                          justifyContent: 'center',
                         }}>
-                          <ShieldCheck size={11} /> Verified
+                          <ShieldCheck size={14} color="#fff" />
                         </div>
                       </div>
 
-                      {/* Card body */}
-                      <div style={{ padding: '18px 20px 20px', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1 }}>
-                        {/* Name */}
-                        <h3 style={{ fontSize: '1.08rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-                          {agent.name}
-                        </h3>
+                      {/* Name */}
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                        {agent.name}
+                      </h3>
 
-                        {/* Role label */}
-                        <span style={{ fontSize: '0.76rem', color: 'var(--primary)', fontWeight: 700 }}>
-                          Verified Rental Agent
-                        </span>
+                      {/* Verified badge */}
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                        fontSize: '0.74rem', color: '#10B981', fontWeight: 700,
+                        background: 'rgba(16,185,129,0.1)', padding: '3px 10px',
+                        borderRadius: '20px',
+                      }}>
+                        <ShieldCheck size={12} /> Verified Rental Agent
+                      </span>
 
-                        {/* Location */}
-                        {agent.agentLocation && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            <MapPin size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-                            <span>{agent.agentLocation}</span>
-                          </div>
-                        )}
-
-                        {/* Bio */}
-                        <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '4px 0 0', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {agent.bio || 'Verified independent rental agent on HO Rentals. Contact directly to arrange viewings.'}
-                        </p>
-
-                        {/* Footer: listings count + CTA */}
-                        <div style={{ marginTop: 'auto', paddingTop: '14px', borderTop: '1px solid var(--border)', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                            🏢 {count} {count === 1 ? 'Listing' : 'Listings'}
-                          </span>
-                          <Link
-                            href={`/agents/${agent.id}`}
-                            className="btn btn-primary btn-sm"
-                            style={{ padding: '7px 14px', fontSize: '0.8rem', borderRadius: '20px', textDecoration: 'none', fontWeight: 700 }}
-                          >
-                            View Profile →
-                          </Link>
+                      {/* Location */}
+                      {agent.agentLocation && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                          <MapPin size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                          <span>{agent.agentLocation}</span>
                         </div>
-                      </div>
+                      )}
+
+                      {/* Bio */}
+                      <p style={{
+                        fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '2px 0 4px',
+                        lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                        fontStyle: 'italic',
+                      }}>
+                        "{agent.bio || 'Verified independent rental agent on HO Rentals.'}"
+                      </p>
+
+                      {/* Divider */}
+                      <div style={{ width: '100%', height: '1px', background: 'var(--border)', margin: '4px 0' }} />
+
+                      {/* Listings count */}
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                        🏢 {count} {count === 1 ? 'Active Listing' : 'Active Listings'}
+                      </span>
+
+                      {/* CTA button — full width centered */}
+                      <Link
+                        href={`/agents/${agent.id}`}
+                        className="btn btn-primary btn-sm"
+                        style={{ width: '100%', padding: '9px 0', fontSize: '0.85rem', borderRadius: '20px', textDecoration: 'none', fontWeight: 700, textAlign: 'center', marginTop: '4px' }}
+                      >
+                        View Agent Profile →
+                      </Link>
                     </div>
                   );
                 })}
