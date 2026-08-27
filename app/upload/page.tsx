@@ -304,7 +304,7 @@ export default function UploadPage({
   const [savingAgentProfile, setSavingAgentProfile] = useState(false);
   const [agentModalError, setAgentModalError] = useState<string | null>(null);
 
-  // Auto open setup modal if agent has incomplete profile details
+  // Auto open setup modal only ONCE if agent has never entered bio/photo
   useEffect(() => {
     if (user?.role === 'agent') {
       setAgentBioInput(user.bio || '');
@@ -312,11 +312,12 @@ export default function UploadPage({
       setAgentWhatsappInput(user.agentWhatsapp || user.phone || '');
       setAgentPhotoPreview(user.profileImage || null);
 
-      if (!user.profileImage || !user.bio || !user.agentLocation || !user.agentWhatsapp) {
+      // Only auto-prompt once if bio OR profile image is missing
+      if (!user.bio || !user.profileImage) {
         setShowAgentSetupModal(true);
       }
     }
-  }, [user]);
+  }, [user?.id, user?.bio, user?.profileImage]);
 
   const handleSaveFullAgentProfile = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -524,6 +525,16 @@ export default function UploadPage({
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                {(user?.bio || user?.profileImage) && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAgentSetupModal(false)}
+                    className="btn btn-outline"
+                    style={{ padding: '12px 18px', fontSize: '0.88rem' }}
+                  >
+                    Keep Current Profile
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={savingAgentProfile}
@@ -536,7 +547,7 @@ export default function UploadPage({
                     </span>
                   ) : (
                     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      <Sparkles size={16} /> Save Profile & Post Listing
+                      <Sparkles size={16} /> Save Profile & Continue
                     </span>
                   )}
                 </button>
