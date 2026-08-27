@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Phone, MessageCircle, ShieldCheck, MapPin, Building, PlusCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Phone, MessageCircle, ShieldCheck, MapPin, Building, PlusCircle, ChevronDown, ChevronUp, Heart, Check } from 'lucide-react';
 import { useAuth } from '../../../lib/auth';
 import { graphqlRequest, GET_AGENT, GET_AGENT_PROPERTIES } from '../../../lib/graphql';
-import { Property, getPricePeriodLabel, getOptimizedImageUrl } from '../../../lib/types';
+import { Property, getPricePeriodLabel, getOptimizedImageUrl, getStatusLabel } from '../../../lib/types';
 import styles from './agent.module.css';
+import propStyles from '../../properties/properties.module.css';
 
 interface AgentData {
   id: string;
@@ -29,6 +30,37 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profileExpanded, setProfileExpanded] = useState(false);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+
+  // Load saved bookmarks from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('saved_properties');
+      if (stored) {
+        try {
+          setSavedIds(JSON.parse(stored));
+        } catch (err) {
+          console.error('Error parsing saved properties from localStorage:', err);
+        }
+      }
+    }
+  }, []);
+
+  const handleToggleSave = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      alert('Please log in to save properties.');
+      return;
+    }
+    setSavedIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((savedId) => savedId !== id) : [...prev, id];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('saved_properties', JSON.stringify(next));
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     async function loadAgentData() {
@@ -229,20 +261,25 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
           <p>{isOwnProfile ? "You haven't posted any property listings yet. Click '+ Add Listing' above to get started." : 'This agent currently does not have any active approved listings.'}</p>
         </div>
       ) : (
-        <div className={styles.propertiesGrid}>
-          {properties.map((p) => (
-            <Link
-              key={p.id}
-              href={`/properties/${p.id}`}
-              style={{ textDecoration: 'none', color: 'inherit' }}
-            >
-              <div className="card" style={{ overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s, box-shadow 0.2s' }}>
-                <div style={{ position: 'relative', width: '100%', paddingTop: '65%', backgroundColor: 'var(--bg-surface-secondary)' }}>
+        <div className={propStyles.grid}>
+          {properties.map((p, index) => {
+            const isSaved = savedIds.includes(p.id);
+            return (
+              <Link
+                key={p.id}
+                href={`/properties/${p.id}`}
+                className={`${propStyles.propertyCard} animate-slide-up`}
+                style={{ animationDelay: `${index * 50}ms`, textDecoration: 'none', color: 'inherit' }}
+              >
+                <div className={propStyles.imageWrapper}>
                   <img
-                    src={getOptimizedImageUrl(p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80', 600)}
+                    src={getOptimizedImageUrl(p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80', 500)}
                     alt={p.title}
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                    className={propStyles.propertyImage}
+                    loading={index < 2 ? "eager" : "lazy"}
+                    decoding="async"
                   />
+
                   {/* Status badge — pending shown only to owner */}
                   {p.status === 'pending_approval' ? (
                     <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(245, 158, 11, 0.92)', color: '#fff', padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700 }}>
@@ -253,19 +290,41 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
                       <ShieldCheck size={12} /> Verified Property
                     </div>
                   )}
-                  <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.65)', color: '#fff', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>
-                    {p.type}
-                  </div>
+
+                  {/* Heart save button */}
+                  <button
+                    onClick={(e) => handleToggleSave(e, p.id)}
+                    className={propStyles.saveButton}
+                    aria-label="Save listing"
+                  >
+                    <Heart size={16} fill={isSaved ? 'var(--primary)' : 'none'} color={isSaved ? 'var(--primary)' : 'currentColor'} />
+                  </button>
                 </div>
 
-                <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-primary)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                <div className={propStyles.cardContent}>
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span className={`badge badge-${p.status === 'available' ? 'available' : p.status === 'rented' || p.status === 'occupied' ? 'rented' : 'pending'}`} style={{ padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px', fontWeight: 700 }}>
+                      {getStatusLabel(p.status, p.type)}
+                    </span>
+                    <span className="badge" style={{ backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600, padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px' }}>
+                      {p.type}
+                    </span>
+                  </div>
+
+                  <h3 className={propStyles.cardTitle} style={{ marginTop: '2px', marginBottom: '6px', fontSize: '1.05rem', fontWeight: 700, textTransform: 'capitalize' }}>
                     {p.title}
                   </h3>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '12px' }}>
-                    <MapPin size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.location}</span>
+                  <div className={propStyles.cardMetaRow} style={{ marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                    <div className={propStyles.cardLocation} style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>
+                      <MapPin size={13} style={{ color: 'var(--primary)' }} />
+                      <span>{p.location.toLowerCase().includes('ho') ? p.location : `${p.location}, Ho`}</span>
+                    </div>
+                    {p.digitalAddress && (
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--primary-dark)', backgroundColor: 'var(--primary-light)', padding: '2px 6px', borderRadius: '4px' }}>
+                        🇬🇭 {p.digitalAddress}
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
@@ -277,9 +336,9 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
                     </span>
                   </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
       </main>
