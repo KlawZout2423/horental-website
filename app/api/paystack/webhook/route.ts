@@ -49,6 +49,44 @@ export async function POST(req: NextRequest) {
         });
         console.log(`🌟 [Paystack SaaS] Property #${metadata.propertyId} marked as featured upon payment!`);
       }
+
+      if (metadata?.subscriptionPlan && customer?.email) {
+        const userObj = await prisma.user.findUnique({ where: { email: customer.email } });
+        if (userObj) {
+          const sub = await prisma.subscription.create({
+            data: {
+              name: metadata.subscriptionPlan,
+              price: amountInGhs,
+              status: 'active',
+              paystackCustomerCode: customer.customer_code || null,
+              paystackSubscriptionCode: reference,
+            },
+          });
+          await prisma.user.update({
+            where: { id: userObj.id },
+            data: {
+              subscriptionId: sub.id,
+              role: userObj.role === 'user' ? 'agent' : userObj.role,
+            },
+          });
+          console.log(`💎 [Paystack SaaS] User ${userObj.email} subscribed to ${metadata.subscriptionPlan}!`);
+        }
+      }
+    }
+
+    // 3. Process Subscription Created / Disabled Events
+    if (event.event === 'subscription.create') {
+      const { subscription_code, customer } = event.data;
+      console.log(`💎 [Paystack SaaS Subscription Created] Code: ${subscription_code}, Customer: ${customer?.email}`);
+    }
+
+    if (event.event === 'subscription.disable') {
+      const { subscription_code } = event.data;
+      await prisma.subscription.updateMany({
+        where: { paystackSubscriptionCode: subscription_code },
+        data: { status: 'canceled' },
+      });
+      console.log(`⚠️ [Paystack SaaS Subscription Canceled] Code: ${subscription_code}`);
     }
 
     return new NextResponse('Webhook Handled Successfully', { status: 200 });

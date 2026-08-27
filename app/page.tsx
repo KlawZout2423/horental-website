@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../lib/auth';
-import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart } from 'lucide-react';
+import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart, Building2, Zap, UserCheck } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTIES } from '../lib/graphql';
 import { trackVisit } from '../lib/trackVisit';
 import styles from './page.module.css';
@@ -231,20 +231,29 @@ export default function Home() {
       <header className={styles.hero}>
         <div className={styles.heroWrapper}>
           <div className={styles.heroLeft}>
-            <div className={styles.heroBadge} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '40px', backgroundColor: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)', fontSize: '0.85rem', fontWeight: 700, color: '#ffffff', marginBottom: '12px' }}>
-              <Sparkles size={14} /> Ghana Rentals Property Platform
+            <div className={styles.heroBadge} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '40px', backgroundColor: 'rgba(99, 102, 241, 0.25)', border: '1px solid rgba(168, 85, 247, 0.4)', fontSize: '0.85rem', fontWeight: 700, color: '#ffffff', marginBottom: '12px', backdropFilter: 'blur(10px)' }}>
+              <Sparkles size={14} style={{ color: '#a855f7' }} /> HO Rentals SaaS Platform
             </div>
-            <h1 className={styles.title}>Find Your Perfect Place in Ghana</h1>
+            <h1 className={styles.title}>The Modern Real Estate & Rental SaaS Engine</h1>
             <p className={styles.subtitle}>
-              Rooms, apartments, hostels, shops & lands across Ho, Volta Region and across Ghana.
+              Verified rooms, apartments, student hostels, shops & commercial spaces across Ho, Volta Region and Ghana. Zero middleman markups.
             </p>
+
+            <div style={{ display: 'flex', gap: '12px', margin: '8px 0 16px', flexWrap: 'wrap' }}>
+              <Link href="/dashboard" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '30px', fontWeight: 700, background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', border: 'none', color: '#fff' }}>
+                <Building2 size={16} /> Landlord & Agent SaaS Portal &rarr;
+              </Link>
+              <a href="#properties" className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '30px', fontWeight: 600, color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
+                <Search size={16} /> Browse Rentals
+              </a>
+            </div>
 
             <form onSubmit={handleSearchSubmit} className={styles.searchContainer}>
               <div className={styles.searchInputWrapper}>
                 <Search size={18} className={styles.searchIcon} />
                 <input
                   type="text"
-                  placeholder="Search location, hostel or property..."
+                  placeholder="Search location, campus (UHAS, HTU), or property title..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={styles.searchInput}

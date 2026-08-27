@@ -8,6 +8,56 @@ import { collectPayment } from '../../lib/momo';
 
 const COMMISSION_FEE = 5;
 
+const USER_SAFE_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  password: true,
+  role: true,
+  phone: true,
+  mustChangePassword: true,
+  createdAt: true,
+};
+
+const PROPERTY_SAFE_SELECT = {
+  id: true,
+  title: true,
+  location: true,
+  price: true,
+  description: true,
+  imageUrl: true,
+  status: true,
+  type: true,
+  contact: true,
+  landlordName: true,
+  digitalAddress: true,
+  landmarks: true,
+  latitude: true,
+  longitude: true,
+  isFeatured: true,
+  createdAt: true,
+  ownerId: true,
+  companyId: true,
+  owner: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      phone: true,
+    }
+  },
+  company: {
+    select: {
+      id: true,
+      name: true,
+      logoUrl: true,
+      contact: true,
+      isOwnCompany: true,
+    }
+  },
+  images: { orderBy: { order: 'asc' as const } },
+};
 
 // Helper to record audit logs for crucial system events
 async function createAuditLog(action: string, details: string, userEmail?: string | null) {
@@ -30,17 +80,20 @@ export const resolvers = {
       if (!user) return null;
       return prisma.user.findUnique({
         where: { id: user.id },
-        select: { id: true, name: true, email: true, role: true, phone: true, mustChangePassword: true }
+        select: USER_SAFE_SELECT,
       });
     },
 
     users: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true, email: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return prisma.user.findMany({
-        select: { id: true, name: true, email: true, role: true, phone: true, mustChangePassword: true },
+        select: USER_SAFE_SELECT,
       });
     },
 
@@ -48,7 +101,10 @@ export const resolvers = {
       let isAdmin = false;
       if (user) {
         try {
-          const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { id: true, role: true }
+          });
           isAdmin = dbUser?.role === 'admin';
         } catch {
           isAdmin = false;
@@ -64,20 +120,13 @@ export const resolvers = {
         where.OR = [
           { status: { notIn: ['pending_approval', 'pending_verification'] } },
           { status: 'available' },
-          { status: null },
           ...(user ? [{ ownerId: user.id }] : [])
         ];
       }
 
       return prisma.property.findMany({
         where,
-        include: {
-          owner: {
-            select: { id: true, name: true, email: true, role: true, phone: true }
-          },
-          company: true,
-          images: { orderBy: { order: 'asc' } },
-        },
+        select: PROPERTY_SAFE_SELECT,
         orderBy: { createdAt: 'desc' }
       });
     },
@@ -85,18 +134,15 @@ export const resolvers = {
     property: async (_: any, { id }: { id: number }, { user }: { user: { id: number } | null }) => {
       const prop = await prisma.property.findUnique({
         where: { id },
-        include: {
-          owner: {
-            select: { id: true, name: true, email: true, role: true, phone: true }
-          },
-          company: true,
-          images: { orderBy: { order: 'asc' } },
-        },
+        select: PROPERTY_SAFE_SELECT,
       });
       if (!prop) return null;
       if (prop.status === 'pending_approval') {
         if (!user) return null;
-        const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { id: true, role: true }
+        });
         if (dbUser?.role !== 'admin' && prop.ownerId !== user.id) {
           return null;
         }
@@ -108,14 +154,17 @@ export const resolvers = {
     user: async (_: any, { id }: { id: number }, { user }: { user: { id: number } | null }) => {
       const targetUser = await prisma.user.findUnique({
         where: { id },
-        select: { id: true, name: true, email: true, role: true, phone: true, bio: true, profileImage: true, agentLocation: true, agentWhatsapp: true },
+        select: { id: true, name: true, email: true, role: true, phone: true },
       });
       if (!targetUser) return null;
 
       // Allow if:
       // 1. Requester is an admin
       if (user) {
-        const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { id: true, role: true }
+        });
         if (dbUser?.role === 'admin') return targetUser;
         // 2. Requester is querying their own profile
         if (user.id === id) return targetUser;
@@ -137,18 +186,17 @@ export const resolvers = {
           ownerId: userId,
           status: 'available',
         },
-        include: {
-          owner: true,
-          company: true,
-          images: { orderBy: { order: 'asc' } },
-        },
+        select: PROPERTY_SAFE_SELECT,
         orderBy: { createdAt: 'desc' },
       });
     },
 
     dashboardStats: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       try {
@@ -195,7 +243,10 @@ export const resolvers = {
 
     pageVisitAnalytics: async (_: any, { period }: { period?: string }, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       const now = new Date();
@@ -337,7 +388,10 @@ export const resolvers = {
 
     contactLogs: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return prisma.contactLog.findMany({
@@ -348,7 +402,10 @@ export const resolvers = {
 
     passwordResetRequests: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return prisma.passwordResetRequest.findMany({
@@ -358,7 +415,10 @@ export const resolvers = {
 
     auditLogs: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return prisma.auditLog.findMany({
@@ -369,7 +429,10 @@ export const resolvers = {
 
     landlordRegistrations: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return prisma.landlordRegistration.findMany({
@@ -379,10 +442,55 @@ export const resolvers = {
 
     reports: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
       return [];
+    },
+
+    verificationRequests: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      return prisma.verificationRequest.findMany({
+        include: { user: { select: { id: true, name: true, email: true, role: true, phone: true } } },
+        orderBy: { createdAt: 'desc' }
+      });
+    },
+
+    landlordAgentLinks: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      return prisma.landlordAgentLink.findMany({
+        include: {
+          landlord: { select: { id: true, name: true, email: true, role: true, phone: true } },
+          agent: { select: { id: true, name: true, email: true, role: true, phone: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    },
+
+    leadInquiries: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      return prisma.leadInquiry.findMany({
+        include: { property: true },
+        orderBy: { createdAt: 'desc' }
+      });
+    },
+
+    fraudAlerts: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      return prisma.fraudAlert.findMany({
+        include: { property: true, user: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: 'desc' }
+      });
+    },
+
+    subscriptions: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      return prisma.subscription.findMany({
+        orderBy: { createdAt: 'desc' }
+      });
     },
   },
 
@@ -412,6 +520,7 @@ export const resolvers = {
             password: hashed,
             phone: formattedPhone,
           },
+          select: USER_SAFE_SELECT,
         });
 
         const JWT_SECRET = getJwtSecret();
@@ -428,9 +537,15 @@ export const resolvers = {
 
     login: async (_: any, { email, password }: any) => {
       const cleanInput = (email || '').trim();
-      let user = await prisma.user.findUnique({ where: { email: cleanInput } });
+      let user = await prisma.user.findUnique({
+        where: { email: cleanInput },
+        select: USER_SAFE_SELECT,
+      });
       if (!user) {
-        user = await prisma.user.findFirst({ where: { phone: cleanInput } });
+        user = await prisma.user.findFirst({
+          where: { phone: cleanInput },
+          select: USER_SAFE_SELECT,
+        });
       }
       if (!user) throw new Error('Invalid credentials');
       const valid = await bcrypt.compare(password, user.password);
@@ -996,6 +1111,122 @@ export const resolvers = {
 
       createAuditLog('AGENT_PROFILE_UPDATED', `Agent ${dbUser.name} (${dbUser.email}) updated their profile`, dbUser.email);
       return updated;
+    },
+
+    submitVerificationRequest: async (_: any, { idType, idNumber, documentUrls }: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const req = await prisma.verificationRequest.create({
+        data: {
+          userId: user.id,
+          idType: idType || 'ghana_card',
+          idNumber,
+          documentUrls: documentUrls || [],
+          status: 'pending'
+        },
+        include: { user: { select: { id: true, name: true, email: true, role: true, phone: true } } }
+      });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { verificationStatus: 'pending' }
+      });
+      createAuditLog('VERIFICATION_REQUEST_SUBMITTED', `User ${user.id} submitted verification request for ${idType}`, null);
+      return req;
+    },
+
+    reviewVerificationRequest: async (_: any, { id, status, reviewerNotes }: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Not authorized');
+
+      const reqId = typeof id === 'string' ? parseInt(id, 10) : id;
+      const updatedReq = await prisma.verificationRequest.update({
+        where: { id: reqId },
+        data: { status, reviewerNotes }
+      });
+
+      if (status === 'verified') {
+        await prisma.user.update({
+          where: { id: updatedReq.userId },
+          data: { verificationStatus: 'verified' }
+        });
+      }
+
+      createAuditLog('VERIFICATION_REVIEWED', `Admin reviewed request ${reqId} with status ${status}`, adminUser.email);
+      return updatedReq;
+    },
+
+    createLandlordAgentLink: async (_: any, { landlordId, agentId, commissionShare }: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const link = await prisma.landlordAgentLink.create({
+        data: {
+          landlordId: typeof landlordId === 'string' ? parseInt(landlordId, 10) : landlordId,
+          agentId: typeof agentId === 'string' ? parseInt(agentId, 10) : agentId,
+          commissionShare: commissionShare || null,
+          status: 'pending'
+        },
+        include: {
+          landlord: { select: { id: true, name: true, email: true, role: true, phone: true } },
+          agent: { select: { id: true, name: true, email: true, role: true, phone: true } }
+        }
+      });
+      createAuditLog('AGENT_LINK_CREATED', `Link requested between landlord ${landlordId} and agent ${agentId}`, null);
+      return link;
+    },
+
+    updateLinkStatus: async (_: any, { id, status }: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const linkId = typeof id === 'string' ? parseInt(id, 10) : id;
+      return prisma.landlordAgentLink.update({
+        where: { id: linkId },
+        data: { status }
+      });
+    },
+
+    createLeadInquiry: async (_: any, { propertyId, tenantName, tenantPhone, channel }: any) => {
+      const pId = typeof propertyId === 'string' ? parseInt(propertyId, 10) : propertyId;
+      return prisma.leadInquiry.create({
+        data: {
+          propertyId: pId,
+          tenantName,
+          tenantPhone,
+          channel: channel || 'whatsapp',
+          status: 'new'
+        },
+        include: { property: true }
+      });
+    },
+
+    flagFraudAlert: async (_: any, { propertyId, userId, reason, severity }: any, { user }: { user: { id: number } | null }) => {
+      const pId = propertyId ? (typeof propertyId === 'string' ? parseInt(propertyId, 10) : propertyId) : null;
+      const uId = userId ? (typeof userId === 'string' ? parseInt(userId, 10) : userId) : (user ? user.id : null);
+      return prisma.fraudAlert.create({
+        data: {
+          propertyId: pId,
+          userId: uId,
+          reason,
+          severity: severity || 'medium',
+          status: 'open'
+        }
+      });
+    },
+
+    createSubscription: async (_: any, { name, price, billingCycle, momoNumber }: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const sub = await prisma.subscription.create({
+        data: {
+          name,
+          price,
+          billingCycle: billingCycle || 'monthly',
+          status: 'active',
+          momoNumber: momoNumber || null
+        }
+      });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { subscriptionId: sub.id }
+      });
+      createAuditLog('SUBSCRIPTION_CREATED', `User ${user.id} subscribed to ${name} for GHc ${price}`, null);
+      return sub;
     },
   },
 
