@@ -660,3 +660,115 @@ export const GET_MY_PROPERTIES = `
     }
   }
 `;
+
+export const GET_VERIFICATION_REQUESTS = `
+  query GetVerificationRequests {
+    verificationRequests {
+      id
+      userId
+      idType
+      idNumber
+      documentUrls
+      status
+      reviewerNotes
+      createdAt
+      user {
+        id
+        name
+        email
+        phone
+        role
+      }
+    }
+  }
+`;
+
+export const REVIEW_VERIFICATION_REQUEST = `
+  mutation ReviewVerificationRequest($id: Int!, $status: String!, $reviewerNotes: String) {
+    reviewVerificationRequest(id: $id, status: $status, reviewerNotes: $reviewerNotes) {
+      id
+      status
+      reviewerNotes
+    }
+  }
+`;
+
+export const GET_LANDLORD_AGENT_LINKS = `
+  query GetLandlordAgentLinks {
+    landlordAgentLinks {
+      id
+      landlordId
+      agentId
+      status
+      commissionShare
+      createdAt
+      landlord {
+        id
+        name
+        phone
+      }
+      agent {
+        id
+        name
+        phone
+      }
+    }
+  }
+`;
+
+export const GET_LEAD_INQUIRIES = `
+  query GetLeadInquiries {
+    leadInquiries {
+      id
+      propertyId
+      tenantName
+      tenantPhone
+      channel
+      status
+      createdAt
+      property {
+        id
+        title
+        location
+      }
+    }
+  }
+`;
+
+export const GET_FRAUD_ALERTS = `
+  query GetFraudAlerts {
+    fraudAlerts {
+      id
+      propertyId
+      userId
+      reason
+      severity
+      status
+      createdAt
+      property {
+        id
+        title
+      }
+      user {
+        id
+        name
+        email
+      }
+    }
+  }
+`;
+
+export const GET_SUBSCRIPTIONS = `
+  query GetSubscriptions {
+    subscriptions {
+      id
+      name
+      price
+      billingCycle
+      status
+      momoNumber
+      createdAt
+    }
+  }
+`;
+
