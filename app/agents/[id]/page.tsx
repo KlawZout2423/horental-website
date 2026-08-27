@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Phone, MessageCircle, ShieldCheck, MapPin, Building, Share2 } from 'lucide-react';
+import { ArrowLeft, Phone, MessageCircle, ShieldCheck, MapPin, Building, PlusCircle } from 'lucide-react';
+import { useAuth } from '../../../lib/auth';
 import { graphqlRequest, GET_AGENT, GET_AGENT_PROPERTIES } from '../../../lib/graphql';
 import { Property, getPricePeriodLabel, getOptimizedImageUrl } from '../../../lib/types';
 import styles from './agent.module.css';
@@ -20,6 +21,8 @@ interface AgentData {
 export default function AgentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const agentId = resolvedParams.id;
+  const { user } = useAuth();
+  const isOwnProfile = Boolean(user && String(user.id) === String(agentId));
 
   const [agent, setAgent] = useState<AgentData | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -142,40 +145,59 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
           </div>
 
           <div className={styles.contactRow}>
-            {agent.phone && (
-              <>
-                <a
-                  href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals.`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${styles.contactBtn} ${styles.whatsappBtn}`}
-                >
-                  <MessageCircle size={16} /> WhatsApp Agent
-                </a>
-                <a
-                  href={`tel:${agent.phone}`}
-                  className={`${styles.contactBtn} ${styles.callBtn}`}
-                >
-                  <Phone size={16} /> Call {agent.phone}
-                </a>
-              </>
+            {isOwnProfile ? (
+              <Link
+                href="/upload"
+                className="btn btn-primary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', borderRadius: '30px', fontWeight: 700, textDecoration: 'none' }}
+              >
+                <PlusCircle size={18} /> + Add New Listing to My Portfolio
+              </Link>
+            ) : (
+              agent.phone && (
+                <>
+                  <a
+                    href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${styles.contactBtn} ${styles.whatsappBtn}`}
+                  >
+                    <MessageCircle size={16} /> WhatsApp Agent
+                  </a>
+                  <a
+                    href={`tel:${agent.phone}`}
+                    className={`${styles.contactBtn} ${styles.callBtn}`}
+                  >
+                    <Phone size={16} /> Call {agent.phone}
+                  </a>
+                </>
+              )
             )}
           </div>
         </div>
       </div>
 
-      {/* Properties Listed Section */}
-      <div className={styles.sectionHeader}>
+      {/* Properties Listed Section Header */}
+      <div className={styles.sectionHeader} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <h2 className={styles.sectionTitle}>
-          Properties listed by {agent.name} ({properties.length})
+          Properties listed by {isOwnProfile ? 'You' : agent.name} ({properties.length})
         </h2>
+        {isOwnProfile && (
+          <Link
+            href="/upload"
+            className="btn btn-primary btn-sm"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '20px', textDecoration: 'none', fontWeight: 700 }}
+          >
+            <PlusCircle size={15} /> + Add Listing
+          </Link>
+        )}
       </div>
 
       {properties.length === 0 ? (
         <div className={styles.emptyState}>
           <Building size={36} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
           <h3>No Active Listings</h3>
-          <p>This agent currently does not have any active approved listings.</p>
+          <p>{isOwnProfile ? "You haven't posted any property listings yet. Click '+ Add Listing' above to get started." : 'This agent currently does not have any active approved listings.'}</p>
         </div>
       ) : (
         <div className={styles.propertiesGrid}>
