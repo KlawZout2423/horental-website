@@ -24,36 +24,33 @@
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 32px;
+  padding: 40px 32px 36px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  align-items: center;
+  text-align: center;
+  gap: 0;
   margin-bottom: 40px;
   box-shadow: var(--shadow-sm);
 }
 
-@media (min-width: 768px) {
-  .profileCard {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 32px;
-  }
-}
-
 .avatarContainer {
-  width: 100px;
-  height: 100px;
+  width: 150px;
+  height: 150px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--primary), #8B0000);
   color: #fff;
-  font-size: 2.2rem;
+  font-size: 3.5rem;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(193, 18, 31, 0.25);
+  box-shadow: 0 6px 24px rgba(193, 18, 31, 0.3);
   overflow: hidden;
+  border: 4px solid var(--bg-surface);
+  outline: 3px solid var(--primary);
+  margin: 0 auto 20px;
 }
 
 .avatarImage {
@@ -64,6 +61,7 @@
 
 .profileInfo {
   flex: 1;
+  width: 100%;
 }
 
 .agentBadge {
@@ -92,12 +90,15 @@
   line-height: 1.6;
   margin-bottom: 18px;
   max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .contactRow {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  justify-content: center;
 }
 
 .contactBtn {

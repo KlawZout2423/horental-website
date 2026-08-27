@@ -34,6 +34,9 @@ export default function UploadPage({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [landlordName, setLandlordName] = useState('');
+  const [rooms, setRooms] = useState('');
+  const [advance, setAdvance] = useState('');
+  const [availableFrom, setAvailableFrom] = useState('');
   
   // Amenities checkboxes state (all default to false - chosen explicitly by user)
   const [hasWifi, setHasWifi] = useState(false);
@@ -249,6 +252,11 @@ export default function UploadPage({
       if (amenitiesList.length > 0) {
         finalDescription += `\n\nFeatures: ${amenitiesList.join(' | ')}`;
       }
+
+      // Append extra fields to description
+      if (rooms) finalDescription += `\n\nRooms Available: ${rooms}`;
+      if (advance) finalDescription += `\nAdvance Required: ${advance}`;
+      if (availableFrom) finalDescription += `\nAvailable From: ${availableFrom}`;
 
       finalDescription += `\n\nPricePeriod: per ${pricePeriod}`;
 
@@ -879,6 +887,45 @@ export default function UploadPage({
                 className="form-control"
               />
             </div>
+
+            {/* Rooms, Advance, Available From — only for room/accommodation types */}
+            {type !== 'Lands' && type !== 'Furnitures' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+                <div className="form-group">
+                  <label htmlFor="rooms">Rooms Available</label>
+                  <input
+                    id="rooms"
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 5"
+                    value={rooms}
+                    onChange={(e) => setRooms(e.target.value)}
+                    className="form-control"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="advance">Advance Required</label>
+                  <input
+                    id="advance"
+                    type="text"
+                    placeholder="e.g. 6 months, 1 year"
+                    value={advance}
+                    onChange={(e) => setAdvance(e.target.value)}
+                    className="form-control"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="availableFrom">Available From</label>
+                  <input
+                    id="availableFrom"
+                    type="date"
+                    value={availableFrom}
+                    onChange={(e) => setAvailableFrom(e.target.value)}
+                    className="form-control"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className={styles.fullWidth}>
               <div className="form-group">

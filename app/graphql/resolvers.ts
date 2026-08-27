@@ -12,7 +12,7 @@ const USER_SAFE_SELECT = {
   id: true,
   name: true,
   email: true,
-  password: true,
+  // password intentionally excluded from safe select — never expose hash over API
   role: true,
   phone: true,
   mustChangePassword: true,
@@ -117,11 +117,16 @@ export const resolvers = {
       }
 
       if (!isAdmin) {
-        where.OR = [
-          { status: { notIn: ['pending_approval', 'pending_verification'] } },
-          { status: 'available' },
-          ...(user ? [{ ownerId: user.id }] : [])
-        ];
+        if (user) {
+          // Logged-in users: see all non-pending props OR their own listings
+          where.OR = [
+            { status: { notIn: ['pending_approval', 'pending_verification'] } },
+            { ownerId: user.id },
+          ];
+        } else {
+          // Anonymous users: only see fully approved properties
+          where.status = { notIn: ['pending_approval', 'pending_verification'] };
+        }
       }
 
       return prisma.property.findMany({
@@ -202,12 +207,21 @@ export const resolvers = {
     },
 
     // Public/Agent: fetch properties submitted by a specific agent
-    agentProperties: async (_: any, { userId }: { userId: number }) => {
+    // includePrivate=true is only honoured if the authenticated user IS that agent (or admin)
+    agentProperties: async (_: any, { userId, includePrivate }: { userId: number; includePrivate?: boolean }, { user }: { user: { id: number } | null }) => {
+      const isOwnerOrAdmin = user && (
+        user.id === userId ||
+        await prisma.user.findUnique({ where: { id: user.id }, select: { role: true } })
+          .then(u => u?.role === 'admin')
+      );
+
+      // Only the agent themselves (or admin) can see pending_approval listings
+      const statusFilter = (includePrivate && isOwnerOrAdmin)
+        ? { in: ['available', 'rented', 'pending_approval'] as string[] }
+        : { in: ['available', 'rented'] as string[] };
+
       return prisma.property.findMany({
-        where: {
-          ownerId: userId,
-          status: { in: ['available', 'rented', 'pending_approval'] },
-        },
+        where: { ownerId: userId, status: statusFilter },
         select: PROPERTY_SAFE_SELECT,
         orderBy: { createdAt: 'desc' },
       });
@@ -559,19 +573,28 @@ export const resolvers = {
 
     login: async (_: any, { email, password }: any) => {
       const cleanInput = (email || '').trim();
-      let user = await prisma.user.findUnique({
+
+      // Fetch the raw record (with password hash) for bcrypt comparison only
+      let rawUser = await prisma.user.findUnique({
         where: { email: cleanInput },
-        select: USER_SAFE_SELECT,
+        select: { id: true, password: true },
       });
-      if (!user) {
-        user = await prisma.user.findFirst({
+      if (!rawUser) {
+        rawUser = await prisma.user.findFirst({
           where: { phone: cleanInput },
-          select: USER_SAFE_SELECT,
+          select: { id: true, password: true },
         });
       }
-      if (!user) throw new Error('Invalid credentials');
-      const valid = await bcrypt.compare(password, user.password);
+      if (!rawUser) throw new Error('Invalid credentials');
+      const valid = await bcrypt.compare(password, rawUser.password);
       if (!valid) throw new Error('Invalid credentials');
+
+      // Re-fetch with safe select (no password) for the returned payload
+      const user = await prisma.user.findUnique({
+        where: { id: rawUser.id },
+        select: USER_SAFE_SELECT,
+      });
+      if (!user) throw new Error('Invalid credentials');
 
       const JWT_SECRET = getJwtSecret();
       const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
@@ -1126,7 +1149,8 @@ export const resolvers = {
       if (!user) throw new Error('Not authenticated');
       const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
       if (dbUser?.role !== 'agent' && dbUser?.role !== 'admin') throw new Error('Only agents can update their profile.');
-      if (!bio?.trim()) throw new Error('Bio is required.');
+      // Only validate bio if it was explicitly passed and is empty
+      if (bio !== undefined && bio !== null && !bio.trim()) throw new Error('Bio cannot be blank if provided.');
 
       const updated = await prisma.user.update({
         where: { id: user.id },

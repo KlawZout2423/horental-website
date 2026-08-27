@@ -236,37 +236,30 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         if (actionType === 'call') {
           window.location.href = `tel:${cleanPhone}`;
         } else {
-          const waPhone = cleanPhone.startsWith('0') ? '233' + cleanPhone.substring(1) : cleanPhone;
-          const landlordName = property!.landlordName || property!.owner?.name || 'Landlord';
+          // WhatsApp goes to HO Rentals with property referral message
           const price = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
           const msg = encodeURIComponent(
-            `Hi ${landlordName},\n\nI found your property on HO Rentals and I'm interested.\n\n` +
+            `Hello HO Rentals,\n\nI am interested in the following property listed on your platform:\n\n` +
             `📌 *${property!.title}*\n` +
             `📍 Location: ${property!.location}\n` +
-            `💰 Price: ${price}\n\n` +
-            `Could you please provide more details and arrange a viewing?\n\n` +
-            `Thank you.`
+            `💰 Price: ${price}\n` +
+            `🆔 Listing ID: #${property!.id}\n\n` +
+            `Please connect me with the landlord or arrange a viewing. Thank you.`
           );
-          window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
+          window.open(`https://wa.me/233557922593?text=${msg}`, '_blank');
         }
       } catch (err: any) {
         console.error('Failed to log contact audit record:', err);
-        const cleanPhone = property!.contact.replace(/[^0-9]/g, '');
-        if (actionType === 'call') {
-          window.location.href = `tel:${cleanPhone}`;
-        } else {
-          const waPhone = cleanPhone.startsWith('0') ? '233' + cleanPhone.substring(1) : cleanPhone;
-          const landlordName = property!.landlordName || property!.owner?.name || 'Landlord';
-          const price = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
-          const msg = encodeURIComponent(
-            `Hi ${landlordName},\n\nI found your property on HO Rentals and I'm interested.\n\n` +
-            `📌 *${property!.title}*\n` +
-            `📍 Location: ${property!.location}\n` +
-            `💰 Price: ${price}\n\n` +
-            `Could you please provide more details and arrange a viewing?\n\nThank you.`
-          );
-          window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
-        }
+        // Fallback: WhatsApp to HO Rentals
+        const price2 = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
+        const msg2 = encodeURIComponent(
+          `Hello HO Rentals,\n\nI am interested in:\n\n` +
+          `📌 *${property!.title}*\n` +
+          `📍 ${property!.location}\n` +
+          `💰 ${price2}\n` +
+          `🆔 ID: #${property!.id}\n\nPlease help arrange a viewing. Thank you.`
+        );
+        window.open(`https://wa.me/233557922593?text=${msg2}`, '_blank');
       } finally {
         setIsLoggingContact(false);
       }
@@ -303,17 +296,16 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
       if (connectActionType === 'call') {
         window.location.href = `tel:${cleanPhone}`;
       } else {
-        const waPhone = cleanPhone.startsWith('0') ? '233' + cleanPhone.substring(1) : cleanPhone;
-        const landlordName = property.landlordName || property.owner?.name || 'Landlord';
         const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
         const msg = encodeURIComponent(
-          `Hi ${landlordName},\n\nI found your property on HO Rentals and I'm interested.\n\n` +
+          `Hello HO Rentals,\n\nI am interested in the following property listed on your platform:\n\n` +
           `📌 *${property.title}*\n` +
           `📍 Location: ${property.location}\n` +
-          `💰 Price: ${price}\n\n` +
-          `Could you please provide more details and arrange a viewing?\n\nThank you.`
+          `💰 Price: ${price}\n` +
+          `🆔 Listing ID: #${property.id}\n\n` +
+          `Please connect me with the landlord or arrange a viewing. Thank you.`
         );
-        window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
+        window.open(`https://wa.me/233557922593?text=${msg}`, '_blank');
       }
 
       setCustomerName('');
@@ -325,8 +317,15 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
       if (connectActionType === 'call') {
         window.location.href = `tel:${cleanPhone}`;
       } else {
-        const waPhone = cleanPhone.startsWith('0') ? '233' + cleanPhone.substring(1) : cleanPhone;
-        window.open(`https://wa.me/${waPhone}`, '_blank');
+        const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
+        const msg = encodeURIComponent(
+          `Hello HO Rentals,\n\nI am interested in:\n\n` +
+          `📌 *${property.title}*\n` +
+          `📍 ${property.location}\n` +
+          `💰 ${price}\n` +
+          `🆔 ID: #${property.id}\n\nPlease help arrange a viewing. Thank you.`
+        );
+        window.open(`https://wa.me/233557922593?text=${msg}`, '_blank');
       }
     } finally {
       setIsLoggingContact(false);
@@ -778,18 +777,24 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
         {/* Sidebar contact widget */}
         <aside className={styles.sidebarCard}>
-          <h3 className={styles.sidebarCardTitle}>Contact Landlord</h3>
+          <h3 className={styles.sidebarCardTitle}>
+            {property.owner?.role === 'agent' ? 'Contact Agent' : 'Contact Landlord'}
+          </h3>
           
           <div className={styles.landlordInfo}>
             {property.landlordName ? (
               <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>Landlord Name</span>
+                <span className={styles.infoLabel}>
+                  {property.owner?.role === 'agent' ? 'Listed By Agent' : 'Landlord Name'}
+                </span>
                 <span className={styles.infoValue}>{property.landlordName}</span>
               </div>
             ) : (
               <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>Landlord / Owner</span>
-                <span className={styles.infoValue}>{property.owner?.name || 'HO Rentals Verified (Agent)'}</span>
+                <span className={styles.infoLabel}>
+                  {property.owner?.role === 'agent' ? 'Agent' : 'Landlord / Owner'}
+                </span>
+                <span className={styles.infoValue}>{property.owner?.name || 'HO Rentals Verified'}</span>
               </div>
             )}
 
@@ -829,7 +834,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               className="btn btn-primary" 
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', background: 'var(--primary)', fontWeight: 700 }}
             >
-              <Phone size={16} /> Call Landlord / Support
+              <Phone size={16} /> {property.owner?.role === 'agent' ? 'Call Agent' : 'Call Landlord'}
             </button>
 
             <button 
@@ -837,21 +842,19 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               className="btn btn-secondary" 
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              <MessageSquare size={16} /> WhatsApp — {property.landlordName || property.owner?.name || 'Landlord'}
+              <MessageSquare size={16} /> WhatsApp HO Rentals
             </button>
 
             <a
               href={(() => {
-                const landlordName = property.landlordName || property.owner?.name || 'Landlord';
                 const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
-                const msg = `Hi ${landlordName}, I found your property on HO Rentals and I'm interested.\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n\nCould you please provide more details?\n\nThank you.`;
-                const cleanPhone = (property.contact || '0557922593').replace(/[^0-9]/g, '');
-                return `sms:${cleanPhone}?body=${encodeURIComponent(msg)}`;
+                const msg = `Hello HO Rentals, I am interested in:\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n🆔 ID: #${property.id}\n\nPlease help arrange a viewing.`;
+                return `sms:+233557922593?body=${encodeURIComponent(msg)}`;
               })()}
               className="btn btn-outline"
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              <MessageSquare size={16} /> SMS — {property.landlordName || property.owner?.name || 'Landlord'}
+              <MessageSquare size={16} /> SMS HO Rentals
             </a>
           </div>
         </aside>

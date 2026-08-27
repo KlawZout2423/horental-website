@@ -628,8 +628,8 @@ export const GET_AGENTS = `
 `;
 
 export const GET_AGENT_PROPERTIES = `
-  query GetAgentProperties($userId: Int!) {
-    agentProperties(userId: $userId) {
+  query GetAgentProperties($userId: Int!, $includePrivate: Boolean) {
+    agentProperties(userId: $userId, includePrivate: $includePrivate) {
       id
       title
       type

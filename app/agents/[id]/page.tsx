@@ -41,7 +41,10 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
 
         const [agentRes, propsRes] = await Promise.all([
           graphqlRequest<{ user: AgentData | null }>(GET_AGENT, { id: parsedId }),
-          graphqlRequest<{ agentProperties: Property[] }>(GET_AGENT_PROPERTIES, { userId: parsedId })
+          graphqlRequest<{ agentProperties: Property[] }>(GET_AGENT_PROPERTIES, {
+            userId: parsedId,
+            includePrivate: Boolean(user && String(user.id) === String(agentId)),
+          })
         ]);
 
         if (!agentRes || !agentRes.user) {
@@ -125,7 +128,7 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
           </p>
 
           {/* Stats Row */}
-          <div style={{ display: 'flex', gap: '16px', margin: '14px 0', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '16px', margin: '14px 0', flexWrap: 'wrap', justifyContent: 'center' }}>
             <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Total Listed</span>
               <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{properties.length}</strong>
@@ -214,9 +217,16 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
                     alt={p.title}
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                   />
-                  <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(16, 185, 129, 0.9)', color: '#fff', padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <ShieldCheck size={12} /> Verified Property
-                  </div>
+                  {/* Status badge — pending shown only to owner */}
+                  {p.status === 'pending_approval' ? (
+                    <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(245, 158, 11, 0.92)', color: '#fff', padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700 }}>
+                      ⏳ Pending Approval
+                    </div>
+                  ) : (
+                    <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(16, 185, 129, 0.9)', color: '#fff', padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <ShieldCheck size={12} /> Verified Property
+                    </div>
+                  )}
                   <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.65)', color: '#fff', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>
                     {p.type}
                   </div>

@@ -307,7 +307,7 @@ export const typeDefs = `#graphql
         users: [User!]!
         agents: [User!]!
         user(id: Int!): User
-        agentProperties(userId: Int!): [Property!]!
+        agentProperties(userId: Int!, includePrivate: Boolean): [Property!]!
         properties(type: String): [Property!]!
         property(id: Int!): Property
         companies: [Company!]!
