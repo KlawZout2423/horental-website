@@ -239,6 +239,8 @@ export default function Home() {
               <a href="#properties" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', borderRadius: '30px', fontWeight: 600, color: '#fff' }}>
                 <Search size={16} /> Browse Rentals
               </a>
+            </div>
+
             <form onSubmit={handleSearchSubmit} className={styles.searchContainer}>
               <div className={styles.searchInputWrapper}>
                 <Search size={18} className={styles.searchIcon} />
