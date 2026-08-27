@@ -30,6 +30,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   // Only handle standard HTTP/HTTPS requests
   if (!event.request.url.startsWith(self.location.origin)) {
     return;
