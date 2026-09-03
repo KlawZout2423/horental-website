@@ -458,7 +458,7 @@ export default function PropertiesClient() {
                 {[
                   { label: 'All', value: 'All' },
                   { label: 'Available', value: 'Available' },
-                  { label: 'Rented', value: 'Rented' },
+                  { label: 'Occupied / Sold', value: 'Rented' },
                 ].map((tab) => (
                   <button
                     key={tab.value}
