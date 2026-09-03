@@ -103,6 +103,22 @@ export const LOGIN_MUTATION = `
   }
 `;
 
+export const GOOGLE_AUTH_MUTATION = `
+  mutation GoogleAuth($idToken: String!) {
+    googleAuth(idToken: $idToken) {
+      token
+      user {
+        id
+        name
+        email
+        phone
+        role
+        mustChangePassword
+      }
+    }
+  }
+`;
+
 export const REGISTER_MUTATION = `
   mutation Register($input: RegisterInput!) {
     register(input: $input) {

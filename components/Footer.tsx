@@ -38,7 +38,7 @@ export default function Footer() {
               <span>HO<span className={styles.logoTextSpan}>Rentals</span></span>
             </div>
             <p className={styles.description}>
-              The trusted property platform for Ho and the Volta Region. Browse rooms, apartments, hostels, shops and lands — all in one place.
+              The trusted property & housing platform across Ho, Volta Region, and all of Ghana. Browse rooms, apartments, hostels, furniture, shops and lands — all in one place.
             </p>
           </div>
 

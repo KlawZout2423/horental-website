@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Phone, MessageCircle, ShieldCheck, MapPin, Building, PlusCircle, ChevronDown, ChevronUp, Heart, Check } from 'lucide-react';
 import { useAuth } from '../../../lib/auth';
 import { graphqlRequest, GET_AGENT, GET_AGENT_PROPERTIES } from '../../../lib/graphql';
 import { Property, getPricePeriodLabel, getOptimizedImageUrl, getStatusLabel } from '../../../lib/types';
+import VerifiedAgentModal from '../../../components/VerifiedAgentModal';
 import styles from './agent.module.css';
 import propStyles from '../../properties/properties.module.css';
 
@@ -17,9 +19,11 @@ interface AgentData {
   role: string;
   bio?: string;
   profileImage?: string;
+  agentLocation?: string;
 }
 
 export default function AgentProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
   const resolvedParams = use(params);
   const agentId = resolvedParams.id;
   const { user } = useAuth();
@@ -31,6 +35,7 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
   const [error, setError] = useState<string | null>(null);
   const [profileExpanded, setProfileExpanded] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
 
   // Load saved bookmarks from localStorage on mount
   useEffect(() => {
@@ -45,6 +50,17 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
       }
     }
   }, []);
+
+  const handleCloseVerifyModal = () => {
+    setShowVerifyModal(false);
+  };
+
+  const handleAcceptVerifyModal = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('agreed_agent_disclaimer', 'true');
+    }
+    setShowVerifyModal(false);
+  };
 
   const handleToggleSave = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -142,98 +158,114 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
         <aside className={styles.sidebar}>
           {/* Agent Info Banner — collapse/expand on mobile */}
           <div className={styles.profileCard}>
+            {/* High-fidelity abstract gradient cover banner (desktop only) */}
+            <div className={styles.coverBanner} />
 
-        {/* ── Always-visible collapsed strip ── */}
-        <div
-          className={styles.collapsedStrip}
-          onClick={() => setProfileExpanded(v => !v)}
-          role="button"
-          aria-expanded={profileExpanded}
-          aria-label="Toggle agent profile"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-            <div className={styles.avatarContainer}>
-              {agent.profileImage ? (
-                <img src={agent.profileImage} alt={agent.name} className={styles.avatarImage} />
-              ) : (
-                agent.name.charAt(0).toUpperCase()
-              )}
+            {/* ── Always-visible collapsed strip ── */}
+            <div
+              className={styles.collapsedStrip}
+              onClick={() => setProfileExpanded(v => !v)}
+              role="button"
+              aria-expanded={profileExpanded}
+              aria-label="Toggle agent profile"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+                <div className={styles.avatarContainer}>
+                  {agent.profileImage ? (
+                    <img src={agent.profileImage} alt={agent.name} className={styles.avatarImage} />
+                  ) : (
+                    agent.name.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <h1 className={styles.agentName}>{agent.name}</h1>
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowVerifyModal(true);
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10B981', fontSize: '0.74rem', fontWeight: 700, marginTop: '3px', cursor: 'pointer' }}
+                    title="Click for Agent Verification Guarantee"
+                  >
+                    <ShieldCheck size={12} /> Verified Agent
+                  </div>
+                  {agent.agentLocation && (
+                    <div className={styles.desktopLocationRow}>
+                      <MapPin size={13} style={{ color: 'var(--primary)', marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }} />
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', verticalAlign: 'middle' }}>{agent.agentLocation}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Toggle icon — only visible on mobile */}
+              <span className={styles.toggleIcon}>
+                {profileExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </span>
             </div>
-            <div style={{ textAlign: 'left' }}>
-              <h1 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', lineHeight: 1.2 }}>{agent.name}</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10B981', fontSize: '0.74rem', fontWeight: 700, marginTop: '3px' }}>
-                <ShieldCheck size={12} /> Verified Agent
+
+            {/* ── Expandable detail section ── */}
+            <div className={`${styles.expandableSection} ${profileExpanded ? styles.expandableOpen : ''}`}>
+              <div className={styles.profileInfo}>
+                {agent.bio && (
+                  <p className={styles.agentBio}>
+                    {agent.bio}
+                  </p>
+                )}
+
+                {/* Stats Row */}
+                <div className={styles.statsRow}>
+                  <div className={styles.statBox}>
+                    <span className={styles.statLabel}>Listed</span>
+                    <strong className={styles.statVal}>{properties.length}</strong>
+                  </div>
+                  <div className={styles.statBox}>
+                    <span className={styles.statLabel}>Available</span>
+                    <strong className={styles.statVal} style={{ color: '#10B981' }}>
+                      {properties.filter((p) => p.status === 'available').length}
+                    </strong>
+                  </div>
+                  <div className={styles.statBox}>
+                    <span className={styles.statLabel}>Occupied</span>
+                    <strong className={styles.statVal}>
+                      {properties.filter((p) => p.status === 'rented' || p.status === 'occupied').length}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className={styles.contactRow}>
+                  {isOwnProfile ? (
+                    <Link
+                      href="/upload"
+                      className="btn btn-primary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', borderRadius: '30px', fontWeight: 700, textDecoration: 'none' }}
+                    >
+                      <PlusCircle size={18} /> Add New Listing
+                    </Link>
+                  ) : (
+                    agent.phone && (
+                      <>
+                        <a
+                          href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals.`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`${styles.contactBtn} ${styles.whatsappBtn}`}
+                        >
+                          <MessageCircle size={16} /> WhatsApp Agent
+                        </a>
+                        <a
+                          href={`tel:${agent.phone}`}
+                          className={`${styles.contactBtn} ${styles.callBtn}`}
+                        >
+                          <Phone size={16} /> Call Agent
+                        </a>
+                      </>
+                    )
+                  )}
+                </div>
               </div>
             </div>
           </div>
-          {/* Toggle icon — only visible on mobile */}
-          <span className={styles.toggleIcon}>
-            {profileExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </span>
-        </div>
-
-        {/* ── Expandable detail section ── */}
-        <div className={`${styles.expandableSection} ${profileExpanded ? styles.expandableOpen : ''}`}>
-          <div className={styles.profileInfo}>
-            <p className={styles.agentBio}>
-              {agent.bio ||
-                `Independent rental agent on HO Rentals. Contact directly to arrange viewings and inquiries for the listings below.`}
-            </p>
-
-            {/* Stats Row */}
-            <div style={{ display: 'flex', gap: '16px', margin: '14px 0', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Total Listed</span>
-                <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{properties.length}</strong>
-              </div>
-              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Available</span>
-                <strong style={{ fontSize: '0.95rem', color: '#10B981' }}>
-                  {properties.filter((p) => p.status === 'available').length}
-                </strong>
-              </div>
-              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Rented / Occupied</span>
-                <strong style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-                  {properties.filter((p) => p.status === 'rented' || p.status === 'occupied').length}
-                </strong>
-              </div>
-            </div>
-
-            <div className={styles.contactRow}>
-              {isOwnProfile ? (
-                <Link
-                  href="/upload"
-                  className="btn btn-primary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', borderRadius: '30px', fontWeight: 700, textDecoration: 'none' }}
-                >
-                  <PlusCircle size={18} /> + Add New Listing to My Portfolio
-                </Link>
-              ) : (
-                agent.phone && (
-                  <>
-                    <a
-                      href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals.`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`${styles.contactBtn} ${styles.whatsappBtn}`}
-                    >
-                      <MessageCircle size={16} /> WhatsApp Agent
-                    </a>
-                    <a
-                      href={`tel:${agent.phone}`}
-                      className={`${styles.contactBtn} ${styles.callBtn}`}
-                    >
-                      <Phone size={16} /> Call {agent.phone}
-                    </a>
-                  </>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      </aside>
+        </aside>
 
       {/* Listings Column */}
       <main className={styles.mainContent}>
@@ -343,6 +375,14 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
       )}
       </main>
       </div>
+
+      <VerifiedAgentModal
+        isOpen={showVerifyModal}
+        onClose={handleCloseVerifyModal}
+        onAccept={handleAcceptVerifyModal}
+        agentName={agent?.name}
+        requireAgreement={true}
+      />
     </div>
   );
 }

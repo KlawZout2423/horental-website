@@ -334,6 +334,7 @@ export const typeDefs = `#graphql
     type Mutation {
         register(input: RegisterInput!): AuthPayload!
         login(email: String!, password: String!): AuthPayload!
+        googleAuth(idToken: String!): AuthPayload!
         submitPasswordResetRequest(name: String!, identifier: String!, message: String): BasicPayload!
         adminResetUserPassword(identifier: String!, newPassword: String!): BasicPayload!
         changePassword(newPassword: String!): BasicPayload!

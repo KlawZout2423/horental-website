@@ -602,6 +602,45 @@ export const resolvers = {
       return { token, user };
     },
 
+    googleAuth: async (_: any, { idToken }: { idToken: string }) => {
+      const { OAuth2Client } = require('google-auth-library');
+      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+      const ticket = await client.verifyIdToken({
+          idToken: idToken,
+          audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) throw new Error('Invalid Google Token');
+
+      const { email, name, picture } = payload;
+      let rawUser = await prisma.user.findUnique({ where: { email } });
+
+      if (!rawUser) {
+        const crypto = require('crypto');
+        const dummyPassword = crypto.randomBytes(16).toString('hex');
+        const hashed = await bcrypt.hash(dummyPassword, 10);
+        rawUser = await prisma.user.create({
+          data: {
+            name: name || 'Google User',
+            email,
+            password: hashed,
+            profileImage: picture,
+          }
+        });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: rawUser.id },
+        select: USER_SAFE_SELECT,
+      });
+      if (!user) throw new Error('Failed to load user session.');
+
+      const JWT_SECRET = getJwtSecret();
+      const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
+      createAuditLog('USER_LOGIN', `User ${user.name} (${user.email}) logged in via Google`, user.email);
+      return { token, user };
+    },
+
     // User submits a password reset request → saved to DB + console log for admin
     submitPasswordResetRequest: async (_: any, { name, identifier, message }: any) => {
       if (!name?.trim() || !identifier?.trim()) {

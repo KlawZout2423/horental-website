@@ -610,12 +610,18 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               if (water.length === 0 && electricity.length === 0 && amenities.length === 0 && landSpecs.length === 0 && furnSpecs.length === 0 && other.length === 0) {
                 const lower = rawDesc.toLowerCase();
                 if (lower.includes('wifi') || lower.includes('wi-fi')) amenities.push('High-Speed WiFi');
+                if (lower.includes(' ac ') || lower.includes('air conditioning') || lower.includes('a/c')) amenities.push('Air Conditioning (AC)');
                 if (lower.includes('cctv')) amenities.push('CCTV Camera');
                 if (lower.includes('furnished')) amenities.push('Furnished');
                 if (lower.includes('fenced') || lower.includes('gated')) amenities.push('Gated & Fenced');
                 if (lower.includes('newly built')) amenities.push('Newly Built');
                 if (lower.includes('bed')) amenities.push('Bed Included');
                 if (lower.includes('desk')) amenities.push('Study Desk');
+                if (lower.includes('kitchen (private)') || lower.includes('private kitchen')) amenities.push('Kitchen (Private)');
+                if (lower.includes('kitchen (shared)') || lower.includes('shared kitchen')) amenities.push('Kitchen (Shared)');
+                if (lower.includes('bathroom (private)') || lower.includes('private bathroom')) amenities.push('Bathroom (Private)');
+                if (lower.includes('bathroom (shared)') || lower.includes('shared bathroom')) amenities.push('Bathroom (Shared)');
+                if (lower.includes('balcony') || lower.includes('veranda')) amenities.push('Balcony / Veranda');
                 
                 if (lower.includes('ghana water')) water.push('Ghana Water Supply');
                 if (lower.includes('polytank')) water.push('Polytank Water');
@@ -777,86 +783,93 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
         {/* Sidebar contact widget */}
         <aside className={styles.sidebarCard}>
-          <h3 className={styles.sidebarCardTitle}>
-            {property.owner?.role === 'agent' ? 'Contact Agent' : 'Contact Landlord'}
-          </h3>
-          
-          <div className={styles.landlordInfo}>
-            {property.landlordName ? (
-              <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>
-                  {property.owner?.role === 'agent' ? 'Listed By Agent' : 'Landlord Name'}
-                </span>
-                <span className={styles.infoValue}>{property.landlordName}</span>
-              </div>
-            ) : (
-              <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>
-                  {property.owner?.role === 'agent' ? 'Agent' : 'Landlord / Owner'}
-                </span>
-                <span className={styles.infoValue}>{property.owner?.name || 'HO Rentals Verified'}</span>
-              </div>
-            )}
+          {(() => {
+            const isFurniture = property.type?.toLowerCase().includes('furniture');
+            return (
+              <>
+                <h3 className={styles.sidebarCardTitle}>
+                  {property.owner?.role === 'agent' ? 'Contact Agent' : (isFurniture ? 'Contact Owner' : 'Contact Landlord')}
+                </h3>
+                
+                <div className={styles.landlordInfo}>
+                  {property.landlordName ? (
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>
+                        {property.owner?.role === 'agent' ? 'Listed By Agent' : (isFurniture ? 'Owner Name' : 'Landlord Name')}
+                      </span>
+                      <span className={styles.infoValue}>{property.landlordName}</span>
+                    </div>
+                  ) : (
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>
+                        {property.owner?.role === 'agent' ? 'Agent' : (isFurniture ? 'Owner' : 'Landlord / Owner')}
+                      </span>
+                      <span className={styles.infoValue}>{property.owner?.name || 'HO Rentals Verified'}</span>
+                    </div>
+                  )}
 
-            <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>Phone Contact</span>
-              <span className={styles.infoValue}>{maskPhoneNumber(property.contact)}</span>
-            </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Phone Contact</span>
+                    <span className={styles.infoValue}>{maskPhoneNumber(property.contact)}</span>
+                  </div>
 
-            {property.owner?.role === 'agent' && (
-              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-                <Link
-                  href={`/agents/${property.owner.id}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: 'var(--bg-surface-secondary)',
-                    border: '1px solid var(--border)',
-                    textDecoration: 'none',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.85rem',
-                    fontWeight: 600
-                  }}
-                >
-                  <span>🏢 Listed by Agent: <strong>{property.owner.name}</strong></span>
-                  <span style={{ color: 'var(--primary)', fontSize: '0.78rem' }}>View Profile &rarr;</span>
-                </Link>
-              </div>
-            )}
-          </div>
+                  {property.owner?.role === 'agent' && (
+                    <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+                      <Link
+                        href={`/agents/${property.owner.id}`}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: 'var(--bg-surface-secondary)',
+                          border: '1px solid var(--border)',
+                          textDecoration: 'none',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.85rem',
+                          fontWeight: 600
+                        }}
+                      >
+                        <span>🏢 Listed by Agent: <strong>{property.owner.name}</strong></span>
+                        <span style={{ color: 'var(--primary)', fontSize: '0.78rem' }}>View Profile &rarr;</span>
+                      </Link>
+                    </div>
+                  )}
+                </div>
 
-          <div className={styles.contactActions}>
-            <button 
-              onClick={() => handleConnectClick('call')} 
-              className="btn btn-primary" 
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', background: 'var(--primary)', fontWeight: 700 }}
-            >
-              <Phone size={16} /> {property.owner?.role === 'agent' ? 'Call Agent' : 'Call Landlord'}
-            </button>
+                <div className={styles.contactActions}>
+                  <button 
+                    onClick={() => handleConnectClick('call')} 
+                    className="btn btn-primary" 
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', background: 'var(--primary)', fontWeight: 700 }}
+                  >
+                    <Phone size={16} /> {property.owner?.role === 'agent' ? 'Call Agent' : (isFurniture ? 'Call Owner' : 'Call Landlord')}
+                  </button>
 
-            <button 
-              onClick={() => handleConnectClick('whatsapp')} 
-              className="btn btn-secondary" 
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              <MessageSquare size={16} /> WhatsApp HO Rentals
-            </button>
+                  <button 
+                    onClick={() => handleConnectClick('whatsapp')} 
+                    className="btn btn-secondary" 
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                    <MessageSquare size={16} /> WhatsApp HO Rentals
+                  </button>
 
-            <a
-              href={(() => {
-                const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
-                const msg = `Hello HO Rentals, I am interested in:\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n🆔 ID: #${property.id}\n\nPlease help arrange a viewing.`;
-                return `sms:+233557922593?body=${encodeURIComponent(msg)}`;
-              })()}
-              className="btn btn-outline"
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              <MessageSquare size={16} /> SMS HO Rentals
-            </a>
-          </div>
+                  <a
+                    href={(() => {
+                      const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
+                      const msg = `Hello HO Rentals, I am interested in:\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n🆔 ID: #${property.id}\n\nPlease help arrange a viewing.`;
+                      return `sms:+233557922593?body=${encodeURIComponent(msg)}`;
+                    })()}
+                    className="btn btn-outline"
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                    <MessageSquare size={16} /> SMS HO Rentals
+                  </a>
+                </div>
+              </>
+            );
+          })()}
         </aside>
       </div>
 

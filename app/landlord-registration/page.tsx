@@ -344,7 +344,7 @@ export default function LandlordRegistrationPage() {
         <span className={styles.regionBadge}>Ho, Volta Region</span>
       </div>
       <div className={styles.supportLine}>
-        Ho Rentals • Ho, Volta Region, Ghana • Tel: 0557922593
+        Ho Rentals • Ho, Volta Region, Ghana • Tel: 0204940602
       </div>
 
       {/* Steps indicators */}

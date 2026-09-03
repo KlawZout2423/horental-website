@@ -17,7 +17,7 @@ export default function TermsPage() {
 Effective Date: 11th July 2026
 
 1. WHO WE ARE
-Ho Rentals is a Ghanaian mobile app that connects landlords and tenants directly — no agents, no hidden fees. We are based in Ho, Volta Region, Ghana. Contact: 0557922593.
+Ho Rentals is a premier Ghanaian mobile and web platform connecting landlords, owners, agents, and tenants directly across Ho, Volta Region, and all of Ghana. Contact: 0204940602.
 
 2. WHO CAN USE HO RENTALS
 You must be at least 18 years old and a resident of Ghana to use this platform. By creating an account, you confirm that all information you provide is accurate and that you will use the platform for lawful purposes only.
@@ -42,7 +42,7 @@ By using Ho Rentals to search for accommodation, you agree to:
 - Not share landlord contact details with third parties.
 
 5. OUR VERIFIED LISTINGS
-Every property on Ho Rentals is physically visited and verified by our team before it goes live. Report suspicious listings to 0557922593.
+Every property on Ho Rentals is physically visited and verified by our team before it goes live. Report suspicious listings to 0204940602.
 
 6. WHAT WE ARE NOT RESPONSIBLE FOR
 Ho Rentals is a connection platform. We are not a party to any rental agreement or transaction between a landlord and tenant.
@@ -116,7 +116,7 @@ Ho Rentals — Transparent. Direct. Trusted.`;
         <section className={styles.sectionCard}>
           <h2 className={styles.sectionTitle}>1. Who We Are</h2>
           <p className={styles.text}>
-            Ho Rentals is a Ghanaian mobile and web platform that connects landlords and tenants directly — no agents, no hidden fees. We are based in Ho, Volta Region, Ghana. Contact: <strong>0557922593</strong>.
+            Ho Rentals is a premier Ghanaian mobile and web platform connecting landlords, owners, agents, and tenants directly across Ho, Volta Region, and all of Ghana. Contact: <strong>0204940602</strong>.
           </p>
         </section>
 
@@ -174,7 +174,7 @@ Ho Rentals — Transparent. Direct. Trusted.`;
         <section className={styles.sectionCard}>
           <h2 className={styles.sectionTitle}>5. Our Verified Listings</h2>
           <p className={styles.text}>
-            Every property on Ho Rentals is physically visited and verified by our team before it goes live. However, property conditions may change after our visit. We strongly advise all tenants to inspect a property in person before committing. Report any suspicious listing to us at <strong>0557922593</strong>.
+            Every property on Ho Rentals is physically visited and verified by our team before it goes live. However, property conditions may change after our visit. We strongly advise all tenants to inspect a property in person before committing. Report any suspicious listing to us at <strong>0204940602</strong>.
           </p>
         </section>
 
@@ -198,7 +198,7 @@ Ho Rentals — Transparent. Direct. Trusted.`;
         <section className={styles.sectionCard}>
           <h2 className={styles.sectionTitle}>8. Your Data</h2>
           <p className={styles.text}>
-            We collect personal information to operate the platform and improve your experience. We will never sell your data to third parties. Your contact details are only shared with other users for the purpose of connecting you with a landlord or tenant. You may request access to or deletion of your data by contacting us at <strong>0557922593</strong>.
+            We collect personal information to operate the platform and improve your experience. We will never sell your data to third parties. Your contact details are only shared with other users for the purpose of connecting you with a landlord or tenant. You may request access to or deletion of your data by contacting us at <strong>0204940602</strong>.
           </p>
         </section>
 

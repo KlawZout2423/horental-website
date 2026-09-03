@@ -16,12 +16,14 @@ import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImag
 
 
 const POPULAR_AREAS = [
+  { name: 'Ho', icon: '📍', label: 'Ho & Volta' },
+  { name: 'HTU', icon: '🏫', label: 'HTU / Ho Poly' },
   { name: 'UHAS', icon: '🎓', label: 'UHAS Campus' },
-  { name: 'Ho Poly', icon: '🏫', label: 'Ho Poly / HTU' },
-  { name: 'SSNIT Flats', icon: '🏢', label: 'SSNIT Flats' },
-  { name: 'Bankoe', icon: '🏙️', label: 'Bankoe' },
-  { name: 'Sokode', icon: '🏡', label: 'Sokode' },
-  { name: 'Civic Centre', icon: '📍', label: 'Civic Centre' }
+  { name: 'Accra', icon: '🏙️', label: 'Accra Capital' },
+  { name: 'Kumasi', icon: '🏛️', label: 'Kumasi Ashanti' },
+  { name: 'Takoradi', icon: '🌊', label: 'Takoradi' },
+  { name: 'Cape Coast', icon: '🏰', label: 'Cape Coast' },
+  { name: 'Tamale', icon: '🌅', label: 'Tamale' }
 ];
 
 const PROPERTY_CATEGORIES = [
@@ -556,8 +558,15 @@ export default function PropertiesClient() {
                   { label: 'AC', icon: '❄️', value: 'AC' },
                   { label: 'Furnished', icon: '🛋️', value: 'Furnished' },
                   { label: 'Study Desk', icon: '📚', value: 'Study Desk' },
+                  { label: 'Bed', icon: '🛏️', value: 'Bed' },
                   { label: 'CCTV Camera', icon: '📹', value: 'CCTV' },
                   { label: 'Gated / Fenced', icon: '🚪', value: 'Gated & Fenced' },
+                  { label: 'Private Kitchen', icon: '🍳', value: 'Kitchen (Private)' },
+                  { label: 'Shared Kitchen', icon: '🍽️', value: 'Kitchen (Shared)' },
+                  { label: 'Private Bath', icon: '🚿', value: 'Bathroom (Private)' },
+                  { label: 'Shared Bath', icon: '🛁', value: 'Bathroom (Shared)' },
+                  { label: 'Balcony', icon: '🌅', value: 'Balcony' },
+                  { label: 'Newly Built', icon: '✨', value: 'Newly Built' },
                   { label: 'Parking', icon: '🚗', value: 'Parking' },
                 ].map((item) => {
                   const isSelected = selectedAmenities.includes(item.value);
@@ -688,7 +697,7 @@ export default function PropertiesClient() {
                         <div className={styles.cardMetaRow} style={{ marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
                           <div className={styles.cardLocation} style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>
                             <MapPin size={13} style={{ color: 'var(--primary)' }} />
-                            <span>{p.location.toLowerCase().includes('ho') ? p.location : `${p.location}, Ho`}</span>
+                            <span>{p.location}</span>
                           </div>
                           {p.digitalAddress && (
                             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--primary-dark)', backgroundColor: 'var(--primary-light)', padding: '2px 6px', borderRadius: '4px' }}>

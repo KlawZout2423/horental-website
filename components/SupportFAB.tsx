@@ -38,7 +38,7 @@ export default function SupportFAB() {
             <MessageSquare size={18} className={styles.optionIcon} style={{ color: '#25D366' }} />
             <div className={styles.optionLabel}>
               <span>WhatsApp Chat</span>
-              <span className={styles.optionValue}>0557 922 593</span>
+              <span className={styles.optionValue}>020 494 0602</span>
             </div>
           </a>
 
@@ -50,7 +50,7 @@ export default function SupportFAB() {
             <MessageSquare size={18} className={styles.optionIcon} style={{ color: 'var(--primary)' }} />
             <div className={styles.optionLabel}>
               <span>SMS Support</span>
-              <span className={styles.optionValue}>0557 922 593</span>
+              <span className={styles.optionValue}>020 494 0602</span>
             </div>
           </a>
 

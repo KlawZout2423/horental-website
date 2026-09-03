@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
 import { Eye, EyeOff, Loader, LogIn } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import styles from './login.module.css';
 
 export default function LoginForm() {
-  const { login, user } = useAuth();
+  const { login, googleLogin, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -142,6 +143,32 @@ export default function LoginForm() {
             )}
           </button>
         </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', opacity: 0.6 }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
+          <span style={{ padding: '0 10px', fontSize: '0.85rem' }}>or</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <GoogleLogin
+            onSuccess={(credentialResponse) => {
+              if (credentialResponse.credential) {
+                googleLogin(credentialResponse.credential).catch((err) => {
+                  setError(err.message || 'Google login failed');
+                });
+              }
+            }}
+            onError={() => {
+              setError('Google login failed. Please try again.');
+            }}
+            useOneTap
+            shape="rectangular"
+            theme="outline"
+            text="continue_with"
+            width="100%"
+          />
+        </div>
 
         <p className={styles.footer}>
           Don&apos;t have an account?{' '}

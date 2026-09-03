@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { graphqlRequest, LOGIN_MUTATION, REGISTER_MUTATION, ME_QUERY } from './graphql';
+import { graphqlRequest, LOGIN_MUTATION, GOOGLE_AUTH_MUTATION, REGISTER_MUTATION, ME_QUERY } from './graphql';
 
 import { User, RegisterInput } from './types';
 
@@ -10,6 +10,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  googleLogin: (idToken: string) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updatedUser: User) => void;
@@ -166,6 +167,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const googleLogin = async (idToken: string) => {
+    setLoading(true);
+    try {
+      const data = await graphqlRequest<{ googleAuth: { token: string; user: User } }>(
+        GOOGLE_AUTH_MUTATION,
+        { idToken }
+      );
+
+      const { token, user: loggedUser } = data.googleAuth;
+
+      const res = await fetch('/api/auth/set-cookie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, user: loggedUser }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to establish secure session. Please try again.');
+      }
+
+      setUser(loggedUser);
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pwa_trigger_pending', 'true');
+        setTimeout(() => {
+          window.dispatchEvent(new Event('trigger-pwa-prompt'));
+        }, 1000);
+      }
+
+      if (loggedUser.role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const register = async (input: RegisterInput) => {
     setLoading(true);
     try {
@@ -226,7 +268,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, googleLogin, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

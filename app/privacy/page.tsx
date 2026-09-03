@@ -28,8 +28,8 @@ We collect personal information necessary to connect tenants and landlords direc
 
 3. HOW WE USE YOUR INFORMATION
 We use your information to:
-- Connect tenants directly with verified landlords via phone or WhatsApp.
-- Schedule physical property verification visits in Ho.
+- Connect tenants & buyers directly with verified landlords, owners, and agents via phone or WhatsApp.
+- Schedule physical property & item verification visits across Ghana.
 - Maintain platform security and prevent fraud or fake listings.
 
 4. WE NEVER SELL YOUR DATA
@@ -44,7 +44,7 @@ Under Ghanaian law, you have the right to:
 - Request correction of inaccurate information.
 - Request full deletion of your account and data.
 
-To exercise these rights, contact us at 0557922593 or support@horentals.com.
+To exercise these rights, contact us at 0204940602 or support@horentals.com.
 
 7. GOVERNING LAW
 This Privacy Policy is governed by the laws of the Republic of Ghana.
@@ -126,8 +126,8 @@ Ho Rentals — Transparent. Direct. Trusted.`;
           <h2 className={styles.sectionTitle}>3. How We Use Your Information</h2>
           <p className={styles.text}>We use your information strictly for the following purposes:</p>
           <ul className={styles.bulletList}>
-            <li>To connect tenants directly with verified landlords via phone call or WhatsApp.</li>
-            <li>To coordinate physical on-site verification visits by our team in Ho.</li>
+            <li>To connect tenants & buyers directly with verified landlords, owners, and agents via phone call or WhatsApp.</li>
+            <li>To coordinate physical on-site verification visits by our team across Ghana.</li>
             <li>To prevent fraudulent listings, fake agents, and unauthorized duplicate rentals.</li>
           </ul>
         </section>
@@ -162,7 +162,7 @@ Ho Rentals — Transparent. Direct. Trusted.`;
             <li>Request permanent deletion of your account and associated phone data.</li>
           </ul>
           <p className={styles.text} style={{ marginTop: '8px' }}>
-            To request data deletion, call or WhatsApp our support line at <strong>0557922593</strong>.
+            To request data deletion, call or WhatsApp our support line at <strong>0204940602</strong>.
           </p>
         </section>
 

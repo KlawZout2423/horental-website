@@ -3361,6 +3361,14 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+          ) : activeTab === 'upload' ? (
+            <div style={{ backgroundColor: 'var(--bg-surface)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={20} style={{ color: 'var(--primary)' }} />
+                <span>Upload Property Listing</span>
+              </h2>
+              <UploadPage isEmbedded={true} onSuccess={() => { setActiveTab('properties'); loadAdminDashboardData(); }} />
+            </div>
           ) : null}
         </div>
       </main>

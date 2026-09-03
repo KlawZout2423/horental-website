@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
         </a>
 
         <p style={{ fontSize: '0.75rem', color: '#94A3B8', margin: '14px 0 0' }}>
-          0557922593 · Mon–Sun 8am–8pm
+          0204940602 · Mon–Sun 8am–8pm
         </p>
       </div>
     </div>

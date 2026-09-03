@@ -8,6 +8,8 @@ import { useAuth } from '../lib/auth';
 import { Home, Search, PlusCircle, Shield, LogOut, Menu, X, User, Heart, Sun, Moon, Info } from 'lucide-react';
 import styles from './Navbar.module.css';
 
+import NotificationBell from './NotificationBell';
+
 export default function Navbar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
@@ -97,6 +99,9 @@ export default function Navbar() {
 
         {/* Desktop Actions */}
         <div className={styles.actions}>
+          {/* Notification Bell for New Listings */}
+          <NotificationBell userId={user?.id} />
+
           {/* Dark / Light theme toggle */}
           <button
             onClick={toggleTheme}
@@ -157,6 +162,10 @@ export default function Navbar() {
 
         {/* Mobile & Right Header Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className={styles.mobileHeaderThemeBtn}>
+            <NotificationBell userId={user?.id} />
+          </div>
+
           {/* Dark / Light theme toggle button — mobile header only */}
           <button
             onClick={toggleTheme}

@@ -1,0 +1,203 @@
+.bellContainer {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.bellBtn {
+  position: relative;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.bellBtn:hover {
+  background-color: var(--bg-surface-secondary);
+}
+
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: #ef4444;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--bg-surface);
+  animation: badgePulse 2s infinite;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -10px;
+  width: 340px;
+  max-width: 90vw;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  overflow: hidden;
+  animation: dropdownFadeIn 0.2s ease-out;
+}
+
+.dropdownHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-surface-secondary);
+}
+
+.dropdownTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.markReadBtn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.markReadBtn:hover {
+  background-color: rgba(193, 18, 31, 0.1);
+}
+
+.notificationsList {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.notificationItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.15s ease;
+  position: relative;
+}
+
+.notificationItem:hover {
+  background-color: var(--bg-surface-secondary);
+}
+
+.unreadItem {
+  background-color: rgba(193, 18, 31, 0.04);
+}
+
+.unreadDot {
+  position: absolute;
+  left: 6px;
+  top: 18px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--primary);
+}
+
+.itemImage {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+  background-color: var(--bg-surface-secondary);
+}
+
+.itemContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemMeta {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.itemPrice {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.itemTime {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.emptyState {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.dropdownFooter {
+  padding: 10px 16px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background-color: var(--bg-surface-secondary);
+}
+
+.viewAllLink {
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.viewAllLink:hover {
+  text-decoration: underline;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}

@@ -40,15 +40,15 @@ export default function AuthPromptModal({ isOpen, onClose, targetPropertyId }: A
           <Lock size={30} />
         </div>
 
-        <h2 className={styles.title}>Account Required to Contact Landlord</h2>
+        <h2 className={styles.title}>Account Required to Contact Owner / Landlord</h2>
         <p className={styles.subtitle}>
-          Sign in or create a free account to call, WhatsApp chat, or book physical viewings directly with verified landlords.
+          Sign in or create a free account to call, WhatsApp chat, or book physical viewings directly with verified owners and landlords.
         </p>
 
         <div className={styles.benefitsList}>
           <div className={styles.benefitItem}>
             <CheckCircle2 size={16} className={styles.benefitIcon} />
-            <span>Direct Landlord Call & WhatsApp numbers</span>
+            <span>Direct Call & WhatsApp contacts for owners and landlords</span>
           </div>
           <div className={styles.benefitItem}>
             <CheckCircle2 size={16} className={styles.benefitIcon} />

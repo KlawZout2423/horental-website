@@ -222,7 +222,7 @@ export default function AboutPage() {
           <p>Talk directly with our team in Ho or browse verified rooms near you today.</p>
           <div className={styles.ctaPhoneRow}>
             <Phone size={18} style={{ color: 'var(--primary)' }} />
-            <span>Call / WhatsApp: <strong>0557922593</strong></span>
+            <span>Call / WhatsApp: <strong>0204940602</strong></span>
           </div>
         </div>
 

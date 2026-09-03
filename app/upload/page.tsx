@@ -6,6 +6,7 @@ import { useAuth } from '../../lib/auth';
 import { graphqlRequest, CREATE_PROPERTY, UPDATE_AGENT_PROFILE } from '../../lib/graphql';
 import { UploadCloud, Image as ImageIcon, Sparkles, Loader } from 'lucide-react';
 import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, User } from '../../lib/types';
+import VerifiedAgentModal from '../../components/VerifiedAgentModal';
 import styles from './upload.module.css';
 
 export default function UploadPage({
@@ -40,12 +41,18 @@ export default function UploadPage({
   
   // Amenities checkboxes state (all default to false - chosen explicitly by user)
   const [hasWifi, setHasWifi] = useState(false);
+  const [hasAc, setHasAc] = useState(false);
   const [hasCctv, setHasCctv] = useState(false);
   const [hasFurnished, setHasFurnished] = useState(false);
   const [hasGatedFenced, setHasGatedFenced] = useState(false);
   const [isNewlyBuilt, setIsNewlyBuilt] = useState(false);
   const [hasBed, setHasBed] = useState(false);
   const [hasStudyDesk, setHasStudyDesk] = useState(false);
+  const [hasPrivateKitchen, setHasPrivateKitchen] = useState(false);
+  const [hasSharedKitchen, setHasSharedKitchen] = useState(false);
+  const [hasPrivateBathroom, setHasPrivateBathroom] = useState(false);
+  const [hasSharedBathroom, setHasSharedBathroom] = useState(false);
+  const [hasBalcony, setHasBalcony] = useState(false);
   const [ghanaWaterShared, setGhanaWaterShared] = useState(false);
   const [ghanaWaterSeparate, setGhanaWaterSeparate] = useState(false);
   const [polytank, setPolytank] = useState(false);
@@ -70,29 +77,30 @@ export default function UploadPage({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Quick Locations State (Volta Region Areas)
+  // Quick Locations State (Ghana Cities & Regions)
   const [quickLocations, setQuickLocations] = useState<string[]>([
+    'HTU / Ho Poly Area, Ho, Volta Region',
     'Sokode (UHAS Main Campus), Volta Region',
     'Dave (UHAS Dave Campus), Volta Region',
-    'HTU / Ho Poly Area, Volta Region',
     'Bankoe, Ho, Volta Region',
+    'East Legon, Accra, Greater Accra',
+    'Madina / Osu / Cantoments, Accra',
+    'KNUST Campus Area, Kumasi, Ashanti Region',
+    'UCC Campus Area, Cape Coast, Central Region',
+    'Takoradi Town / Market Circle, Western Region',
+    'Tamale Central, Northern Region',
+    'Sunyani City, Bono Region',
+    'Koforidua, Eastern Region',
     'Civic Center, Ho, Volta Region',
     'Ahoe, Ho, Volta Region',
-    'Kpaguri, Ho, Volta Region',
-    'Heve, Ho, Volta Region',
-    'Adaklu Road, Volta Region',
-    'Kpotame, Volta Region',
     'Hohoe, Volta Region',
     'Kpando, Volta Region',
     'Denu / Aflao, Volta Region',
     'Sogakope, Volta Region',
-    'Keta / Anloga, Volta Region',
-    'Akatsi, Volta Region',
-    'Peki, Volta Region',
-    'Jasikan, Volta Region',
   ]);
   const [showAddCustomLocation, setShowAddCustomLocation] = useState(false);
   const [customAreaInput, setCustomAreaInput] = useState('');
+  const [showVerifyInfoModal, setShowVerifyInfoModal] = useState(false);
 
   const handleAddCustomQuickLocation = () => {
     if (!customAreaInput.trim()) return;
@@ -217,12 +225,18 @@ export default function UploadPage({
       } else {
         const otherOptions: string[] = [];
         if (hasWifi) otherOptions.push('WiFi');
+        if (hasAc) otherOptions.push('AC');
         if (hasCctv) otherOptions.push('CCTV Camera');
         if (hasFurnished) otherOptions.push('Furnished');
         if (hasGatedFenced) otherOptions.push('Gated & Fenced');
         if (isNewlyBuilt) otherOptions.push('Newly Built');
         if (hasBed) otherOptions.push('Bed');
         if (hasStudyDesk) otherOptions.push('Study Desk');
+        if (hasPrivateKitchen) otherOptions.push('Kitchen (Private)');
+        if (hasSharedKitchen) otherOptions.push('Kitchen (Shared)');
+        if (hasPrivateBathroom) otherOptions.push('Bathroom (Private)');
+        if (hasSharedBathroom) otherOptions.push('Bathroom (Shared)');
+        if (hasBalcony) otherOptions.push('Balcony / Veranda');
         if (otherOptions.length > 0) {
           amenitiesList.push(`Amenities: ${otherOptions.join(', ')}`);
         }
@@ -595,7 +609,11 @@ export default function UploadPage({
                 <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
                   Agent: {user.name}
                 </h3>
-                <span style={{ fontSize: '0.72rem', backgroundColor: '#10B981', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: 700 }}>
+                <span
+                  onClick={() => setShowVerifyInfoModal(true)}
+                  style={{ fontSize: '0.72rem', backgroundColor: '#10B981', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                  title="Click for Agent Verification Guarantee"
+                >
                   Verified Agent
                 </span>
               </div>
@@ -1112,6 +1130,30 @@ export default function UploadPage({
                           <span>High-Speed WiFi</span>
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasAc} onChange={(e) => setHasAc(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Air Conditioning (AC)</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasPrivateKitchen} onChange={(e) => setHasPrivateKitchen(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Kitchen (Private)</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasSharedKitchen} onChange={(e) => setHasSharedKitchen(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Kitchen (Shared)</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasPrivateBathroom} onChange={(e) => setHasPrivateBathroom(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Bathroom (Private)</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasSharedBathroom} onChange={(e) => setHasSharedBathroom(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Bathroom (Shared)</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <input type="checkbox" checked={hasBalcony} onChange={(e) => setHasBalcony(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          <span>Balcony / Veranda</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
                           <input type="checkbox" checked={hasCctv} onChange={(e) => setHasCctv(e.target.checked)} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
                           <span>CCTV Camera</span>
                         </label>
@@ -1221,6 +1263,12 @@ export default function UploadPage({
           </div>
           {formContent}
         </div>
+
+        <VerifiedAgentModal
+          isOpen={showVerifyInfoModal}
+          onClose={() => setShowVerifyInfoModal(false)}
+          agentName={user?.name}
+        />
       </div>
     );
 }

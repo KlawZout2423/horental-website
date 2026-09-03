@@ -9,6 +9,7 @@ import { graphqlRequest, GET_PROPERTIES, GET_AGENTS } from '../lib/graphql';
 import { trackVisit } from '../lib/trackVisit';
 import styles from './page.module.css';
 import AuthPromptModal from '../components/AuthPromptModal';
+import VerifiedAgentModal from '../components/VerifiedAgentModal';
 
 import { Property, getPricePeriodLabel, getOptimizedImageUrl, getStatusLabel } from '../lib/types';
 
@@ -48,12 +49,14 @@ const SELF_CONTAINED_OPTIONS = [
 ];
 
 const POPULAR_AREAS = [
+  { name: 'Ho', icon: '📍', label: 'Ho & Volta' },
+  { name: 'HTU', icon: '🏫', label: 'HTU / Ho Poly' },
   { name: 'UHAS', icon: '🎓', label: 'UHAS Campus' },
-  { name: 'Ho Poly', icon: '🏫', label: 'Ho Poly / HTU' },
-  { name: 'SSNIT Flats', icon: '🏢', label: 'SSNIT Flats' },
-  { name: 'Bankoe', icon: '🏙️', label: 'Bankoe' },
-  { name: 'Sokode', icon: '🏡', label: 'Sokode' },
-  { name: 'Civic Centre', icon: '📍', label: 'Civic Centre' }
+  { name: 'Accra', icon: '🏙️', label: 'Accra Capital' },
+  { name: 'Kumasi', icon: '🏛️', label: 'Kumasi Ashanti' },
+  { name: 'Takoradi', icon: '🌊', label: 'Takoradi' },
+  { name: 'Cape Coast', icon: '🏰', label: 'Cape Coast' },
+  { name: 'Tamale', icon: '🌅', label: 'Tamale' }
 ];
 
 // Testimonials data removed
@@ -67,6 +70,23 @@ export default function Home() {
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [agents, setAgents] = useState<AgentUser[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal states
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
+  const [modalAgentName, setModalAgentName] = useState<string | undefined>(undefined);
+  const [pendingAgentRedirect, setPendingAgentRedirect] = useState<string | null>(null);
+
+  const handleAgentClick = (e: React.MouseEvent, agentId: string | number, agentName?: string) => {
+    if (typeof window !== 'undefined') {
+      const agreed = localStorage.getItem('agreed_agent_disclaimer') === 'true';
+      if (!agreed) {
+        e.preventDefault();
+        setModalAgentName(agentName);
+        setPendingAgentRedirect(`/agents/${agentId}`);
+        setVerifyModalOpen(true);
+      }
+    }
+  };
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -256,9 +276,9 @@ export default function Home() {
       <header className={styles.hero}>
         <div className={styles.heroWrapper}>
           <div className={styles.heroLeft}>
-            <h1 className={styles.title}>Find Verified Rooms & Apartments in Ho</h1>
+            <h1 className={styles.title}>Find Verified Rooms, Hostels & Furnitures in Ghana</h1>
             <p className={styles.subtitle}>
-              Verified rooms, apartments, student hostels, shops & commercial spaces across Ho, Volta Region and Ghana. Zero middleman markups.
+              Verified rooms, apartments, student hostels, furniture, shops & commercial spaces across Ho, Volta Region, Accra, Kumasi and all of Ghana. Zero middleman markups.
             </p>
 
             <div style={{ display: 'flex', gap: '12px', margin: '8px 0 16px', flexWrap: 'wrap' }}>
@@ -427,7 +447,7 @@ export default function Home() {
                 <p>No verified rental agents are available at the moment.</p>
               </div>
             ) : (
-              <div className={styles.gridCards}>
+              <div className={styles.agentGridCards}>
                 {agents.map((agent, index) => {
                   const agentProps = properties.filter(
                     (p) => String(p.owner?.id) === String(agent.id)
@@ -437,52 +457,15 @@ export default function Home() {
                   return (
                     <div
                       key={agent.id}
-                      className={`${styles.propertyCard} animate-slide-up`}
-                      style={{
-                        animationDelay: `${index * 80}ms`,
-                        padding: '0 20px 20px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        backgroundColor: 'var(--bg-surface)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius-lg)',
-                        boxShadow: 'var(--shadow-sm)',
-                        textAlign: 'center',
-                        gap: '8px',
-                        position: 'relative',
-                        overflow: 'hidden',
-                      }}
+                      className={`${styles.agentCard} animate-slide-up`}
+                      style={{ animationDelay: `${index * 80}ms` }}
                     >
                       {/* Premium blurred cover banner background */}
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: '76px',
-                        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(168, 85, 247, 0.18) 100%)',
-                        borderBottom: '1px solid var(--border)',
-                        zIndex: 0,
-                      }} />
+                      <div className={styles.agentCardCover} />
 
                       {/* Centered photo overlapping the cover banner */}
-                      <div style={{ position: 'relative', display: 'inline-block', marginTop: '26px', zIndex: 1 }}>
-                        <div style={{
-                          width: '96px',
-                          height: '96px',
-                          borderRadius: '50%',
-                          overflow: 'hidden',
-                          border: '4px solid var(--bg-surface)',
-                          background: 'var(--bg-surface-secondary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '2.3rem',
-                          fontWeight: 900,
-                          color: 'var(--primary)',
-                          boxShadow: 'var(--shadow-md)',
-                        }}>
+                      <div className={styles.agentCardPhotoContainer}>
+                        <div className={styles.agentCardPhoto}>
                           {agent.profileImage ? (
                             <img src={agent.profileImage} alt={agent.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
@@ -490,106 +473,56 @@ export default function Home() {
                           )}
                         </div>
                         {/* Green verified badge tick pinned to photo */}
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '2px',
-                          right: '2px',
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '50%',
-                          background: '#10B981',
-                          border: '2.5px solid var(--bg-surface)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}>
+                        <div className={styles.agentCardBadge}>
                           <ShieldCheck size={12} color="#fff" />
                         </div>
                       </div>
 
                       {/* Name */}
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: '2px 0 0', color: 'var(--text-primary)', zIndex: 1 }}>
+                      <h3 className={styles.agentCardName}>
                         {agent.name}
                       </h3>
 
-                      {/* Verified badge pill */}
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '0.72rem',
-                        color: '#10B981',
-                        fontWeight: 700,
-                        background: 'rgba(16, 185, 129, 0.08)',
-                        padding: '3px 10px',
-                        borderRadius: '20px',
-                        zIndex: 1,
-                      }}>
+                      {/* Verified badge pill — clicking opens Independent Agent Disclaimer Modal */}
+                      <span
+                        className={styles.agentCardPill}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setModalAgentName(agent.name);
+                          setVerifyModalOpen(true);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        title="Click to view Independent Agent Disclaimer & Verification"
+                      >
                         <ShieldCheck size={12} /> Verified Agent
                       </span>
 
                       {/* Location */}
                       {agent.agentLocation && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--text-secondary)', zIndex: 1 }}>
+                        <div className={styles.agentCardLocation}>
                           <MapPin size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />
                           <span>{agent.agentLocation}</span>
                         </div>
                       )}
 
                       {/* Bio */}
-                      <p style={{
-                        fontSize: '0.84rem',
-                        color: 'var(--text-secondary)',
-                        margin: '2px 0 4px',
-                        lineHeight: 1.45,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        fontStyle: 'italic',
-                        padding: '0 8px',
-                        zIndex: 1,
-                      }}>
+                      <p className={styles.agentCardBio}>
                         "{agent.bio || 'Verified independent rental agent on HO Rentals.'}"
                       </p>
 
                       {/* Divider line */}
-                      <div style={{ width: '100%', height: '1px', background: 'var(--border)', margin: '4px 0', zIndex: 1 }} />
+                      <div className={styles.agentCardDivider} />
 
                       {/* Listings count styled as metadata tag */}
-                      <div style={{
-                        backgroundColor: 'var(--bg-surface-secondary)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '30px',
-                        padding: '4px 14px',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        color: 'var(--text-secondary)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        margin: '2px 0',
-                        zIndex: 1,
-                      }}>
+                      <div className={styles.agentCardStats}>
                         🏢 {count} {count === 1 ? 'Active Listing' : 'Active Listings'}
                       </div>
 
-                      {/* CTA button — full width centered */}
+                      {/* CTA button — direct navigation to profile */}
                       <Link
                         href={`/agents/${agent.id}`}
-                        className="btn btn-primary btn-sm"
-                        style={{
-                          width: '100%',
-                          padding: '10px 0',
-                          fontSize: '0.84rem',
-                          borderRadius: '30px',
-                          textDecoration: 'none',
-                          fontWeight: 700,
-                          textAlign: 'center',
-                          marginTop: '6px',
-                          zIndex: 1,
-                          boxShadow: '0 4px 12px rgba(193, 18, 31, 0.15)',
-                        }}
+                        className={`btn btn-primary btn-sm ${styles.agentCardBtn}`}
                       >
                         View Agent Profile →
                       </Link>
@@ -851,6 +784,19 @@ export default function Home() {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         targetPropertyId={targetPropertyId}
+      />
+
+      <VerifiedAgentModal
+        isOpen={verifyModalOpen}
+        onClose={() => setVerifyModalOpen(false)}
+        onAccept={() => {
+          setVerifyModalOpen(false);
+          if (pendingAgentRedirect) {
+            router.push(pendingAgentRedirect);
+            setPendingAgentRedirect(null);
+          }
+        }}
+        agentName={modalAgentName}
       />
     </div>
   );
