@@ -22,16 +22,27 @@ export async function graphqlRequest<T = any>(
 ): Promise<T> {
   // Route through our Next.js proxy so the HttpOnly cookie is attached
   // server-side. The browser automatically sends the cookie with this request.
-  const proxyUrl = '/graphql';
+  const proxyUrl = '/api/graphql';
 
   try {
-    const res = await fetch(proxyUrl, {
+    let res = await fetch(proxyUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables }),
       cache: 'no-store', // Disable caching for real-time rental updates
       credentials: 'same-origin', // Ensures cookies are sent with the request
     });
+
+    if (res.status === 404) {
+      // Fallback to /graphql if /api/graphql is not reached
+      res = await fetch('/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables }),
+        cache: 'no-store',
+        credentials: 'same-origin',
+      });
+    }
 
     let body: GraphQLResponse<T>;
     try {
@@ -60,8 +71,29 @@ export async function graphqlRequest<T = any>(
     return body.data;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
-    // Only log unexpected errors — not user-facing validation errors like duplicate accounts
-    if (!message.includes('already exists') && !message.includes('Invalid credentials') && !message.includes('Not authenticated') && !message.includes('Not authorized')) {
+    
+    // If dev server returned transient 404 during Turbopack route compilation, retry once
+    if (message.includes('Status: 404')) {
+      try {
+        await new Promise((res) => setTimeout(res, 500));
+        const retryRes = await fetch('/graphql', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, variables }),
+          cache: 'no-store',
+          credentials: 'same-origin',
+        });
+        if (retryRes.ok) {
+          const retryBody: GraphQLResponse<T> = await retryRes.json();
+          if (retryBody.data) return retryBody.data;
+        }
+      } catch {
+        // Fall through to standard error handling if retry fails
+      }
+    }
+
+    // Only log unexpected errors — not user-facing validation errors or transient auth messages
+    if (!message.includes('already exists') && !message.includes('Invalid credentials') && !message.includes('Not authenticated') && !message.includes('Not authorized') && !message.includes('Status: 404')) {
       console.error('GraphQL Request Error:', message);
     }
     throw new Error(message);
@@ -804,6 +836,24 @@ export const GET_SUBSCRIPTIONS = `
       momoNumber
       createdAt
     }
+  }
+`;
+
+export const READ_NOTIFICATION_IDS_QUERY = `
+  query ReadNotificationIds {
+    readNotificationIds
+  }
+`;
+
+export const MARK_NOTIFICATION_READ = `
+  mutation MarkNotificationRead($propertyId: Int!) {
+    markNotificationRead(propertyId: $propertyId)
+  }
+`;
+
+export const MARK_ALL_NOTIFICATIONS_READ = `
+  mutation MarkAllNotificationsRead($propertyIds: [Int!]!) {
+    markAllNotificationsRead(propertyIds: $propertyIds)
   }
 `;
 

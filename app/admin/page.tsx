@@ -261,10 +261,12 @@ export default function AdminPage() {
 
   // Load initial data (stats + properties + users) immediately on mount
   useEffect(() => {
-    if (user && user.role === 'admin') {
+    if (!authLoading && user && user.role === 'admin') {
       loadInitialData();
+    } else if (!authLoading) {
+      setLoadingData(false);
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   // Lazy-load tab-specific data when user switches tabs
   useEffect(() => {
@@ -1116,11 +1118,10 @@ export default function AdminPage() {
               <span className={styles.navCountBadge}>{landlordRegistrations.length}</span>
             </button>
 
-            {/* Standard Nav Item for Upload Action */}
             <button
               onClick={() => setActiveTab('upload')}
-              className={`${styles.navItem} ${activeTab === 'upload' ? styles.activeNavItem : ''}`}
-              style={{ marginTop: '12px', borderTop: '1px solid #1E293B', paddingTop: '16px', borderRadius: '0' }}
+              className={styles.sidebarUploadBtn}
+              style={{ marginTop: '16px' }}
             >
               <Plus size={16} />
               <span>Upload Property</span>
@@ -1270,8 +1271,8 @@ export default function AdminPage() {
                   </button>
                   <button
                     onClick={() => { setActiveTab('upload'); setIsMobileDrawerOpen(false); }}
-                    className={`${styles.navItem} ${activeTab === 'upload' ? styles.activeNavItem : ''}`}
-                    style={{ marginTop: '12px', borderTop: '1px solid #1E293B', paddingTop: '16px' }}
+                    className={styles.sidebarUploadBtn}
+                    style={{ marginTop: '16px' }}
                   >
                     <Plus size={16} /> Upload Property
                   </button>
@@ -1474,7 +1475,9 @@ export default function AdminPage() {
           )}
 
           {/* Render Tab Contents */}
-          {loadingData ? (
+          {activeTab === 'upload' ? (
+            <UploadPage isEmbedded={true} onSuccess={() => { setActiveTab('properties'); loadAdminDashboardData(); }} />
+          ) : loadingData ? (
             <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-secondary)' }}>
               <Loader className="animate-spin" size={36} style={{ margin: '0 auto 16px', color: 'var(--primary)' }} />
               <p style={{ fontWeight: 600 }}>Syncing records from database...</p>
@@ -3059,8 +3062,6 @@ export default function AdminPage() {
                 )}
               </div>
             </>
-          ) : activeTab === 'upload' ? (
-            <UploadPage isEmbedded={true} onSuccess={() => { setActiveTab('properties'); loadAdminDashboardData(); }} />
           ) : activeTab === 'traffic' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 

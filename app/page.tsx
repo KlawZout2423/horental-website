@@ -77,13 +77,22 @@ export default function Home() {
   const [pendingAgentRedirect, setPendingAgentRedirect] = useState<string | null>(null);
 
   const handleAgentClick = (e: React.MouseEvent, agentId: string | number, agentName?: string) => {
+    e.preventDefault();
+    // Step 1: Must be signed in
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    // Step 2: Must accept disclaimer (per session)
     if (typeof window !== 'undefined') {
-      const agreed = localStorage.getItem('agreed_agent_disclaimer') === 'true';
+      const agreed = sessionStorage.getItem('agreed_agent_disclaimer') === 'true';
       if (!agreed) {
-        e.preventDefault();
         setModalAgentName(agentName);
         setPendingAgentRedirect(`/agents/${agentId}`);
         setVerifyModalOpen(true);
+      } else {
+        // Already agreed this session — navigate directly
+        router.push(`/agents/${agentId}`);
       }
     }
   };
@@ -108,9 +117,7 @@ export default function Home() {
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selfContainedBtnRef = useRef<HTMLButtonElement>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
-
-  // Close dropdown overlay when clicking outside
+  // Close dropdown overlay when clicking outside or scrolling
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -120,19 +127,19 @@ export default function Home() {
         setShowSelfContainedDropdown(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  // Recalculate dropdown position whenever it opens
-  useEffect(() => {
-    if (showSelfContainedDropdown && selfContainedBtnRef.current) {
-      const rect = selfContainedBtnRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + window.scrollY + 8,
-        left: rect.left + window.scrollX,
-      });
+    function handleScroll() {
+      if (showSelfContainedDropdown) {
+        setShowSelfContainedDropdown(false);
+      }
     }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, [showSelfContainedDropdown]);
 
   // Fetch properties & agents from database
@@ -221,6 +228,23 @@ export default function Home() {
       router.push('/properties?openFilters=true');
     } else if (type === 'self-contained') {
       setShowSelfContainedDropdown(!showSelfContainedDropdown);
+    } else if (type === 'agents') {
+      // Gate: must be signed in
+      if (!user) {
+        setShowAuthModal(true);
+        return;
+      }
+      // Gate: must accept disclaimer (per session)
+      if (typeof window !== 'undefined') {
+        const agreed = sessionStorage.getItem('agreed_agent_disclaimer') === 'true';
+        if (!agreed) {
+          setVerifyModalOpen(true);
+          return;
+        }
+      }
+      // Both gates passed — show agents
+      setActiveTypeFilter(type);
+      setShowSelfContainedDropdown(false);
     } else {
       setActiveTypeFilter(type);
       setShowSelfContainedDropdown(false);
@@ -276,7 +300,7 @@ export default function Home() {
       <header className={styles.hero}>
         <div className={styles.heroWrapper}>
           <div className={styles.heroLeft}>
-            <h1 className={styles.title}>Find Verified Rooms, Hostels & Furnitures in Ghana</h1>
+            <h1 className={styles.title}>Find Verified Properties in Ghana</h1>
             <p className={styles.subtitle}>
               Verified rooms, apartments, student hostels, furniture, shops & commercial spaces across Ho, Volta Region, Accra, Kumasi and all of Ghana. Zero middleman markups.
             </p>
@@ -358,16 +382,42 @@ export default function Home() {
 
                 if (isSelfContained) {
                   return (
-                    <button
-                      key={chip.type}
-                      ref={selfContainedBtnRef}
-                      type="button"
-                      className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
-                      onClick={() => handleChipClick(chip.type)}
-                    >
-                      <span>{chip.label}</span>
-                      <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: showSelfContainedDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                    </button>
+                    <div key={chip.type} style={{ position: 'relative', display: 'inline-block' }}>
+                      <button
+                        ref={selfContainedBtnRef}
+                        type="button"
+                        className={`${styles.chip} ${isActive ? styles.activeChip : ''}`}
+                        onClick={() => handleChipClick(chip.type)}
+                      >
+                        <span>{chip.label}</span>
+                        <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: showSelfContainedDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                      </button>
+
+                      {showSelfContainedDropdown && (
+                        <div
+                          ref={dropdownRef}
+                          className={styles.dropdownMenu}
+                          style={{
+                            position: 'absolute',
+                            top: 'calc(100% + 6px)',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            zIndex: 99999,
+                          }}
+                        >
+                          {SELF_CONTAINED_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.type}
+                              type="button"
+                              className={styles.dropdownItem}
+                              onClick={() => handleSelfContainedSelect(opt.type)}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   );
                 }
 
@@ -386,31 +436,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
-        {/* Self-Contained dropdown — rendered as fixed overlay outside scroll container */}
-        {showSelfContainedDropdown && dropdownPos && (
-          <div
-            ref={dropdownRef}
-            className={styles.dropdownMenu}
-            style={{
-              position: 'fixed',
-              top: dropdownPos.top,
-              left: dropdownPos.left,
-              zIndex: 99999,
-            }}
-          >
-            {SELF_CONTAINED_OPTIONS.map((opt) => (
-              <button
-                key={opt.type}
-                type="button"
-                className={styles.dropdownItem}
-                onClick={() => handleSelfContainedSelect(opt.type)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Property Listings Section */}
@@ -483,17 +508,10 @@ export default function Home() {
                         {agent.name}
                       </h3>
 
-                      {/* Verified badge pill — clicking opens Independent Agent Disclaimer Modal */}
+                      {/* Verified badge pill — informational only (user already agreed at chip level) */}
                       <span
                         className={styles.agentCardPill}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setModalAgentName(agent.name);
-                          setVerifyModalOpen(true);
-                        }}
-                        style={{ cursor: 'pointer' }}
-                        title="Click to view Independent Agent Disclaimer & Verification"
+                        title="This agent has been verified by HO Rentals"
                       >
                         <ShieldCheck size={12} /> Verified Agent
                       </span>
@@ -519,7 +537,7 @@ export default function Home() {
                         🏢 {count} {count === 1 ? 'Active Listing' : 'Active Listings'}
                       </div>
 
-                      {/* CTA button — direct navigation to profile */}
+                      {/* CTA button — user already agreed at chip level */}
                       <Link
                         href={`/agents/${agent.id}`}
                         className={`btn btn-primary btn-sm ${styles.agentCardBtn}`}
@@ -794,6 +812,9 @@ export default function Home() {
           if (pendingAgentRedirect) {
             router.push(pendingAgentRedirect);
             setPendingAgentRedirect(null);
+          } else {
+            // Accepted from the filter chip — show agents view
+            setActiveTypeFilter('agents');
           }
         }}
         agentName={modalAgentName}

@@ -292,11 +292,10 @@ export default function RegisterForm() {
             onError={() => {
               setError('Google login failed. Please try again.');
             }}
-            useOneTap
             shape="rectangular"
             theme="outline"
             text="continue_with"
-            width="100%"
+            width="360"
           />
         </div>
 

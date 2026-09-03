@@ -33,6 +33,7 @@ model User {
   landlordLinks       LandlordAgentLink[]   @relation("LandlordLinks")
   agentLinks          LandlordAgentLink[]   @relation("AgentLinks")
   fraudAlerts         FraudAlert[]
+  notificationReads   NotificationRead[]
 }
 
 model Company {
@@ -84,6 +85,7 @@ model Property {
   contactLogs  ContactLog[]
   leadInquiries LeadInquiry[]
   fraudAlerts  FraudAlert[]
+  notificationReads NotificationRead[]
 
   @@index([status, isFeatured])
   @@index([price])
@@ -255,4 +257,17 @@ model LandlordRegistration {
   agreementSigned  Boolean  @default(true)
   socialMediaBoost Boolean  @default(false)
   createdAt        DateTime @default(now())
+}
+
+model NotificationRead {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  propertyId Int
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId])
 }

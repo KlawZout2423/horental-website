@@ -324,6 +324,7 @@ export const typeDefs = `#graphql
         leadInquiries: [LeadInquiry!]!
         fraudAlerts: [FraudAlert!]!
         subscriptions: [Subscription!]!
+        readNotificationIds: [Int!]!
     }
 
     type BasicPayload {
@@ -368,5 +369,7 @@ export const typeDefs = `#graphql
         createLeadInquiry(propertyId: Int!, tenantName: String!, tenantPhone: String!, channel: String): LeadInquiry!
         flagFraudAlert(propertyId: Int, userId: Int, reason: String!, severity: String): FraudAlert!
         createSubscription(name: String!, price: Float!, billingCycle: String, momoNumber: String): Subscription!
+        markNotificationRead(propertyId: Int!): Boolean!
+        markAllNotificationsRead(propertyIds: [Int!]!): Boolean!
     }
 `;

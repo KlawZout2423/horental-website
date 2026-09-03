@@ -3,7 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Bell, Sparkles, CheckCheck, Building2, ChevronRight } from 'lucide-react';
-import { graphqlRequest, GET_PROPERTIES } from '../lib/graphql';
+import {
+  graphqlRequest,
+  GET_PROPERTIES,
+  READ_NOTIFICATION_IDS_QUERY,
+  MARK_NOTIFICATION_READ,
+  MARK_ALL_NOTIFICATIONS_READ,
+} from '../lib/graphql';
 import { Property, getOptimizedImageUrl } from '../lib/types';
 import styles from './NotificationBell.module.css';
 
@@ -18,8 +24,9 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Key for local storage based on user ID
-  const storageKey = userId ? `read_notifications_user_${userId}` : 'read_notifications_guest';
+  // Stable user ID string for consistent hook dependency sizing
+  const currentUserId = userId ? String(userId) : '';
+  const storageKey = currentUserId ? `read_notifications_user_${currentUserId}` : 'read_notifications_guest';
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -34,17 +41,25 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     }
   }, [storageKey]);
 
-  // Fetch recent properties when component mounts
+  // Fetch recent properties and DB read notifications on mount or user login
   useEffect(() => {
     async function fetchRecentListings() {
       try {
         setLoading(true);
-        const data = await graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES, {
-          limit: 10,
-        });
+        const [data, dbReads] = await Promise.all([
+          graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES, { limit: 10 }),
+          currentUserId
+            ? graphqlRequest<{ readNotificationIds: number[] }>(READ_NOTIFICATION_IDS_QUERY).catch(() => ({ readNotificationIds: [] }))
+            : Promise.resolve({ readNotificationIds: [] }),
+        ]);
+
         if (data && data.properties) {
-          // Sort by creation date or take recent properties
           setNewListings(data.properties.slice(0, 8));
+        }
+
+        if (dbReads && dbReads.readNotificationIds && dbReads.readNotificationIds.length > 0) {
+          const dbReadStrings = dbReads.readNotificationIds.map((id) => String(id));
+          setReadIds((prev) => Array.from(new Set([...prev, ...dbReadStrings])));
         }
       } catch (err) {
         console.error('Error fetching new listing notifications:', err);
@@ -54,7 +69,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     }
 
     fetchRecentListings();
-  }, []);
+  }, [currentUserId]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -67,24 +82,44 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const unreadCount = newListings.filter(p => !readIds.includes(String(p.id))).length;
+  const unreadCount = newListings.filter((p) => !readIds.includes(String(p.id))).length;
 
-  const markAllAsRead = () => {
-    const allIds = newListings.map(p => String(p.id));
+  const markAllAsRead = async () => {
+    const allIds = newListings.map((p) => String(p.id));
+    const numericIds = newListings.map((p) => Number(p.id));
     const updated = Array.from(new Set([...readIds, ...allIds]));
     setReadIds(updated);
+
     if (typeof window !== 'undefined') {
       localStorage.setItem(storageKey, JSON.stringify(updated));
     }
+
+    if (userId && numericIds.length > 0) {
+      try {
+        await graphqlRequest(MARK_ALL_NOTIFICATIONS_READ, { propertyIds: numericIds });
+      } catch (e) {
+        console.error('Failed to mark notifications read in DB:', e);
+      }
+    }
   };
 
-  const handleItemClick = (propertyId: string | number) => {
+  const handleItemClick = async (propertyId: string | number) => {
     const idStr = String(propertyId);
+    const numId = Number(propertyId);
+
     if (!readIds.includes(idStr)) {
       const updated = [...readIds, idStr];
       setReadIds(updated);
       if (typeof window !== 'undefined') {
         localStorage.setItem(storageKey, JSON.stringify(updated));
+      }
+
+      if (userId) {
+        try {
+          await graphqlRequest(MARK_NOTIFICATION_READ, { propertyId: numId });
+        } catch (e) {
+          console.error('Failed to mark notification read in DB:', e);
+        }
       }
     }
     setIsOpen(false);

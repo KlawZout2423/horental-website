@@ -84,6 +84,20 @@ export const resolvers = {
       });
     },
 
+    readNotificationIds: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user || !(prisma as any).notificationRead) return [];
+      try {
+        const reads = await (prisma as any).notificationRead.findMany({
+          where: { userId: user.id },
+          select: { propertyId: true }
+        });
+        return reads.map((r: { propertyId: number }) => r.propertyId);
+      } catch (e) {
+        console.error('Error reading notificationRead from database:', e);
+        return [];
+      }
+    },
+
     users: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
       const dbUser = await prisma.user.findUnique({
@@ -952,7 +966,29 @@ export const resolvers = {
       const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
       if (fullUser?.role !== 'admin') throw new Error('Admin only');
 
-      return prisma.user.delete({ where: { id } });
+      const targetId = typeof id === 'string' ? parseInt(id, 10) : Number(id);
+      const targetUser = await prisma.user.findUnique({ where: { id: targetId } });
+      if (!targetUser) {
+        throw new Error('User record was not found or has already been deleted.');
+      }
+
+      // Unbind landlord reference from properties
+      await prisma.property.updateMany({
+        where: { landlordId: targetId },
+        data: { landlordId: null },
+      });
+
+      // Delete user's properties and their images
+      const userProperties = await prisma.property.findMany({ where: { ownerId: targetId }, select: { id: true } });
+      const propertyIds = userProperties.map((p) => p.id);
+      if (propertyIds.length > 0) {
+        await prisma.propertyImage.deleteMany({ where: { propertyId: { in: propertyIds } } });
+        await prisma.property.deleteMany({ where: { ownerId: targetId } });
+      }
+
+      const deletedUser = await prisma.user.delete({ where: { id: targetId } });
+      createAuditLog('USER_DELETED', `Admin ${fullUser.email} deleted user ${targetUser.name} (${targetUser.email})`, fullUser.email);
+      return deletedUser;
     },
 
     updateUserRole: async (_: any, { id, role }: any, { user }: { user: { id: number } | null }) => {
@@ -1320,6 +1356,56 @@ export const resolvers = {
       });
       createAuditLog('SUBSCRIPTION_CREATED', `User ${user.id} subscribed to ${name} for GHc ${price}`, null);
       return sub;
+    },
+
+    markNotificationRead: async (_: any, { propertyId }: { propertyId: number }, { user }: { user: { id: number } | null }) => {
+      if (!user || !(prisma as any).notificationRead) return false;
+      const pId = typeof propertyId === 'string' ? parseInt(propertyId, 10) : Number(propertyId);
+      try {
+        await (prisma as any).notificationRead.upsert({
+          where: {
+            userId_propertyId: {
+              userId: user.id,
+              propertyId: pId
+            }
+          },
+          create: {
+            userId: user.id,
+            propertyId: pId
+          },
+          update: {}
+        });
+        return true;
+      } catch (e) {
+        console.error('Error marking notification read:', e);
+        return false;
+      }
+    },
+
+    markAllNotificationsRead: async (_: any, { propertyIds }: { propertyIds: number[] }, { user }: { user: { id: number } | null }) => {
+      if (!user || !(prisma as any).notificationRead) return false;
+      const pIds = (propertyIds || []).map(id => typeof id === 'string' ? parseInt(id, 10) : Number(id));
+      try {
+        for (const pId of pIds) {
+          await (prisma as any).notificationRead.upsert({
+            where: {
+              userId_propertyId: {
+                userId: user.id,
+                propertyId: pId
+              }
+            },
+            create: {
+              userId: user.id,
+              propertyId: pId
+            },
+            update: {}
+          });
+        }
+        return true;
+      } catch (e) {
+        console.error('Error marking all notifications read:', e);
+        return false;
+      }
     },
   },
 

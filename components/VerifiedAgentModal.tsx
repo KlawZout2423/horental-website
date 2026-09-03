@@ -23,7 +23,7 @@ export default function VerifiedAgentModal({
 
   useEffect(() => {
     if (typeof window !== 'undefined' && isOpen) {
-      const isAlreadyAgreed = localStorage.getItem('agreed_agent_disclaimer') === 'true';
+      const isAlreadyAgreed = sessionStorage.getItem('agreed_agent_disclaimer') === 'true';
       setHasAgreed(isAlreadyAgreed);
     }
   }, [isOpen]);
@@ -32,7 +32,7 @@ export default function VerifiedAgentModal({
 
   const handleConfirm = () => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('agreed_agent_disclaimer', 'true');
+      sessionStorage.setItem('agreed_agent_disclaimer', 'true');
     }
     if (onAccept) {
       onAccept();
@@ -48,49 +48,38 @@ export default function VerifiedAgentModal({
         </button>
 
         <div className={styles.iconWrapper}>
-          <ShieldCheck size={34} />
+          <ShieldCheck size={28} />
         </div>
 
         <div className={styles.badgeHeader}>
-          <Award size={14} /> Independent Agent Platform Notice
+          <Award size={13} /> Platform Notice
         </div>
 
         <h2 className={styles.title}>
-          {agentName ? `Agent Profile: ${agentName}` : 'Independent Agent Disclaimer'}
+          Independent Platform Disclaimer
         </h2>
+
         <p className={styles.subtitle}>
-          HO Rentals connects you with third-party verified agents to offer a wide variety of accommodation choices across Ghana.
+          HO Rentals connects you with third-party verified agents in Ghana. We are an independent listing portal.
         </p>
 
-        {/* Platform Disclaimer Box */}
+        {/* Streamlined Disclaimer Box */}
         <div className={styles.disclaimerBox}>
           <div className={styles.disclaimerHeader}>
-            <ShieldAlert size={18} /> Important Platform Disclaimer
+            <ShieldAlert size={16} /> Important Notice
           </div>
           <div className={styles.disclaimerText}>
-            <strong>HO Rentals is an independent listing platform:</strong> We are separate from third-party agents. Any transaction, financial payment, viewings, or agreements made between you and an agent are purely your direct responsibility. <strong>HO Rentals holds zero liability for agent-handled agreements or transactions.</strong>
+            Payments, viewings, and rental agreements are directly between you and the agent. <strong>HO Rentals holds zero liability for third-party agent interactions or transactions.</strong>
           </div>
         </div>
 
         {/* Verification Standards */}
         <div className={styles.pointsList}>
           <div className={styles.pointItem}>
-            <CheckCircle2 size={16} className={styles.pointIcon} />
+            <CheckCircle2 size={15} className={styles.pointIcon} />
             <div>
               <span className={styles.pointTextTitle}>Ghana Card ID Screened</span>
-              <span className={styles.pointTextDesc}>
-                Agent government photo ID and phone contact have been validated by HO Rentals.
-              </span>
-            </div>
-          </div>
-
-          <div className={styles.pointItem}>
-            <CheckCircle2 size={16} className={styles.pointIcon} />
-            <div>
-              <span className={styles.pointTextTitle}>No Illegal Registration Fees</span>
-              <span className={styles.pointTextDesc}>
-                Agents agree to display real prices and refrain from charging unauthorized markups.
-              </span>
+              <span className={styles.pointTextDesc}>Agent identity and contacts are validated by HO Rentals.</span>
             </div>
           </div>
         </div>
@@ -104,7 +93,7 @@ export default function VerifiedAgentModal({
             className={styles.checkbox}
           />
           <span className={styles.checkboxLabel}>
-            I understand & agree that HO Rentals is an independent platform and is not liable for third-party agent interactions or transactions.
+            I understand and accept HO Rentals independent platform terms.
           </span>
         </label>
 
@@ -114,7 +103,7 @@ export default function VerifiedAgentModal({
           disabled={!hasAgreed}
           onClick={handleConfirm}
         >
-          <span>I Accept & Proceed to Agent</span>
+          <span>Accept &amp; Continue</span>
           <ArrowRight size={16} />
         </button>
       </div>
