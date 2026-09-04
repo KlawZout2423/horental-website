@@ -28,6 +28,8 @@ import { graphqlRequest, CREATE_LANDLORD_REGISTRATION } from '../../lib/graphql'
 import { formatGhanaPhone, isValidGhanaPhone } from '../../lib/types';
 import styles from './landlord-registration.module.css';
 
+import AgentRegisterForm from './agent-register-form';
+
 interface PhotoItem {
   file: File;
   previewUrl: string;
@@ -35,6 +37,7 @@ interface PhotoItem {
 
 export default function LandlordRegistrationPage() {
   const router = useRouter();
+  const [registrationMode, setRegistrationMode] = useState<'agent' | 'property'>('agent');
   const [currentStep, setCurrentStep] = useState(1);
 
   // --- Form States ---
@@ -335,8 +338,91 @@ export default function LandlordRegistrationPage() {
     }
   };
 
+  if (registrationMode === 'agent') {
+    return (
+      <div style={{ position: 'relative', width: '100%' }}>
+        <div style={{ maxWidth: '380px', margin: '20px auto -20px', display: 'flex', gap: '4px', backgroundColor: 'var(--bg-surface-secondary)', padding: '4px', borderRadius: '12px', zIndex: 20, border: '1px solid var(--border)' }}>
+          <button
+            onClick={() => setRegistrationMode('agent')}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              backgroundColor: '#FFFFFF',
+              color: 'var(--primary)',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Register as Agent
+          </button>
+          <button
+            onClick={() => setRegistrationMode('property')}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              backgroundColor: 'transparent',
+              color: 'var(--text-secondary)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            List Property Direct
+          </button>
+        </div>
+        <AgentRegisterForm />
+      </div>
+    );
+  }
+
   return (
     <div className={styles.app}>
+      <div style={{ maxWidth: '380px', margin: '0 auto 20px', display: 'flex', gap: '4px', backgroundColor: 'var(--bg-surface-secondary)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+        <button
+          onClick={() => setRegistrationMode('agent')}
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            backgroundColor: 'transparent',
+            color: 'var(--text-secondary)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          Register as Agent
+        </button>
+        <button
+          onClick={() => setRegistrationMode('property')}
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            backgroundColor: '#FFFFFF',
+            color: 'var(--primary)',
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          List Property Direct
+        </button>
+      </div>
+
       <div className={styles.topBar}>
         <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Building size={20} /> Ho Rentals — Landlord Registration
