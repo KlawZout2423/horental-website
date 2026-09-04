@@ -439,3 +439,18 @@ a:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+/* Dev overlay & watcher hiding */
+[data-nextjs-toast],
+[data-nextjs-dialog-overlay],
+#__next-build-watcher,
+[class*="nextjs"],
+nextjs-portal,
+#nextjs-dev-overlay,
+div[class*="toast"],
+button[aria-label*="Next.js"] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}

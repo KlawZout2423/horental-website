@@ -203,7 +203,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
       setIsBookingViewing(false);
       setViewingSubmitted(true);
       if (typeof window !== 'undefined') {
-        window.open(`https://wa.me/233557922593?text=${message}`, '_blank');
+        window.open(`https://wa.me/233204940602?text=${message}`, '_blank');
       }
     } catch (err) {
       console.error('Booking viewing failed:', err);
@@ -238,28 +238,39 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         } else {
           // WhatsApp goes to HO Rentals with property referral message
           const price = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
+          const isAgentListing = property!.owner?.role === 'agent';
+          const actionText = isAgentListing
+            ? `Please connect me with Agent ${property!.owner?.name || ''} to arrange a viewing. Thank you.`
+            : `Please connect me with the ${property!.type.toLowerCase().includes('furniture') ? 'owner' : 'landlord'}. Thank you.`;
+
           const msg = encodeURIComponent(
             `Hello HO Rentals,\n\nI am interested in the following property listed on your platform:\n\n` +
             `📌 *${property!.title}*\n` +
             `📍 Location: ${property!.location}\n` +
             `💰 Price: ${price}\n` +
             `🆔 Listing ID: #${property!.id}\n\n` +
-            `Please connect me with the landlord or arrange a viewing. Thank you.`
+            actionText
           );
-          window.open(`https://wa.me/233557922593?text=${msg}`, '_blank');
+          window.open(`https://wa.me/233204940602?text=${msg}`, '_blank');
         }
       } catch (err: any) {
         console.error('Failed to log contact audit record:', err);
         // Fallback: WhatsApp to HO Rentals
         const price2 = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
+        const isAgentListing2 = property!.owner?.role === 'agent';
+        const actionText2 = isAgentListing2
+          ? `Please connect me with Agent ${property!.owner?.name || ''} to arrange a viewing. Thank you.`
+          : `Please connect me with the ${property!.type.toLowerCase().includes('furniture') ? 'owner' : 'landlord'}. Thank you.`;
+
         const msg2 = encodeURIComponent(
           `Hello HO Rentals,\n\nI am interested in:\n\n` +
           `📌 *${property!.title}*\n` +
           `📍 ${property!.location}\n` +
           `💰 ${price2}\n` +
-          `🆔 ID: #${property!.id}\n\nPlease help arrange a viewing. Thank you.`
+          `🆔 ID: #${property!.id}\n\n` +
+          actionText2
         );
-        window.open(`https://wa.me/233557922593?text=${msg2}`, '_blank');
+        window.open(`https://wa.me/233204940602?text=${msg2}`, '_blank');
       } finally {
         setIsLoggingContact(false);
       }
@@ -297,15 +308,20 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         window.location.href = `tel:${cleanPhone}`;
       } else {
         const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
+        const isAgentListing = property.owner?.role === 'agent';
+        const actionText = isAgentListing
+          ? `Please connect me with Agent ${property.owner?.name || ''} to arrange a viewing. Thank you.`
+          : `Please connect me with the ${property.type.toLowerCase().includes('furniture') ? 'owner' : 'landlord'}. Thank you.`;
+
         const msg = encodeURIComponent(
           `Hello HO Rentals,\n\nI am interested in the following property listed on your platform:\n\n` +
           `📌 *${property.title}*\n` +
           `📍 Location: ${property.location}\n` +
           `💰 Price: ${price}\n` +
           `🆔 Listing ID: #${property.id}\n\n` +
-          `Please connect me with the landlord or arrange a viewing. Thank you.`
+          actionText
         );
-        window.open(`https://wa.me/233557922593?text=${msg}`, '_blank');
+        window.open(`https://wa.me/233204940602?text=${msg}`, '_blank');
       }
 
       setCustomerName('');
@@ -318,14 +334,20 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         window.location.href = `tel:${cleanPhone}`;
       } else {
         const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
+        const isAgentListing = property.owner?.role === 'agent';
+        const actionText = isAgentListing
+          ? `Please connect me with Agent ${property.owner?.name || ''} to arrange a viewing. Thank you.`
+          : `Please connect me with the ${property.type.toLowerCase().includes('furniture') ? 'owner' : 'landlord'}. Thank you.`;
+
         const msg = encodeURIComponent(
           `Hello HO Rentals,\n\nI am interested in:\n\n` +
           `📌 *${property.title}*\n` +
           `📍 ${property.location}\n` +
           `💰 ${price}\n` +
-          `🆔 ID: #${property.id}\n\nPlease help arrange a viewing. Thank you.`
+          `🆔 ID: #${property.id}\n\n` +
+          actionText
         );
-        window.open(`https://wa.me/233557922593?text=${msg}`, '_blank');
+        window.open(`https://wa.me/233204940602?text=${msg}`, '_blank');
       }
     } finally {
       setIsLoggingContact(false);
@@ -858,8 +880,12 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                   <a
                     href={(() => {
                       const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
-                      const msg = `Hello HO Rentals, I am interested in:\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n🆔 ID: #${property.id}\n\nPlease help arrange a viewing.`;
-                      return `sms:+233557922593?body=${encodeURIComponent(msg)}`;
+                      const isAgentListing = property.owner?.role === 'agent';
+                      const actionText = isAgentListing
+                        ? `Please connect me with Agent ${property.owner?.name || ''} to arrange a viewing.`
+                        : `Please connect me with the ${property.type.toLowerCase().includes('furniture') ? 'owner' : 'landlord'}. Thank you.`;
+                      const msg = `Hello HO Rentals, I am interested in:\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n🆔 ID: #${property.id}\n\n${actionText}`;
+                      return `sms:+233204940602?body=${encodeURIComponent(msg)}`;
                     })()}
                     className="btn btn-outline"
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}

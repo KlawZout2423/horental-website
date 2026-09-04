@@ -99,8 +99,8 @@ export default function Navbar() {
 
         {/* Desktop Actions */}
         <div className={styles.actions}>
-          {/* Notification Bell for New Listings */}
-          <NotificationBell userId={user?.id} />
+          {/* Notification Bell for New Listings — Logged in users only */}
+          {user && <NotificationBell userId={user.id} />}
 
           {/* Dark / Light theme toggle */}
           <button
@@ -162,9 +162,11 @@ export default function Navbar() {
 
         {/* Mobile & Right Header Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div className={styles.mobileHeaderThemeBtn}>
-            <NotificationBell userId={user?.id} />
-          </div>
+          {user && (
+            <div className={styles.mobileHeaderThemeBtn}>
+              <NotificationBell userId={user.id} />
+            </div>
+          )}
 
           {/* Dark / Light theme toggle button — mobile header only */}
           <button

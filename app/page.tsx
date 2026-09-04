@@ -101,6 +101,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTypeFilter, setActiveTypeFilter] = useState('All');
   const [showSelfContainedDropdown, setShowSelfContainedDropdown] = useState(false);
+  const [dropdownCoords, setDropdownCoords] = useState<{ top: number; left: number } | null>(null);
 
   // Bookmark active state
   const [savedIds, setSavedIds] = useState<string[]>([]);
@@ -117,7 +118,20 @@ export default function Home() {
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selfContainedBtnRef = useRef<HTMLButtonElement>(null);
-  // Close dropdown overlay when clicking outside or scrolling
+
+  const updateDropdownCoords = () => {
+    if (selfContainedBtnRef.current) {
+      const rect = selfContainedBtnRef.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const clampedX = Math.max(115, Math.min((typeof window !== 'undefined' ? window.innerWidth : 400) - 115, centerX));
+      setDropdownCoords({
+        top: rect.bottom + 6,
+        left: clampedX,
+      });
+    }
+  };
+
+  // Close dropdown overlay when clicking outside, scrolling, or resizing
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -128,17 +142,19 @@ export default function Home() {
       }
     }
 
-    function handleScroll() {
+    function handleScrollOrResize() {
       if (showSelfContainedDropdown) {
         setShowSelfContainedDropdown(false);
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScrollOrResize, { passive: true });
+    window.addEventListener('resize', handleScrollOrResize, { passive: true });
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScrollOrResize);
+      window.removeEventListener('resize', handleScrollOrResize);
     };
   }, [showSelfContainedDropdown]);
 
@@ -227,6 +243,9 @@ export default function Home() {
     if (type === 'filters') {
       router.push('/properties?openFilters=true');
     } else if (type === 'self-contained') {
+      if (!showSelfContainedDropdown) {
+        updateDropdownCoords();
+      }
       setShowSelfContainedDropdown(!showSelfContainedDropdown);
     } else if (type === 'agents') {
       // Gate: must be signed in
@@ -304,12 +323,6 @@ export default function Home() {
             <p className={styles.subtitle}>
               Verified rooms, apartments, student hostels, furniture, shops & commercial spaces across Ho, Volta Region, Accra, Kumasi and all of Ghana. Zero middleman markups.
             </p>
-
-            <div style={{ display: 'flex', gap: '12px', margin: '8px 0 16px', flexWrap: 'wrap' }}>
-              <a href="#properties" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', borderRadius: '30px', fontWeight: 600, color: '#fff' }}>
-                <Search size={16} /> Browse Rentals
-              </a>
-            </div>
 
             <form onSubmit={handleSearchSubmit} className={styles.searchContainer}>
               <div className={styles.searchInputWrapper}>
@@ -393,16 +406,16 @@ export default function Home() {
                         <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: showSelfContainedDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                       </button>
 
-                      {showSelfContainedDropdown && (
+                      {showSelfContainedDropdown && dropdownCoords && (
                         <div
                           ref={dropdownRef}
                           className={styles.dropdownMenu}
                           style={{
-                            position: 'absolute',
-                            top: 'calc(100% + 6px)',
-                            left: '50%',
+                            position: 'fixed',
+                            top: `${dropdownCoords.top}px`,
+                            left: `${dropdownCoords.left}px`,
                             transform: 'translateX(-50%)',
-                            zIndex: 99999,
+                            zIndex: 999999,
                           }}
                         >
                           {SELF_CONTAINED_OPTIONS.map((opt) => (

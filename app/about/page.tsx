@@ -231,7 +231,7 @@ export default function AboutPage() {
             Search Verified Rentals <ArrowRight size={16} />
           </Link>
           <a 
-            href="https://wa.me/233557922593?text=Hi%20HO%20Rentals,%20I%20have%20an%20inquiry" 
+            href="https://wa.me/233204940602?text=Hi%20HO%20Rentals,%20I%20have%20an%20inquiry" 
             target="_blank" 
             rel="noopener noreferrer" 
             className="btn btn-outline"

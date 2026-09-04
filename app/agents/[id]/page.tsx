@@ -245,7 +245,7 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
                     agent.phone && (
                       <>
                         <a
-                          href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals.`)}`}
+                          href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals to arrange a viewing.`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className={`${styles.contactBtn} ${styles.whatsappBtn}`}

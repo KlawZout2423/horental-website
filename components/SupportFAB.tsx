@@ -2,11 +2,18 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Mail, X } from 'lucide-react';
+import { useAuth } from '../lib/auth';
 import styles from './SupportFAB.module.css';
 
 export default function SupportFAB() {
+  const { user } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close popup menu when clicking outside
   useEffect(() => {
@@ -18,6 +25,9 @@ export default function SupportFAB() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Only show floating support button to logged in users after mounting on client
+  if (!mounted || !user) return null;
   return (
     <div className={styles.fabContainer} ref={containerRef}>
       {isOpen && (
@@ -29,7 +39,7 @@ export default function SupportFAB() {
           <div className={styles.popupDivider} />
           
           <a
-            href="https://wa.me/233557922593?text=Hi%20HO%20Rentals,%20I%20have%20an%20issue/inquiry%20regarding%20the%20platform."
+            href="https://wa.me/233204940602?text=Hi%20HO%20Rentals,%20I%20have%20an%20issue/inquiry%20regarding%20the%20platform."
             target="_blank"
             rel="noopener noreferrer"
             className={styles.optionItem}
@@ -43,7 +53,7 @@ export default function SupportFAB() {
           </a>
 
           <a
-            href="sms:+233557922593?body=Hi%20HO%20Rentals,%20I%20need%20help%20with..."
+            href="sms:+233204940602?body=Hi%20HO%20Rentals,%20I%20need%20help%20with..."
             className={styles.optionItem}
             onClick={() => setIsOpen(false)}
           >

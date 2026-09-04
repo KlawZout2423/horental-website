@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
-import { Eye, EyeOff, Loader, UserPlus, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Loader, UserPlus, ArrowLeft, UserCheck } from 'lucide-react';
 import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../lib/types';
 import { GoogleLogin } from '@react-oauth/google';
 import styles from '../login/login.module.css';
@@ -110,12 +110,14 @@ export default function RegisterForm() {
 
   return (
     <div className={styles.page}>
-      {/* Back to home */}
-      <Link href="/" className={styles.backBtn} aria-label="Back to home">
-        <ArrowLeft size={16} />
-        <span>Back to HO Rentals</span>
-      </Link>
-      <div className={`${styles.card} animate-fade-in`}>
+      <div className={styles.container}>
+        {/* Back to home link */}
+        <Link href="/" className={styles.simpleBackLink}>
+          <ArrowLeft size={16} />
+          <span>Back to HO Rentals</span>
+        </Link>
+
+        <div className={`${styles.card} animate-fade-in`}>
 
         {/* Brand mark */}
         <div className={styles.brand}>
@@ -124,8 +126,8 @@ export default function RegisterForm() {
         </div>
 
         <div className={styles.header}>
-          <h1 className={styles.title}>Create Account</h1>
-          <p className={styles.subtitle}>Join HO Rentals Ghana to find or list accommodation, hostels, furnitures, and properties.</p>
+          <h1 className={styles.title}>Create your account</h1>
+          <p className={styles.subtitle}>Find your next home with HO Rentals.</p>
         </div>
 
         {error && (
@@ -136,11 +138,11 @@ export default function RegisterForm() {
 
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <div className="form-group">
-            <label htmlFor="name">Full Name</label>
+            <label htmlFor="name">Full name</label>
             <input
               id="name"
               type="text"
-              placeholder="e.g. John Doe"
+              placeholder="Full Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -150,27 +152,30 @@ export default function RegisterForm() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="phone">Ghana Phone Number (10 Digits)</label>
-            <input
-              id="phone"
-              type="tel"
-              placeholder="e.g. 0241234567"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
-              required
-              maxLength={10}
-              autoComplete="tel"
-              className="form-control"
-            />
+            <label htmlFor="phone">Phone number</label>
+            <div className={styles.phoneInputContainer}>
+              <div className={styles.phonePrefix}>🇬🇭 +233</div>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="24 123 4567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+                required
+                maxLength={10}
+                autoComplete="tel"
+                className={`form-control ${styles.phoneInput}`}
+              />
+            </div>
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(min. 6 characters)</span></label>
+            <label htmlFor="password">Password</label>
             <div className={styles.passwordWrapper}>
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Create a password"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -187,14 +192,15 @@ export default function RegisterForm() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+            <span className={styles.passwordHelper}>At least 8 characters</span>
             {password && (
-              <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                    Password Strength: <strong style={{ color: strength.color }}>{strength.label}</strong>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                    Strength: <strong style={{ color: strength.color }}>{strength.label}</strong>
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
                   {[0, 1, 2, 3].map((index) => {
                     const filledSegmentsCount = strength.score + 1;
                     const isFilled = index < filledSegmentsCount;
@@ -202,7 +208,7 @@ export default function RegisterForm() {
                       <div
                         key={index}
                         style={{
-                          height: '4px',
+                          height: '3px',
                           flex: 1,
                           backgroundColor: isFilled ? strength.color : 'var(--bg-surface-secondary)',
                           borderRadius: '2px',
@@ -217,12 +223,12 @@ export default function RegisterForm() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
+            <label htmlFor="confirmPassword">Confirm password</label>
             <div className={styles.passwordWrapper}>
               <input
                 id="confirmPassword"
                 type={showConfirmPassword ? 'text' : 'password'}
-                placeholder="Re-enter your password"
+                placeholder="Confirm Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -241,17 +247,17 @@ export default function RegisterForm() {
           </div>
 
           {/* Terms checkbox */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <input
               id="terms"
               type="checkbox"
               checked={acceptTerms}
               onChange={(e) => setAcceptTerms(e.target.checked)}
-              style={{ width: '16px', height: '16px', marginTop: '2px', accentColor: 'var(--primary)', cursor: 'pointer', flexShrink: 0 }}
+              style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer', flexShrink: 0 }}
             />
-            <label htmlFor="terms" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none', lineHeight: 1.5 }}>
+            <label htmlFor="terms" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
               I agree to the{' '}
-              <Link href="/terms" style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'none' }}>
+              <Link href="/terms" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
                 Terms &amp; Conditions
               </Link>
             </label>
@@ -268,15 +274,15 @@ export default function RegisterForm() {
               </>
             ) : (
               <>
-                <UserPlus size={16} /> Sign Up
+                <UserPlus size={16} /> Create Account
               </>
             )}
           </button>
         </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', opacity: 0.6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', margin: '6px 0', opacity: 0.6 }}>
           <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
-          <span style={{ padding: '0 10px', fontSize: '0.85rem' }}>or</span>
+          <span style={{ padding: '0 8px', fontSize: '0.78rem' }}>or</span>
           <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
         </div>
 
@@ -295,7 +301,7 @@ export default function RegisterForm() {
             shape="rectangular"
             theme="outline"
             text="continue_with"
-            width="360"
+            width="320"
           />
         </div>
 
@@ -305,7 +311,16 @@ export default function RegisterForm() {
             Sign In
           </Link>
         </p>
+
+        {/* Agent Registration Section */}
+        <div className={styles.agentSection}>
+          <span className={styles.agentText}>Are you an agent?</span>
+          <Link href="/landlord-registration" className={styles.agentOutlineBtn}>
+            Register as an Agent &rarr;
+          </Link>
+        </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
         </p>
 
         <a
-          href={`https://wa.me/233557922593?text=${waMsg}`}
+          href={`https://wa.me/233204940602?text=${waMsg}`}
           target="_blank"
           rel="noopener noreferrer"
           style={{
