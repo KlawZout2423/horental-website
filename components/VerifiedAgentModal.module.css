@@ -13,6 +13,8 @@
   z-index: 9999;
   padding: 20px;
   animation: fadeIn 0.25s ease-out;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .modal {

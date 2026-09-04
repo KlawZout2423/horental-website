@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../lib/auth';
-import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart, Building2, Zap, UserCheck, Building } from 'lucide-react';
+import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart, Building2, Zap, UserCheck, Building, Check, CheckCircle } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTIES, GET_AGENTS } from '../lib/graphql';
 import { trackVisit } from '../lib/trackVisit';
 import styles from './page.module.css';
@@ -456,10 +456,20 @@ export default function Home() {
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div className={styles.sectionHeaderRow}>
             <div>
-              <h2 className={styles.sectionHeaderTitle}>Top Listings</h2>
-              <p className={styles.sectionHeaderSubtitle}>Discover the newest verified rentals across Ho.</p>
+              <h2 className={styles.sectionHeaderTitle}>
+                {activeTypeFilter === 'agents'
+                  ? 'Verified Agents Directory'
+                  : activeTypeFilter !== 'All'
+                  ? `${activeTypeFilter} Listings`
+                  : 'Top Listings'}
+              </h2>
+              <p className={styles.sectionHeaderSubtitle}>
+                {activeTypeFilter === 'agents'
+                  ? (user ? `Welcome ${user.name}! Explore verified agents and connect directly.` : 'Explore verified agents across Ghana and connect directly.')
+                  : 'Discover the newest verified rentals across Ghana.'}
+              </p>
             </div>
-            <Link href="/properties" className={`btn btn-outline ${styles.viewAllLink}`}>
+            <Link href={activeTypeFilter === 'agents' ? '/properties?type=agents' : '/properties'} className={`btn btn-outline ${styles.viewAllLink}`}>
               View All &rarr;
             </Link>
           </div>
@@ -498,8 +508,12 @@ export default function Home() {
                       className={`${styles.agentCard} animate-slide-up`}
                       style={{ animationDelay: `${index * 80}ms` }}
                     >
-                      {/* Premium blurred cover banner background */}
-                      <div className={styles.agentCardCover} />
+                      {/* Premium architectural cover banner background */}
+                      <div className={styles.agentCardCover}>
+                        <svg className={styles.agentCardBlueprintSvg} viewBox="0 0 400 120" preserveAspectRatio="none">
+                          <path d="M0 20 L400 100 M0 60 L400 20 M50 0 L350 120 M150 0 L250 120 M0 100 L400 60" stroke="currentColor" strokeWidth="0.75" fill="none" />
+                        </svg>
+                      </div>
 
                       {/* Centered photo overlapping the cover banner */}
                       <div className={styles.agentCardPhotoContainer}>
@@ -512,7 +526,7 @@ export default function Home() {
                         </div>
                         {/* Green verified badge tick pinned to photo */}
                         <div className={styles.agentCardBadge}>
-                          <ShieldCheck size={12} color="#fff" />
+                          <Check size={14} color="#fff" strokeWidth={3} />
                         </div>
                       </div>
 
@@ -521,41 +535,66 @@ export default function Home() {
                         {agent.name}
                       </h3>
 
-                      {/* Verified badge pill — informational only (user already agreed at chip level) */}
-                      <span
-                        className={styles.agentCardPill}
-                        title="This agent has been verified by HO Rentals"
-                      >
-                        <ShieldCheck size={12} /> Verified Agent
-                      </span>
+                      {/* Verified Badge Pill */}
+                      <div className={styles.agentCardPill}>
+                        <CheckCircle size={14} style={{ color: '#10B981' }} />
+                        <span>VERIFIED AGENT</span>
+                      </div>
 
                       {/* Location */}
                       {agent.agentLocation && (
                         <div className={styles.agentCardLocation}>
-                          <MapPin size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                          <MapPin size={15} style={{ color: '#8B5CF6', flexShrink: 0 }} />
                           <span>{agent.agentLocation}</span>
                         </div>
                       )}
 
-                      {/* Bio */}
-                      <p className={styles.agentCardBio}>
-                        "{agent.bio || 'Verified independent rental agent on HO Rentals.'}"
-                      </p>
-
-                      {/* Divider line */}
-                      <div className={styles.agentCardDivider} />
-
-                      {/* Listings count styled as metadata tag */}
-                      <div className={styles.agentCardStats}>
-                        🏢 {count} {count === 1 ? 'Active Listing' : 'Active Listings'}
+                      {/* Divider line with center bullet dot */}
+                      <div className={styles.agentCardDividerContainer}>
+                        <div className={styles.agentCardDividerLine} />
+                        <div className={styles.agentCardDividerDot} />
+                        <div className={styles.agentCardDividerLine} />
                       </div>
 
-                      {/* CTA button — user already agreed at chip level */}
+                      {/* Stats Metric Box */}
+                      <div className={styles.agentCardMetricsBox}>
+                        <div className={styles.agentMetricCol}>
+                          <div className={styles.agentMetricIconCircle} style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6' }}>
+                            <Building2 size={16} />
+                          </div>
+                          <div className={styles.agentMetricTextGroup}>
+                            <span className={styles.agentMetricValue} style={{ color: '#6366F1' }}>
+                              {String(count).padStart(2, '0')}
+                            </span>
+                            <span className={styles.agentMetricLabel}>
+                              {count === 1 ? 'Active Listing' : 'Active Listings'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className={styles.agentMetricDivider} />
+
+                        <div className={styles.agentMetricCol}>
+                          <div className={styles.agentMetricIconCircle} style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }}>
+                            <ShieldCheck size={16} />
+                          </div>
+                          <div className={styles.agentMetricTextGroup}>
+                            <span className={styles.agentMetricValue} style={{ color: '#10B981' }}>
+                              100%
+                            </span>
+                            <span className={styles.agentMetricLabel}>
+                              Verified
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Red CTA Button */}
                       <Link
                         href={`/agents/${agent.id}`}
-                        className={`btn btn-primary btn-sm ${styles.agentCardBtn}`}
+                        className={`btn ${styles.agentCardBtn}`}
                       >
-                        View Agent Profile →
+                        View Agent Profile <ArrowRight size={16} />
                       </Link>
                     </div>
                   );

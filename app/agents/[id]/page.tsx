@@ -272,9 +272,14 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
 
       {/* Properties Listed Section Header */}
       <div className={styles.sectionHeader} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <h2 className={styles.sectionTitle}>
-          Properties listed by {isOwnProfile ? 'You' : agent.name} ({properties.length})
-        </h2>
+        <div>
+          <h2 className={styles.sectionTitle}>
+            {isOwnProfile ? `Welcome ${user?.name || 'Agent'}! Your Listed Properties` : `Properties Listed by ${agent.name}`} ({properties.length})
+          </h2>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+            {isOwnProfile ? 'Manage your active listings and track inquiries.' : `Explore verified rentals managed by ${agent.name}.`}
+          </p>
+        </div>
         {isOwnProfile && (
           <Link
             href="/upload"
