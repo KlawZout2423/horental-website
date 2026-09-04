@@ -253,6 +253,8 @@ export default function AdminPage() {
   // Filter Helper lists
   const approvedProperties = properties.filter((p) => p.status !== 'pending_approval');
   const pendingProperties = properties.filter((p) => p.status === 'pending_approval');
+  const standardUsers = users.filter((u) => u.role !== 'agent' && u.role !== 'landlord');
+  const agentUsers = users.filter((u) => u.role === 'agent' || u.role === 'landlord');
 
   // Security Redirect: Only allow Admin role
   useEffect(() => {
@@ -1088,7 +1090,7 @@ export default function AdminPage() {
             >
               <Users size={16} />
               <span>User Directory</span>
-              <span className={styles.navCountBadge}>{users.length}</span>
+              <span className={styles.navCountBadge}>{standardUsers.length}</span>
             </button>
             <button
               onClick={() => setActiveTab('audits')}
@@ -1135,7 +1137,7 @@ export default function AdminPage() {
               <FileText size={16} />
               <span>Agents / Landlords DB</span>
               <span className={styles.navCountBadge}>
-                {users.filter(u => u.role === 'agent' || u.role === 'landlord' || u.role === 'partner').length + landlordRegistrations.length}
+                {agentUsers.length + landlordRegistrations.length}
               </span>
             </button>
 
@@ -1191,6 +1193,7 @@ export default function AdminPage() {
               {activeTab === 'audits' && 'Audit Logs'}
               {activeTab === 'traffic' && 'Traffic Analytics'}
               {activeTab === 'reports' && 'Flagged Reports'}
+              {activeTab === 'landlords' && 'Agents & Landlords DB'}
               {activeTab === 'upload' && 'Upload Property'}
             </span>
           </div>
@@ -1270,7 +1273,7 @@ export default function AdminPage() {
                     onClick={() => { setActiveTab('users'); setIsMobileDrawerOpen(false); }}
                     className={`${styles.navItem} ${activeTab === 'users' ? styles.activeNavItem : ''}`}
                   >
-                    <Users size={16} /> User Directory ({users.length})
+                    <Users size={16} /> User Directory ({standardUsers.length})
                   </button>
                   <button
                     onClick={() => { setActiveTab('audits'); setIsMobileDrawerOpen(false); }}
@@ -1288,7 +1291,7 @@ export default function AdminPage() {
                     onClick={() => { setActiveTab('landlords'); setIsMobileDrawerOpen(false); }}
                     className={`${styles.navItem} ${activeTab === 'landlords' ? styles.activeNavItem : ''}`}
                   >
-                    <FileText size={16} /> Landlords Database ({landlordRegistrations.length})
+                    <FileText size={16} /> Agents & Landlords ({agentUsers.length + landlordRegistrations.length})
                   </button>
                   <button
                     onClick={() => { setActiveTab('upload'); setIsMobileDrawerOpen(false); }}
@@ -2001,18 +2004,18 @@ export default function AdminPage() {
                       <th>Phone Number</th>
                       <th>System Role</th>
                       <th>Modify Role</th>
-                      <th style={{ textAlign: 'right' }}>Remove</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {users.length === 0 ? (
+                    {standardUsers.length === 0 ? (
                       <tr>
                         <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                          No users found in the database.
+                          No standard users found in the database. (Agents and Landlords are managed in the Agents / Landlords DB tab)
                         </td>
                       </tr>
                     ) : (
-                      users.map((u) => (
+                      standardUsers.map((u) => (
                         <tr key={u.id}>
                           <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{u.name}</td>
                           <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{u.email}</td>
@@ -2029,13 +2032,14 @@ export default function AdminPage() {
                               disabled={actionLoading || u.id === user.id}
                               className={styles.selectRole}
                             >
-                              <option value="user">User</option>
+                              <option value="user">User (Tenant/Buyer)</option>
                               <option value="agent">Agent</option>
+                              <option value="landlord">Landlord</option>
                               <option value="admin">Admin</option>
                             </select>
                           </td>
                           <td>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' }}>
                               <button
                                 onClick={() => handleResetUserPassword(u.id, u.name, String(u.id))}
                                 disabled={actionLoading}
@@ -2064,10 +2068,10 @@ export default function AdminPage() {
 
               {/* Mobile Card List View */}
               <div className={styles.mobileCardList}>
-                {users.length === 0 ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No users found in the database.</p>
+                {standardUsers.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No standard users found in the database.</p>
                 ) : (
-                  users.map((u) => (
+                  standardUsers.map((u) => (
                     <div key={u.id} className={styles.adminCardItem}>
                       <div className={styles.adminCardHeader}>
                         <div>
@@ -2087,8 +2091,9 @@ export default function AdminPage() {
                           className={styles.selectRole}
                           style={{ flex: 1 }}
                         >
-                          <option value="user">User</option>
+                          <option value="user">User (Tenant/Buyer)</option>
                           <option value="agent">Agent</option>
+                          <option value="landlord">Landlord</option>
                           <option value="admin">Admin</option>
                         </select>
                         <button
@@ -2851,7 +2856,7 @@ export default function AdminPage() {
                 <div className={styles.statCard} style={{ borderLeft: '4px solid var(--primary)' }}>
                   <span className={styles.statLabel}>Registered Agents</span>
                   <span className={styles.statValue} style={{ color: 'var(--primary)' }}>
-                    {users.filter((u) => u.role === 'agent' || u.role === 'landlord' || u.role === 'partner').length}
+                    {users.filter((u) => u.role === 'agent' || u.role === 'landlord').length}
                   </span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Active platform agents</span>
                 </div>
@@ -2907,7 +2912,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
                     <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      Registered Agents Directory ({users.filter((u) => u.role === 'agent' || u.role === 'landlord' || u.role === 'partner').length})
+                      Registered Agents Directory ({users.filter((u) => u.role === 'agent' || u.role === 'landlord').length})
                     </h3>
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                       All registered agents and landlords with active accounts.
@@ -2928,14 +2933,14 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {users.filter((u) => u.role === 'agent' || u.role === 'landlord' || u.role === 'partner').length === 0 ? (
+                      {users.filter((u) => u.role === 'agent' || u.role === 'landlord').length === 0 ? (
                         <tr>
                           <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
                             No registered agents found.
                           </td>
                         </tr>
                       ) : (
-                        users.filter((u) => u.role === 'agent' || u.role === 'landlord' || u.role === 'partner').map((ag) => {
+                        users.filter((u) => u.role === 'agent' || u.role === 'landlord').map((ag) => {
                           const waNumber = ag.agentWhatsapp || ag.phone || '';
                           const waClean = waNumber.replace(/[^0-9]/g, '');
                           const waLink = waClean ? `https://wa.me/${waClean.startsWith('0') ? '233' + waClean.substring(1) : waClean}` : '';
@@ -2979,17 +2984,24 @@ export default function AdminPage() {
                                     👁️ Preview Form
                                   </button>
 
-                                  <select
-                                    value={ag.role}
-                                    onChange={(e) => handleUpdateUserRole(ag.id, e.target.value)}
-                                    className={styles.selectRole}
-                                    style={{ fontSize: '0.76rem', padding: '4px 8px' }}
+                                  <button
+                                    onClick={() => handleDeleteUser(ag.id)}
+                                    disabled={actionLoading || ag.id === user?.id}
+                                    className="btn btn-outline"
+                                    style={{
+                                      padding: '4px 8px',
+                                      fontSize: '0.72rem',
+                                      color: 'var(--danger)',
+                                      borderColor: 'rgba(239, 68, 68, 0.4)',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                    title="Delete agent account"
                                   >
-                                    <option value="agent">Agent</option>
-                                    <option value="partner">Partner</option>
-                                    <option value="landlord">Landlord</option>
-                                    <option value="user">Tenant User</option>
-                                  </select>
+                                    <Trash2 size={13} />
+                                    <span>Delete</span>
+                                  </button>
 
                                   <select
                                      value={ag.verificationStatus === 'verified' ? 'verified' : 'unverified'}

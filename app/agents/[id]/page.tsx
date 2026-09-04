@@ -20,6 +20,7 @@ interface AgentData {
   bio?: string;
   profileImage?: string;
   agentLocation?: string;
+  verificationStatus?: string;
 }
 
 export default function AgentProfilePage({ params }: { params: Promise<{ id: string }> }) {
@@ -98,6 +99,12 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
 
         if (!agentRes || !agentRes.user) {
           setError('Agent profile not found.');
+          return;
+        }
+
+        const isAuthorizedViewer = user && (user.role === 'admin' || String(user.id) === String(agentId));
+        if (agentRes.user.verificationStatus !== 'verified' && !isAuthorizedViewer) {
+          setError('This agent account is currently pending verification and is not publicly visible.');
           return;
         }
 

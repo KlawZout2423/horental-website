@@ -114,6 +114,7 @@ export const ME_QUERY = `
       profileImage
       agentLocation
       agentWhatsapp
+      verificationStatus
       mustChangePassword
     }
   }
@@ -129,6 +130,7 @@ export const LOGIN_MUTATION = `
         email
         phone
         role
+        verificationStatus
         mustChangePassword
       }
     }
@@ -145,6 +147,7 @@ export const GOOGLE_AUTH_MUTATION = `
         email
         phone
         role
+        verificationStatus
         mustChangePassword
       }
     }
@@ -161,6 +164,7 @@ export const REGISTER_MUTATION = `
         email
         phone
         role
+        verificationStatus
         mustChangePassword
       }
     }
@@ -329,6 +333,7 @@ export const GET_USERS = `
       email
       phone
       role
+      verificationStatus
       mustChangePassword
     }
   }
@@ -654,6 +659,7 @@ export const GET_AGENT = `
       profileImage
       agentLocation
       agentWhatsapp
+      verificationStatus
     }
   }
 `;

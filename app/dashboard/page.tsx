@@ -11,8 +11,13 @@ import {
   SubscriptionPlan,
 } from '../../lib/mockSaaSData';
 
+import { useAuth } from '../../lib/auth';
+
 export default function SaaSPage() {
-  const [role, setRole] = useState<'agent' | 'landlord' | 'admin'>('agent');
+  const { user } = useAuth();
+  const [role, setRole] = useState<'agent' | 'landlord' | 'admin'>(
+    user?.role === 'landlord' ? 'landlord' : user?.role === 'admin' ? 'admin' : 'agent'
+  );
   const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'leads' | 'subscription' | 'verification'>('overview');
   const [properties, setProperties] = useState<SaaSProperty[]>(MOCK_SAAS_PROPERTIES);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
@@ -58,7 +63,12 @@ export default function SaaSPage() {
         <div className={styles.headerContent}>
           <div className={styles.brandGroup}>
             <h1 className={styles.title}>HO Rentals SaaS</h1>
-            <span className={styles.badgeSaaS}>Platform Suite</span>
+            <span className={styles.badgeSaaS}>Platform Workspace</span>
+            {user && (
+              <span className="badge badge-primary" style={{ fontSize: '0.72rem', textTransform: 'capitalize', marginLeft: '6px' }}>
+                {user.name} ({user.role})
+              </span>
+            )}
           </div>
 
           <div className={styles.roleSwitcher}>

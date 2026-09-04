@@ -91,7 +91,7 @@ export default function Navbar() {
           <Link href="/properties" className={isActive('/properties')}>Search Rentals</Link>
           <Link href="/about" className={isActive('/about')}>About Us</Link>
           <Link href="/favorites" className={isActive('/favorites')}>Favorites</Link>
-          {user && (user.role === 'admin' || user.role === 'agent') && (
+          {user && (user.role === 'admin' || user.role === 'agent' || user.role === 'landlord') && (
             <Link href="/upload" className={isActive('/upload')}>Upload Property</Link>
           )}
           {user && user.role === 'admin' && (
@@ -132,7 +132,7 @@ export default function Navbar() {
                       <Shield size={16} /> Admin Panel
                     </Link>
                   )}
-                  {(user.role === 'admin' || user.role === 'agent') && (
+                  {(user.role === 'admin' || user.role === 'agent' || user.role === 'landlord') && (
                     <Link href="/upload" className={styles.userMenuItem}>
                       <PlusCircle size={16} /> Post a Listing
                     </Link>
@@ -203,7 +203,7 @@ export default function Navbar() {
           <Link href="/favorites" className={isActive('/favorites')} onClick={toggleMobileMenu}>
             <Heart size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Favorites
           </Link>
-          {user && (user.role === 'admin' || user.role === 'agent') && (
+          {user && (user.role === 'admin' || user.role === 'agent' || user.role === 'landlord') && (
             <Link href="/upload" className={isActive('/upload')} onClick={toggleMobileMenu}>
               <PlusCircle size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Upload Property
             </Link>

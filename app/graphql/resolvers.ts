@@ -17,6 +17,7 @@ const USER_SAFE_SELECT = {
   phone: true,
   mustChangePassword: true,
   createdAt: true,
+  verificationStatus: true,
 };
 
 const PROPERTY_SAFE_SELECT = {
@@ -169,11 +170,11 @@ export const resolvers = {
       return prop;
     },
 
-    // Public: fetch a single user by ID (restricted to agent profile pages or self/admin query)
+    // Public: fetch a single user by ID (restricted to verified agent profile pages or self/admin query)
     user: async (_: any, { id }: { id: number }, { user }: { user: { id: number } | null }) => {
       const targetUser = await prisma.user.findUnique({
         where: { id },
-        select: { id: true, name: true, email: true, role: true, phone: true },
+        select: { id: true, name: true, email: true, role: true, phone: true, bio: true, profileImage: true, agentLocation: true, agentWhatsapp: true, verificationStatus: true },
       });
       if (!targetUser) return null;
 
@@ -189,12 +190,15 @@ export const resolvers = {
         if (user.id === id) return targetUser;
       }
 
-      // 3. Otherwise, public access is only allowed for agent/partner/admin profiles
-      if (targetUser.role === 'agent' || targetUser.role === 'partner' || targetUser.role === 'admin') {
+      // 3. Otherwise, public access is only allowed for VERIFIED agent/landlord or admin profiles
+      if ((targetUser.role === 'agent' || targetUser.role === 'landlord') && targetUser.verificationStatus === 'verified') {
+        return targetUser;
+      }
+      if (targetUser.role === 'admin') {
         return targetUser;
       }
 
-      // Hide normal customer profiles from public access
+      // Hide unverified agent profiles and normal customer profiles from public access
       return null;
     },
 
@@ -202,7 +206,8 @@ export const resolvers = {
     agents: async () => {
       return prisma.user.findMany({
         where: {
-          role: 'agent',
+          role: { in: ['agent', 'landlord'] },
+          verificationStatus: 'verified',
         },
         select: {
           id: true,
@@ -580,25 +585,33 @@ export const resolvers = {
       const formattedPhone = formatGhanaPhone(input.phone);
 
       // Check if this phone number is already registered
-      const existingByPhone = await prisma.user.findFirst({ where: { phone: formattedPhone } });
-      if (existingByPhone) {
-        throw new Error('An account with this phone number already exists. Please log in instead.');
+      if (formattedPhone) {
+        const existingByPhone = await prisma.user.findFirst({ where: { phone: formattedPhone } });
+        if (existingByPhone) {
+          throw new Error(`An account with the phone number (${formattedPhone}) already exists. Please log in instead.`);
+        }
       }
 
-      // Check if this email is already registered (email is derived from phone on the frontend)
-      const existingByEmail = await prisma.user.findUnique({ where: { email: input.email } });
-      if (existingByEmail) {
-        throw new Error('An account with this phone number already exists. Please log in instead.');
+      // Check if this email is already registered
+      if (input.email) {
+        const existingByEmail = await prisma.user.findUnique({ where: { email: input.email } });
+        if (existingByEmail) {
+          throw new Error(`An account with the email address (${input.email}) already exists. Please log in instead.`);
+        }
       }
 
       try {
         const hashed = await bcrypt.hash(input.password, 10);
+        const targetRole = (input.role === 'agent' || input.role === 'landlord' || input.role === 'admin') ? input.role : 'user';
+        
         const user = await prisma.user.create({
           data: {
             name: sanitizedName,
             email: input.email,
             password: hashed,
             phone: formattedPhone,
+            role: targetRole,
+            verificationStatus: 'unverified',
           },
           select: USER_SAFE_SELECT,
         });
@@ -609,7 +622,11 @@ export const resolvers = {
       } catch (err: any) {
         // Prisma unique constraint error (P2002) — fallback safety net
         if (err?.code === 'P2002') {
-          throw new Error('An account with this phone number already exists. Please log in instead.');
+          const target = err?.meta?.target;
+          if (Array.isArray(target) && target.includes('email')) {
+            throw new Error(`An account with the email address (${input.email}) already exists. Please log in instead.`);
+          }
+          throw new Error('An account with this phone number or email already exists. Please log in instead.');
         }
         throw err;
       }
@@ -782,12 +799,17 @@ export const resolvers = {
       if (!user) throw new Error('Not authenticated');
 
       const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
-      if (fullUser?.role !== 'admin' && fullUser?.role !== 'partner' && fullUser?.role !== 'agent') {
+      if (fullUser?.role !== 'admin' && fullUser?.role !== 'agent' && fullUser?.role !== 'landlord') {
         throw new Error('Not authorized to upload properties');
       }
 
+      // Block unverified agents from uploading properties
+      if (fullUser?.role === 'agent' && fullUser.verificationStatus !== 'verified') {
+        throw new Error('Your agent account is pending verification. You can upload properties once approved by an administrator.');
+      }
+
       // Ensure agents have a bio saved; assign default fallback if missing so they are never blocked
-      if (fullUser?.role === 'agent' && (!fullUser.bio || !fullUser.bio.trim())) {
+      if ((fullUser?.role === 'agent' || fullUser?.role === 'landlord') && (!fullUser.bio || !fullUser.bio.trim())) {
         await prisma.user.update({
           where: { id: user.id },
           data: { bio: 'Verified independent rental agent on HO Rentals.' },
@@ -797,8 +819,8 @@ export const resolvers = {
       const defaultCompany = await prisma.company.findFirst({ where: { isOwnCompany: true } });
       if (!defaultCompany) throw new Error('Default company not found');
 
-      // Agents force properties to pending_approval status, partners/admins default to available
-      const status = fullUser?.role === 'agent' ? 'pending_approval' : (input.status || 'available');
+      // Agents & Landlords force properties to pending_approval status, partners/admins default to available
+      const status = (fullUser?.role === 'agent' || fullUser?.role === 'landlord') ? 'pending_approval' : (input.status || 'available');
 
       return prisma.property.create({
         data: {
@@ -1023,14 +1045,16 @@ export const resolvers = {
 
     updateUserRole: async (_: any, { id, role }: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
+      const targetId = typeof id === 'string' ? parseInt(id, 10) : Number(id);
+      const isSelf = Number(user.id) === targetId;
       const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
-      if (fullUser?.role !== 'admin') throw new Error('Admin only');
+      if (!isSelf && fullUser?.role !== 'admin') throw new Error('Not authorized');
 
       const updatedUser = await prisma.user.update({
-        where: { id },
+        where: { id: targetId },
         data: { role },
       });
-      createAuditLog('ROLE_UPDATED', `Admin ${fullUser.email} updated user ${updatedUser.email} to role ${role}`, fullUser.email);
+      createAuditLog('ROLE_UPDATED', `User ${updatedUser.email} role updated to ${role}`, fullUser?.email || null);
       return updatedUser;
     },
 
@@ -1253,7 +1277,7 @@ export const resolvers = {
     updateAgentProfile: async (_: any, { bio, profileImage, agentLocation, agentWhatsapp }: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
       const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-      if (dbUser?.role !== 'agent' && dbUser?.role !== 'admin') throw new Error('Only agents can update their profile.');
+      if (dbUser?.role !== 'agent' && dbUser?.role !== 'landlord' && dbUser?.role !== 'admin') throw new Error('Only agents can update their profile.');
       // Only validate bio if it was explicitly passed and is empty
       if (bio !== undefined && bio !== null && !bio.trim()) throw new Error('Bio cannot be blank if provided.');
 

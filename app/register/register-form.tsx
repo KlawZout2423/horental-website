@@ -37,6 +37,7 @@ export default function RegisterForm() {
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [role, setRole] = useState<'user' | 'agent'>('user');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -97,9 +98,15 @@ export default function RegisterForm() {
         email: generatedEmail,
         phone: formattedPhone,
         password,
+        role,
       });
 
-      router.push(redirectUrl);
+      // Redirect agents to upload page to confirm their role works immediately
+      if (role === 'agent') {
+        router.push('/upload');
+      } else {
+        router.push(redirectUrl);
+      }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Failed to create your account. Please try again.';
       setError(errMsg);
@@ -137,6 +144,48 @@ export default function RegisterForm() {
         )}
 
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
+          <div className="form-group" style={{ marginBottom: '14px' }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', display: 'block' }}>Account Type</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setRole('user')}
+                style={{
+                  flex: 1,
+                  padding: '8px 10px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1.5px solid ${role === 'user' ? 'var(--primary)' : 'var(--border)'}`,
+                  backgroundColor: role === 'user' ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-surface)',
+                  color: role === 'user' ? 'var(--primary)' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                👤 Tenant / Buyer
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('agent')}
+                style={{
+                  flex: 1,
+                  padding: '8px 10px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1.5px solid ${role === 'agent' ? 'var(--primary)' : 'var(--border)'}`,
+                  backgroundColor: role === 'agent' ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-surface)',
+                  color: role === 'agent' ? 'var(--primary)' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                🏢 Rental Agent
+              </button>
+            </div>
+          </div>
+
           <div className="form-group">
             <label htmlFor="name">Full name</label>
             <input

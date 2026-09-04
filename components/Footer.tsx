@@ -54,7 +54,7 @@ export default function Footer() {
             </h4>
             <div className={styles.links}>
               <Link href="/properties" className={styles.link}>Browse Rentals</Link>
-              {user && (user.role === 'admin' || user.role === 'partner') && (
+              {user && (user.role === 'admin' || user.role === 'agent' || user.role === 'landlord') && (
                 <Link href="/upload" className={styles.link}>List a Property</Link>
               )}
             </div>

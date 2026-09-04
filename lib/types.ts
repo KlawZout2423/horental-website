@@ -3,7 +3,7 @@ export interface User {
   name: string;
   email: string;
   phone: string;
-  role: 'admin' | 'user' | 'agent' | 'partner' | string;
+  role: 'admin' | 'user' | 'agent' | 'landlord' | string;
   bio?: string;
   profileImage?: string;
   agentLocation?: string;
@@ -81,6 +81,7 @@ export interface RegisterInput {
   phone: string;
   password: string;
   email?: string;
+  role?: string;
 }
 
 /**

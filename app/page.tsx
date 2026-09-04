@@ -177,7 +177,8 @@ export default function Home() {
         }
 
         if (agentsRes && agentsRes.agents) {
-          setAgents(agentsRes.agents);
+          const verifiedOnly = agentsRes.agents.filter(a => a.verificationStatus === 'verified');
+          setAgents(verifiedOnly);
         }
       } catch (e) {
         console.error('Error fetching data:', e);
@@ -677,7 +678,7 @@ export default function Home() {
                 >
                   Clear Active Filters
                 </button>
-                {user && (user.role === 'agent' || user.role === 'partner' || user.role === 'admin') && (
+                {user && (user.role === 'agent' || user.role === 'landlord' || user.role === 'admin') && (
                   <Link href="/upload" className="btn btn-primary">
                     Post Your Listing
                   </Link>

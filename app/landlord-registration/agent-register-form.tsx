@@ -22,7 +22,7 @@ import {
   UploadCloud
 } from 'lucide-react';
 import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../lib/types';
-import { graphqlRequest, UPDATE_AGENT_PROFILE } from '../../lib/graphql';
+import { graphqlRequest, UPDATE_AGENT_PROFILE, UPDATE_USER_ROLE } from '../../lib/graphql';
 import styles from '../login/login.module.css';
 
 const getPasswordStrength = (pwd: string) => {
@@ -47,7 +47,7 @@ const getPasswordStrength = (pwd: string) => {
 };
 
 export default function AgentRegisterForm() {
-  const { register, user } = useAuth();
+  const { register, user, updateUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -269,12 +269,23 @@ export default function AgentRegisterForm() {
     try {
       const generatedEmail = sanitizedEmail || `${formattedPhone}@horentals.com`;
 
-      await register({
-        name: sanitizedName,
-        email: generatedEmail,
-        phone: formattedPhone,
-        password,
-      });
+      if (user && user.id) {
+        // Upgrade existing logged-in account to agent role
+        try {
+          await graphqlRequest(UPDATE_USER_ROLE, { id: user.id, role: 'agent' });
+          updateUser({ ...user, role: 'agent' });
+        } catch (e) {
+          console.error('Role upgrade notice:', e);
+        }
+      } else {
+        await register({
+          name: sanitizedName,
+          email: generatedEmail,
+          phone: formattedPhone,
+          password,
+          role: 'agent',
+        });
+      }
 
       // Update Agent Profile with detailed credentials
       try {

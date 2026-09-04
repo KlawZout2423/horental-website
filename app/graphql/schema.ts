@@ -165,6 +165,7 @@ export const typeDefs = `#graphql
         email: String!
         password: String!
         phone: String
+        role: String
     }
 
     input PropertyImageInput {

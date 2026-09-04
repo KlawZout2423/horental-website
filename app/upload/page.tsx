@@ -76,6 +76,7 @@ export default function UploadPage({
   // Status states
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessNotice, setShowSuccessNotice] = useState(false);
 
   // Quick Locations State (Ghana Cities & Regions)
   const [quickLocations, setQuickLocations] = useState<string[]>([
@@ -135,7 +136,7 @@ export default function UploadPage({
     if (!authLoading) {
       if (!user) {
         router.push('/login?redirect=/upload');
-      } else if (user.role !== 'admin' && user.role !== 'partner' && user.role !== 'agent') {
+      } else if (user.role !== 'admin' && user.role !== 'agent' && user.role !== 'landlord') {
         router.push('/');
       }
     }
@@ -297,11 +298,15 @@ export default function UploadPage({
 
       await graphqlRequest(CREATE_PROPERTY, { input });
       
-      // On success, go back to properties listing
-      if (onSuccess) {
-        onSuccess();
+      if (user?.role === 'agent' || user?.role === 'landlord') {
+        setShowSuccessNotice(true);
+        if (onSuccess) onSuccess();
       } else {
-        router.push('/properties');
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push('/properties');
+        }
       }
     } catch (err: any) {
       console.error('Submit property error:', err);
@@ -411,6 +416,179 @@ export default function UploadPage({
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', flexDirection: 'column', gap: '16px' }}>
         <Loader size={40} className="animate-spin" style={{ color: 'var(--primary)' }} />
         <p style={{ color: 'var(--text-secondary)' }}>Checking credentials...</p>
+      </div>
+    );
+  }
+
+  // Block unverified agents from uploading — they must be verified by admin first
+  // Admins and landlords bypass this check
+  if ((user.role === 'agent') && user.verificationStatus !== 'verified') {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', padding: '20px' }}>
+        <div style={{
+          maxWidth: '520px',
+          width: '100%',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '48px 36px',
+          textAlign: 'center',
+          boxShadow: 'var(--shadow-lg)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '20px',
+        }}>
+          {/* Icon */}
+          <div style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(245,158,11,0.05) 100%)',
+            border: '2px solid rgba(245,158,11,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '2.4rem',
+          }}>
+            🕐
+          </div>
+
+          {/* Badge */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'rgba(245,158,11,0.1)',
+            border: '1px solid rgba(245,158,11,0.3)',
+            borderRadius: '999px',
+            padding: '5px 14px',
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            color: '#B45309',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+          }}>
+            ⏳ Pending Verification
+          </div>
+
+          {/* Heading */}
+          <div>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 10px' }}>
+              Account Under Review
+            </h1>
+            <p style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+              Welcome, <strong style={{ color: 'var(--text-primary)' }}>{user.name}</strong>! Your agent account has been created and is currently being reviewed by the HO Rentals team.
+            </p>
+          </div>
+
+          {/* Info steps */}
+          <div style={{
+            width: '100%',
+            background: 'var(--bg-surface-secondary)',
+            borderRadius: 'var(--radius-md)',
+            padding: '20px',
+            textAlign: 'left',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+          }}>
+            {[
+              { icon: '✅', title: 'Account Created', desc: 'Your agent account is successfully set up.', done: true },
+              { icon: '🔍', title: 'Identity Verification', desc: 'Our team is reviewing your registration details.', done: false },
+              { icon: '📋', title: 'Admin Approval', desc: 'You will be approved once your information is verified.', done: false },
+              { icon: '🏠', title: 'Upload Properties', desc: 'After approval, you can list properties on HO Rentals.', done: false },
+            ].map((step, i) => (
+              <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: step.done ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.08)',
+                  border: `1.5px solid ${step.done ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.3)'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.9rem',
+                  flexShrink: 0,
+                }}>
+                  {step.icon}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.87rem', color: step.done ? '#047857' : 'var(--text-primary)' }}>{step.title}</div>
+                  <div style={{ fontSize: '0.80rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{step.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Contact info */}
+          <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
+            This usually takes <strong>24–48 hours</strong>. If you have questions, contact us via WhatsApp or email.
+          </p>
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: '12px', width: '100%', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => router.push('/')}
+              className="btn btn-outline"
+              style={{ flex: 1, padding: '12px 16px', fontSize: '0.88rem', fontWeight: 600 }}
+            >
+              ← Back to Home
+            </button>
+            <a
+              href="https://wa.me/233571542612?text=Hello%2C%20I%20registered%20as%20an%20agent%20on%20HO%20Rentals%20and%20am%20awaiting%20verification."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary"
+              style={{ flex: 1, padding: '12px 16px', fontSize: '0.88rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              💬 Contact Support
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showSuccessNotice) {
+    return (
+      <div className={styles.container} style={{ maxWidth: '640px', padding: '60px 20px', textAlign: 'center' }}>
+        <div className="card glass animate-slide-up" style={{ padding: '40px 28px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px', backgroundColor: 'var(--bg-surface)' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
+            🎉
+          </div>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+            Property Submitted for Verification!
+          </h2>
+          <p style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: '480px', margin: 0 }}>
+            Your property listing has been successfully uploaded and is currently pending review by our verification team. It will officially go live on HO Rentals once approved by the admin.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '12px', width: '100%' }}>
+            <button
+              onClick={() => {
+                setShowSuccessNotice(false);
+                setTitle('');
+                setLocation('');
+                setPrice('');
+                setDescription('');
+                setImageFiles([]);
+                setImagePreviews([]);
+              }}
+              className="btn btn-outline"
+              style={{ padding: '12px 20px', fontSize: '0.88rem', flex: '1 1 180px' }}
+            >
+              Upload Another Property
+            </button>
+            <button
+              onClick={() => router.push(`/agents/${user.id}`)}
+              className="btn btn-primary"
+              style={{ padding: '12px 20px', fontSize: '0.88rem', flex: '1 1 180px' }}
+            >
+              View My Agent Profile
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
