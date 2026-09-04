@@ -1,7 +1,7 @@
 {
   "name": "HO Rentals Ghana",
   "short_name": "HO Rentals",
-  "description": "Connecting Tenants, Landlords, and Owners Directly across Ghana (Ho, Volta Region & Nationwide)",
+  "description": "Connecting Tenants, Landlords, and Owners Directly across Ghana",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F8FAFC",

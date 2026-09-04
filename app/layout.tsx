@@ -22,17 +22,17 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "HO Rentals Ghana | Find Rooms, Hostels, Apartments & Furnitures in Ho & Ghana",
+    default: "HO Rentals Ghana | Find Rooms, Hostels, Apartments & Furnitures across Ghana",
     template: "%s | HO Rentals Ghana"
   },
-  description: "Browse and rent rooms, apartments, self-contains, student hostels, furniture, shops and lands in Ho, Volta Region, Accra, Kumasi and across Ghana. Find your perfect place with HO Rentals.",
+  description: "Browse and rent rooms, apartments, self-contains, student hostels, furniture, shops and lands across Ghana. Find your perfect place with HO Rentals.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://horentals.com"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "HO Rentals Ghana | Rooms, Hostels, Furnitures & Apartments in Ghana",
-    description: "Find affordable rooms, self-contains, student hostels, furniture and properties for rent in Ho & across Ghana.",
+    title: "HO Rentals Ghana | Rooms, Hostels, Furnitures & Apartments across Ghana",
+    description: "Find affordable rooms, self-contains, student hostels, furniture and properties for rent across Ghana.",
     url: "/",
     siteName: "HO Rentals Ghana",
     locale: "en_GH",
@@ -40,8 +40,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "HO Rentals | Find Properties in Ho & Volta Region",
-    description: "Browse rooms, hostels, and apartments for rent in Ho & Volta Region.",
+    title: "HO Rentals | Find Properties across Ghana",
+    description: "Browse rooms, hostels, and apartments for rent across Ghana.",
   },
 };
 
