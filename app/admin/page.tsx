@@ -2950,13 +2950,17 @@ export default function AdminPage() {
                                 </span>
                               </td>
                               <td>
-                                <button
-                                  onClick={() => handleUpdateVerificationStatus(ag.id, ag.verificationStatus === 'verified' ? 'unverified' : 'verified')}
-                                  className="btn btn-outline"
-                                  style={{ fontSize: '0.74rem', padding: '4px 8px' }}
+                                <select
+                                  value={ag.role}
+                                  onChange={(e) => handleUpdateUserRole(ag.id, e.target.value)}
+                                  className={styles.selectRole}
+                                  style={{ fontSize: '0.76rem', padding: '4px 8px' }}
                                 >
-                                  {ag.verificationStatus === 'verified' ? 'Revoke Verified' : 'Verify Agent'}
-                                </button>
+                                  <option value="agent">Agent</option>
+                                  <option value="partner">Partner</option>
+                                  <option value="landlord">Landlord</option>
+                                  <option value="user">Tenant User</option>
+                                </select>
                               </td>
                             </tr>
                           );

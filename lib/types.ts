@@ -8,6 +8,7 @@ export interface User {
   profileImage?: string;
   agentLocation?: string;
   agentWhatsapp?: string;
+  verificationStatus?: string;
   mustChangePassword?: boolean;
 }
 
