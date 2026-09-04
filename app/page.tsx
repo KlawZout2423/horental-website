@@ -426,10 +426,6 @@ export default function Home() {
                               onClick={() => handleSelfContainedSelect(opt.type)}
                             >
                               {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   );
                 }
@@ -450,6 +446,31 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Self-contained dropdown — OUTSIDE stickySearchBar to escape stacking context */}
+      {showSelfContainedDropdown && dropdownCoords && (
+        <div
+          ref={dropdownRef}
+          className={styles.dropdownMenu}
+          style={{
+            position: 'fixed',
+            top: `${dropdownCoords.top}px`,
+            left: `${Math.min(dropdownCoords.left, (typeof window !== 'undefined' ? window.innerWidth - 240 : 160))}px`,
+            zIndex: 999999,
+          }}
+        >
+          {SELF_CONTAINED_OPTIONS.map((opt) => (
+            <button
+              key={opt.type}
+              type="button"
+              className={styles.dropdownItem}
+              onClick={() => handleSelfContainedSelect(opt.type)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Property Listings Section */}
       <section className={`${styles.section} ${styles.listingsSection}`} style={{ maxWidth: 'none' }}>
