@@ -28,17 +28,35 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   const currentUserId = userId ? String(userId) : '';
   const storageKey = currentUserId ? `read_notifications_user_${currentUserId}` : 'read_notifications_guest';
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(storageKey);
-        if (stored) {
-          setReadIds(JSON.parse(stored));
-        }
-      } catch (err) {
-        console.error('Error reading read notifications from localStorage:', err);
-      }
+  // Load from localStorage (both user-specific key and global fallback key)
+  const loadLocalReadIds = (): string[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const globalStored = localStorage.getItem('read_notifications_global');
+      const userStored = localStorage.getItem(storageKey);
+      const gIds = globalStored ? JSON.parse(globalStored) : [];
+      const uIds = userStored ? JSON.parse(userStored) : [];
+      return Array.from(new Set([...gIds, ...uIds].map(String)));
+    } catch {
+      return [];
     }
+  };
+
+  const saveLocalReadIds = (ids: string[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const existing = loadLocalReadIds();
+      const merged = Array.from(new Set([...existing, ...ids].map(String)));
+      localStorage.setItem('read_notifications_global', JSON.stringify(merged));
+      localStorage.setItem(storageKey, JSON.stringify(merged));
+      setReadIds(merged);
+    } catch (err) {
+      console.error('Error saving read notifications:', err);
+    }
+  };
+
+  useEffect(() => {
+    setReadIds(loadLocalReadIds());
   }, [storageKey]);
 
   // Fetch recent properties and DB read notifications on mount or user login
@@ -46,6 +64,9 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     async function fetchRecentListings() {
       try {
         setLoading(true);
+        const localRead = loadLocalReadIds();
+        setReadIds(localRead);
+
         const [data, dbReads] = await Promise.all([
           graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES, { limit: 10 }),
           currentUserId
@@ -57,10 +78,9 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
           setNewListings(data.properties.slice(0, 8));
         }
 
-        if (dbReads && dbReads.readNotificationIds && dbReads.readNotificationIds.length > 0) {
-          const dbReadStrings = dbReads.readNotificationIds.map((id) => String(id));
-          setReadIds((prev) => Array.from(new Set([...prev, ...dbReadStrings])));
-        }
+        const dbReadStrings = (dbReads?.readNotificationIds || []).map(String);
+        const combined = Array.from(new Set([...localRead, ...dbReadStrings]));
+        saveLocalReadIds(combined);
       } catch (err) {
         console.error('Error fetching new listing notifications:', err);
       } finally {
@@ -69,7 +89,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     }
 
     fetchRecentListings();
-  }, [currentUserId]);
+  }, [currentUserId, storageKey]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -87,12 +107,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   const markAllAsRead = async () => {
     const allIds = newListings.map((p) => String(p.id));
     const numericIds = newListings.map((p) => Number(p.id));
-    const updated = Array.from(new Set([...readIds, ...allIds]));
-    setReadIds(updated);
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(storageKey, JSON.stringify(updated));
-    }
+    saveLocalReadIds(allIds);
 
     if (userId && numericIds.length > 0) {
       try {
@@ -108,11 +123,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     const numId = Number(propertyId);
 
     if (!readIds.includes(idStr)) {
-      const updated = [...readIds, idStr];
-      setReadIds(updated);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-      }
+      saveLocalReadIds([idStr]);
 
       if (userId) {
         try {
