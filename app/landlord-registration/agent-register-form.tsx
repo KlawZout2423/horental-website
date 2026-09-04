@@ -309,7 +309,7 @@ export default function AgentRegisterForm() {
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
-                    justify-content: 'center',
+                    justifyContent: 'center',
                     fontSize: '0.8rem',
                     fontWeight: 700,
                     backgroundColor: isDone ? 'var(--primary)' : isActive ? 'var(--primary-light)' : '#FFFFFF',

@@ -189,7 +189,7 @@ export default function LoginForm() {
         {/* Agent Registration Section */}
         <div className={styles.agentSection}>
           <span className={styles.agentText}>Are you an agent?</span>
-          <Link href="/landlord-registration" className={styles.agentOutlineBtn}>
+          <Link href="/register-agent" className={styles.agentOutlineBtn}>
             Register as an Agent &rarr;
           </Link>
         </div>
