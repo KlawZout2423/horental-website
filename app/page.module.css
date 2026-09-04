@@ -664,8 +664,7 @@
 }
 
 .propertyCard:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.12), var(--shadow-glow);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.14), var(--shadow-glow);
   border-color: var(--primary);
 }
 

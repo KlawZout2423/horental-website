@@ -426,6 +426,10 @@ export default function Home() {
                               onClick={() => handleSelfContainedSelect(opt.type)}
                             >
                               {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 }
