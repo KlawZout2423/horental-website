@@ -272,7 +272,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         // Fallback WhatsApp
         const price2 = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
         const isAgentListing2 = property!.owner?.role === 'agent';
-        const cleanPhone2 = landlordPhone.replace(/[^0-9]/g, '');
+        const cleanPhone2 = (property?.contact || '').replace(/[^0-9]/g, '');
 
         if (isAgentListing2 && cleanPhone2) {
           const formattedAgentWa = cleanPhone2.startsWith('0')
