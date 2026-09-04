@@ -53,14 +53,14 @@ export default function SupportFAB() {
           </a>
 
           <a
-            href="sms:+233204940602?body=Hi%20HO%20Rentals,%20I%20need%20help%20with..."
+            href="sms:+233241234567?body=Hi%20HO%20Rentals,%20I%20need%20help%20with..."
             className={styles.optionItem}
             onClick={() => setIsOpen(false)}
           >
             <MessageSquare size={18} className={styles.optionIcon} style={{ color: 'var(--primary)' }} />
             <div className={styles.optionLabel}>
               <span>SMS Support</span>
-              <span className={styles.optionValue}>020 494 0602</span>
+              <span className={styles.optionValue}>024 123 4567</span>
             </div>
           </a>
 

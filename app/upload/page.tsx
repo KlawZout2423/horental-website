@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
-import { graphqlRequest, CREATE_PROPERTY, UPDATE_AGENT_PROFILE } from '../../lib/graphql';
+import { graphqlRequest, CREATE_PROPERTY, UPDATE_AGENT_PROFILE, GET_AGENT_PROPERTIES } from '../../lib/graphql';
 import { UploadCloud, Image as ImageIcon, Sparkles, Loader } from 'lucide-react';
 import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, User } from '../../lib/types';
 import VerifiedAgentModal from '../../components/VerifiedAgentModal';
@@ -321,15 +321,30 @@ export default function UploadPage({
   const [savingAgentProfile, setSavingAgentProfile] = useState(false);
   const [agentModalError, setAgentModalError] = useState<string | null>(null);
 
-  // Sync agent inputs from user session
+  const [agentPropertyCount, setAgentPropertyCount] = useState<number | null>(null);
+
+  // Sync agent inputs from user session & load property count
   useEffect(() => {
     if (user?.role === 'agent') {
       setAgentBioInput(user.bio || '');
       setAgentLocationInput(user.agentLocation || 'Ho, Volta Region');
       setAgentWhatsappInput(user.agentWhatsapp || user.phone || '');
       setAgentPhotoPreview(user.profileImage || null);
+
+      if (user.id) {
+        graphqlRequest<{ agentProperties: any[] }>(GET_AGENT_PROPERTIES, {
+          userId: user.id,
+          includePrivate: true,
+        })
+          .then((res) => {
+            if (res?.agentProperties) {
+              setAgentPropertyCount(res.agentProperties.length);
+            }
+          })
+          .catch(() => {});
+      }
     }
-  }, [user?.id, user?.bio, user?.profileImage]);
+  }, [user?.id, user?.bio, user?.profileImage, user?.role]);
 
   const handleSaveFullAgentProfile = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -620,6 +635,19 @@ export default function UploadPage({
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
                 {user.bio || 'Verified Rental Agent on HO Rentals'}
               </p>
+
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px', padding: '3px 10px', backgroundColor: agentPropertyCount !== null && agentPropertyCount >= 2 ? '#FEF3C7' : '#ECFDF5', border: `1px solid ${agentPropertyCount !== null && agentPropertyCount >= 2 ? '#F59E0B' : '#10B981'}`, borderRadius: '12px', fontSize: '0.76rem', fontWeight: 700, color: agentPropertyCount !== null && agentPropertyCount >= 2 ? '#92400E' : '#065F46' }}>
+                <span>🏷️ Agent Listing Rate:</span>
+                {agentPropertyCount !== null ? (
+                  agentPropertyCount < 2 ? (
+                    <span>First 2 FREE ({agentPropertyCount} of 2 used) — Next listing is FREE</span>
+                  ) : (
+                    <span>GH₵10.00 per property listed (Free tier limit reached)</span>
+                  )
+                ) : (
+                  <span>First 2 properties FREE, subsequent listings GH₵10.00 each</span>
+                )}
+              </div>
             </div>
           </div>
 

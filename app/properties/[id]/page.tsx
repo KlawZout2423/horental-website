@@ -938,16 +938,19 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     href={(() => {
                       const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
                       const isAgentListing = property.owner?.role === 'agent';
-                      const actionText = isAgentListing
-                        ? `Please connect me with Agent ${property.owner?.name || ''} to arrange a viewing.`
-                        : `Please connect me with the ${property.type.toLowerCase().includes('furniture') ? 'owner' : 'landlord'}. Thank you.`;
-                      const msg = `Hello HO Rentals, I am interested in:\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n🆔 ID: #${property.id}\n\n${actionText}`;
-                      return `sms:+233204940602?body=${encodeURIComponent(msg)}`;
+                      const rawPhone = property.contact ? property.contact.replace(/[^0-9+]/g, '') : '';
+                      const targetPhone = isAgentListing && rawPhone ? rawPhone : '+233241234567';
+
+                      const msg = isAgentListing
+                        ? `Hello Agent ${property.owner?.name || ''},\n\nI am interested in your property listed on HO Rentals:\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n🆔 ID: #${property.id}\n\nI would like to arrange a viewing.`
+                        : `Hello HO Rentals,\n\nI am interested in:\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n🆔 ID: #${property.id}`;
+
+                      return `sms:${targetPhone}?body=${encodeURIComponent(msg)}`;
                     })()}
                     className="btn btn-outline"
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
-                    <MessageSquare size={16} /> SMS HO Rentals
+                    <MessageSquare size={16} /> {property.owner?.role === 'agent' ? 'SMS Agent' : 'SMS HO Rentals'}
                   </a>
                 </div>
               </>

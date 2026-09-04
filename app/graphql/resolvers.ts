@@ -85,9 +85,9 @@ export const resolvers = {
     },
 
     readNotificationIds: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
-      if (!user || !(prisma as any).notificationRead) return [];
+      if (!user) return [];
       try {
-        const reads = await (prisma as any).notificationRead.findMany({
+        const reads = await prisma.notificationRead.findMany({
           where: { userId: user.id },
           select: { propertyId: true }
         });
@@ -503,6 +503,12 @@ export const resolvers = {
 
     verificationRequests: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
       return prisma.verificationRequest.findMany({
         include: { user: { select: { id: true, name: true, email: true, role: true, phone: true } } },
         orderBy: { createdAt: 'desc' }
@@ -511,6 +517,12 @@ export const resolvers = {
 
     landlordAgentLinks: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
       return prisma.landlordAgentLink.findMany({
         include: {
           landlord: { select: { id: true, name: true, email: true, role: true, phone: true } },
@@ -522,6 +534,12 @@ export const resolvers = {
 
     leadInquiries: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
       return prisma.leadInquiry.findMany({
         include: { property: true },
         orderBy: { createdAt: 'desc' }
@@ -530,6 +548,12 @@ export const resolvers = {
 
     fraudAlerts: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
       return prisma.fraudAlert.findMany({
         include: { property: true, user: { select: { id: true, name: true, email: true } } },
         orderBy: { createdAt: 'desc' }
@@ -538,6 +562,12 @@ export const resolvers = {
 
     subscriptions: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, role: true }
+      });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
       return prisma.subscription.findMany({
         orderBy: { createdAt: 'desc' }
       });
@@ -1242,6 +1272,22 @@ export const resolvers = {
       return updated;
     },
 
+    verifyAgent: async (_: any, { userId, status }: { userId: number; status: string }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (adminUser?.role !== 'admin') throw new Error('Not authorized');
+
+      const targetId = typeof userId === 'string' ? parseInt(userId, 10) : Number(userId);
+      const updatedUser = await prisma.user.update({
+        where: { id: targetId },
+        data: { verificationStatus: status || 'verified' },
+        select: USER_SAFE_SELECT,
+      });
+
+      createAuditLog('AGENT_VERIFIED', `Admin ${adminUser.name} (${adminUser.email}) set agent #${targetId} verification status to ${status}`, adminUser.email);
+      return updatedUser;
+    },
+
     submitVerificationRequest: async (_: any, { idType, idNumber, documentUrls }: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
       const req = await prisma.verificationRequest.create({
@@ -1359,10 +1405,10 @@ export const resolvers = {
     },
 
     markNotificationRead: async (_: any, { propertyId }: { propertyId: number }, { user }: { user: { id: number } | null }) => {
-      if (!user || !(prisma as any).notificationRead) return false;
+      if (!user) return false;
       const pId = typeof propertyId === 'string' ? parseInt(propertyId, 10) : Number(propertyId);
       try {
-        await (prisma as any).notificationRead.upsert({
+        await prisma.notificationRead.upsert({
           where: {
             userId_propertyId: {
               userId: user.id,
@@ -1383,11 +1429,11 @@ export const resolvers = {
     },
 
     markAllNotificationsRead: async (_: any, { propertyIds }: { propertyIds: number[] }, { user }: { user: { id: number } | null }) => {
-      if (!user || !(prisma as any).notificationRead) return false;
+      if (!user) return false;
       const pIds = (propertyIds || []).map(id => typeof id === 'string' ? parseInt(id, 10) : Number(id));
       try {
         for (const pId of pIds) {
-          await (prisma as any).notificationRead.upsert({
+          await prisma.notificationRead.upsert({
             where: {
               userId_propertyId: {
                 userId: user.id,

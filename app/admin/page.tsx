@@ -29,7 +29,8 @@ import {
   UPDATE_LANDLORD_REGISTRATION_STATUS,
   DELETE_LANDLORD_REGISTRATION,
   PUBLISH_LANDLORD_REGISTRATION,
-  GET_PAGE_ANALYTICS
+  GET_PAGE_ANALYTICS,
+  VERIFY_AGENT
 } from '../../lib/graphql';
 import { buildTrackingUrl } from '../../lib/trackVisit';
 import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2 } from 'lucide-react';
@@ -141,6 +142,7 @@ export default function AdminPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [landlordRegistrations, setLandlordRegistrations] = useState<LandlordRegistration[]>([]);
   const [selectedLandlord, setSelectedLandlord] = useState<LandlordRegistration | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<User | null>(null);
   const [landlordSearch, setLandlordSearch] = useState('');
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrModalUrl, setQrModalUrl] = useState('');
@@ -545,6 +547,23 @@ export default function AdminPage() {
       setMessage({ text: '🎉 Listing approved and published successfully!', isError: false });
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to approve property.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleVerifyAgent = async (userId: number | string, status: string) => {
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      const parsedId = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+      await graphqlRequest(VERIFY_AGENT, { userId: parsedId, status });
+      setUsers((prev) =>
+        prev.map((u) => (Number(u.id) === parsedId ? { ...u, verificationStatus: status } : u))
+      );
+      setMessage({ text: `Agent verification status updated to ${status}.`, isError: false });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to verify agent.', isError: true });
     } finally {
       setActionLoading(false);
     }
@@ -2950,17 +2969,48 @@ export default function AdminPage() {
                                 </span>
                               </td>
                               <td>
-                                <select
-                                  value={ag.role}
-                                  onChange={(e) => handleUpdateUserRole(ag.id, e.target.value)}
-                                  className={styles.selectRole}
-                                  style={{ fontSize: '0.76rem', padding: '4px 8px' }}
-                                >
-                                  <option value="agent">Agent</option>
-                                  <option value="partner">Partner</option>
-                                  <option value="landlord">Landlord</option>
-                                  <option value="user">Tenant User</option>
-                                </select>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <button
+                                    onClick={() => setSelectedAgent(ag)}
+                                    className="btn btn-outline"
+                                    style={{ padding: '4px 10px', fontSize: '0.72rem', color: 'var(--primary)', borderColor: 'var(--primary-light)' }}
+                                    title="Preview agent registration details"
+                                  >
+                                    👁️ Preview Form
+                                  </button>
+
+                                  <select
+                                    value={ag.role}
+                                    onChange={(e) => handleUpdateUserRole(ag.id, e.target.value)}
+                                    className={styles.selectRole}
+                                    style={{ fontSize: '0.76rem', padding: '4px 8px' }}
+                                  >
+                                    <option value="agent">Agent</option>
+                                    <option value="partner">Partner</option>
+                                    <option value="landlord">Landlord</option>
+                                    <option value="user">Tenant User</option>
+                                  </select>
+
+                                  <select
+                                     value={ag.verificationStatus === 'verified' ? 'verified' : 'unverified'}
+                                     onChange={(e) => handleVerifyAgent(ag.id, e.target.value)}
+                                     disabled={actionLoading}
+                                     className={styles.selectRole}
+                                     style={{
+                                       fontSize: '0.76rem',
+                                       padding: '4px 8px',
+                                       fontWeight: 700,
+                                       backgroundColor: ag.verificationStatus === 'verified' ? '#ECFDF5' : '#FEF3C7',
+                                       color: ag.verificationStatus === 'verified' ? '#047857' : '#B45309',
+                                       border: `1px solid ${ag.verificationStatus === 'verified' ? '#10B981' : '#F59E0B'}`,
+                                       borderRadius: 'var(--radius-sm)',
+                                       cursor: 'pointer'
+                                     }}
+                                   >
+                                     <option value="verified" style={{ backgroundColor: '#fff', color: '#047857', fontWeight: 700 }}>✓ Verify</option>
+                                     <option value="unverified" style={{ backgroundColor: '#fff', color: '#B45309', fontWeight: 600 }}>Unverify</option>
+                                   </select>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -3548,6 +3598,112 @@ export default function AdminPage() {
               <button 
                 type="button" 
                 onClick={() => setSelectedLandlord(null)} 
+                className="btn btn-outline"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedAgent && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent} style={{ maxWidth: '600px' }}>
+            <div className={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'var(--primary-light)', border: '2px solid var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {selectedAgent.profileImage ? (
+                    <img src={selectedAgent.profileImage} alt={selectedAgent.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <Users size={24} color="var(--primary)" />
+                  )}
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                    Agent Registration Profile: {selectedAgent.name}
+                  </h2>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    Verification Status: <strong style={{ color: selectedAgent.verificationStatus === 'verified' ? '#10B981' : '#F59E0B' }}>{selectedAgent.verificationStatus || 'unverified'}</strong>
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => setSelectedAgent(null)} className={styles.modalCloseBtn}>&times;</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '70vh', overflowY: 'auto', paddingRight: '4px', marginTop: '12px' }}>
+              {/* Profile Photo Display */}
+              {selectedAgent.profileImage && (
+                <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', textAlign: 'center' }}>
+                  <img src={selectedAgent.profileImage} alt={selectedAgent.name} style={{ maxWidth: '180px', maxHeight: '180px', borderRadius: 'var(--radius-md)', objectFit: 'cover', border: '2px solid var(--primary)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', margin: '0 auto' }} />
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>Uploaded Agent Professional Picture</div>
+                </div>
+              )}
+
+              {/* Personal & Contact Details */}
+              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '12px' }}>
+                  Agent Contact Information
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85rem' }}>
+                  <div><strong>Full Name:</strong> {selectedAgent.name}</div>
+                  <div><strong>Account Role:</strong> <span style={{ textTransform: 'capitalize' }}>{selectedAgent.role}</span></div>
+                  <div><strong>Primary Phone:</strong> {selectedAgent.phone || '—'}</div>
+                  <div>
+                    <strong>WhatsApp Line:</strong> {selectedAgent.agentWhatsapp || selectedAgent.phone || '—'}{' '}
+                    {(selectedAgent.agentWhatsapp || selectedAgent.phone) && (
+                      <a 
+                        href={`https://wa.me/${(selectedAgent.agentWhatsapp || selectedAgent.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '233')}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        style={{ color: '#25D366', fontWeight: 700, marginLeft: '4px', fontSize: '0.8rem' }}
+                      >
+                        💬 Chat
+                      </a>
+                    )}
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}><strong>Email Address:</strong> {selectedAgent.email || '—'}</div>
+                  <div style={{ gridColumn: '1 / -1' }}><strong>Location / Operating Area:</strong> {selectedAgent.agentLocation || 'Ho, Ghana'}</div>
+                </div>
+              </div>
+
+              {/* Bio & Credentials Details */}
+              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '12px' }}>
+                  Submitted Bio &amp; ID Credentials
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.5, margin: 0 }}>
+                  {selectedAgent.bio || 'No bio details provided.'}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+              <select
+                value={selectedAgent.verificationStatus === 'verified' ? 'verified' : 'unverified'}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleVerifyAgent(selectedAgent.id, val);
+                  setSelectedAgent((prev) => prev ? { ...prev, verificationStatus: val } : null);
+                }}
+                disabled={actionLoading}
+                style={{
+                  fontSize: '0.82rem',
+                  padding: '8px 14px',
+                  fontWeight: 700,
+                  backgroundColor: selectedAgent.verificationStatus === 'verified' ? '#ECFDF5' : '#FEF3C7',
+                  color: selectedAgent.verificationStatus === 'verified' ? '#047857' : '#B45309',
+                  border: `1px solid ${selectedAgent.verificationStatus === 'verified' ? '#10B981' : '#F59E0B'}`,
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="verified" style={{ backgroundColor: '#fff', color: '#047857', fontWeight: 700 }}>✓ Verify Agent</option>
+                <option value="unverified" style={{ backgroundColor: '#fff', color: '#B45309', fontWeight: 600 }}>Unverify Agent</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => setSelectedAgent(null)}
                 className="btn btn-outline"
               >
                 Close

@@ -18,7 +18,8 @@ import {
   Briefcase, 
   Check, 
   MapPin, 
-  Phone
+  Phone,
+  UploadCloud
 } from 'lucide-react';
 import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../lib/types';
 import { graphqlRequest, UPDATE_AGENT_PROFILE } from '../../lib/graphql';
@@ -54,6 +55,8 @@ export default function AgentRegisterForm() {
 
   // --- Step 1: Personal & Contact Details ---
   const [name, setName] = useState('');
+  const [profileImage, setProfileImage] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('Male');
   const [phone, setPhone] = useState('');
@@ -73,9 +76,7 @@ export default function AgentRegisterForm() {
   const [agencyName, setAgencyName] = useState('');
   const [experience, setExperience] = useState('1-2 Years');
   const [operatingLocations, setOperatingLocations] = useState('');
-  const [propertyTypesManaged, setPropertyTypesManaged] = useState<string[]>([
-    'Single Room Self Contain', 'Apartments'
-  ]);
+  const [agentBio, setAgentBio] = useState('');
 
   // --- Step 4: Account Password & Agreement ---
   const [password, setPassword] = useState('');
@@ -100,17 +101,11 @@ export default function AgentRegisterForm() {
     'Oti', 'Savannah', 'North East', 'Ahafo', 'Bono East', 'Western North'
   ];
 
-  const propertyTypeOptions = [
-    'Single Room', 'Single Room Self Contain', 'Chamber & Hall',
-    'Chamber & Hall Self Contain', '2-Bedroom Apartment', 
-    '3-Bedroom Apartment+', 'Student Hostels', 'Shops / Commercial', 'Land / Plots'
-  ];
-
   const agreementPoints = [
     'I confirm that all personal and identification details provided are true, valid, and legally accurate.',
+    'I agree to the Agent Verification Registration Fee of GH₵100.00 to activate my agent portal access.',
     'I agree to uphold the HO Rentals verified agent standards and respond promptly to tenant inquiries.',
-    'I agree to the HO Rentals commission and service agreement policy on confirmed tenant transactions.',
-    'I enter into this agent agreement voluntarily without pressure or misrepresentation.'
+    'I agree to the HO Rentals listing policy (First 2 properties listed for FREE, subsequent listings at GH₵10.00 each).'
   ];
 
   // Redirect if already logged in as an agent
@@ -120,12 +115,6 @@ export default function AgentRegisterForm() {
     }
   }, [user]);
 
-  const togglePropertyType = (type: string) => {
-    setPropertyTypesManaged(prev => 
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    );
-  };
-
   const toggleAgreement = (index: number) => {
     setAgreements(prev => {
       const copy = [...prev];
@@ -134,10 +123,53 @@ export default function AgentRegisterForm() {
     });
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Profile image file must be less than 10MB.');
+      return;
+    }
+
+    setUploadingImage(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error('Image upload failed.');
+      }
+
+      const data = await res.json();
+      if (data.imageUrl) {
+        setProfileImage(data.imageUrl);
+      } else {
+        throw new Error('Could not retrieve image URL.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to upload profile picture. Please try again.';
+      setError(msg);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   // --- Step Validation Handlers ---
   const validateStep1 = () => {
     setError(null);
     const sanitizedName = sanitizeInput(name);
+    const sanitizedEmail = sanitizeInput(emailInput).toLowerCase().trim();
+    setName(sanitizedName);
+    setEmailInput(sanitizedEmail);
+
     if (!sanitizedName) return setError('Please enter your full name.');
     if (!phone.trim()) return setError('Please enter your primary phone number.');
 
@@ -145,30 +177,52 @@ export default function AgentRegisterForm() {
     if (!isValidGhanaPhone(formattedPhone)) {
       return setError('Please enter a valid 10-digit primary phone number (e.g. 0241234567).');
     }
+    setPhone(formattedPhone);
 
     if (whatsapp.trim()) {
       const formattedWa = formatGhanaPhone(whatsapp);
       if (!isValidGhanaPhone(formattedWa)) {
         return setError('Please enter a valid 10-digit WhatsApp phone number.');
       }
+      setWhatsapp(formattedWa);
     }
+    if (altPhone.trim()) {
+      setAltPhone(formatGhanaPhone(altPhone));
+    }
+
     setCurrentStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const validateStep2 = () => {
     setError(null);
-    if (!idNumber.trim()) return setError('Please enter your National ID / Ghana Card Number.');
-    if (!city.trim()) return setError('Please enter your city or town.');
+    const sanitizedId = sanitizeInput(idNumber).toUpperCase().trim();
+    const sanitizedCity = sanitizeInput(city).trim();
+    const sanitizedDigitalAddr = sanitizeInput(digitalAddress).toUpperCase().trim();
+    const sanitizedHomeAddr = sanitizeInput(homeAddress).trim();
+
+    setIdNumber(sanitizedId);
+    setCity(sanitizedCity);
+    setDigitalAddress(sanitizedDigitalAddr);
+    setHomeAddress(sanitizedHomeAddr);
+
+    if (!sanitizedId) return setError('Please enter your National ID / Ghana Card Number.');
+    if (!sanitizedCity) return setError('Please enter your city or town.');
+
     setCurrentStep(3);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const validateStep3 = () => {
     setError(null);
-    if (propertyTypesManaged.length === 0) {
-      return setError('Please select at least one property type you manage or list.');
-    }
+    const sanitizedAgency = sanitizeInput(agencyName).trim();
+    const sanitizedOps = sanitizeInput(operatingLocations).trim();
+    const sanitizedBio = sanitizeInput(agentBio).trim();
+
+    setAgencyName(sanitizedAgency);
+    setOperatingLocations(sanitizedOps);
+    setAgentBio(sanitizedBio);
+
     setCurrentStep(4);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -178,8 +232,22 @@ export default function AgentRegisterForm() {
     setError(null);
 
     const sanitizedName = sanitizeInput(name);
+    const sanitizedEmail = sanitizeInput(emailInput).toLowerCase().trim();
+    const sanitizedIdNumber = sanitizeInput(idNumber).toUpperCase().trim();
+    const sanitizedCity = sanitizeInput(city).trim();
+    const sanitizedAgency = sanitizeInput(agencyName).trim();
+    const sanitizedOps = sanitizeInput(operatingLocations).trim();
+    const sanitizedDigitalAddr = sanitizeInput(digitalAddress).toUpperCase().trim();
+    const sanitizedHomeAddr = sanitizeInput(homeAddress).trim();
+    const sanitizedBio = sanitizeInput(agentBio).trim();
+
     const formattedPhone = formatGhanaPhone(phone);
     const formattedWhatsapp = whatsapp ? formatGhanaPhone(whatsapp) : formattedPhone;
+
+    if (!sanitizedName) return setError('Please enter your full name.');
+    if (!isValidGhanaPhone(formattedPhone)) return setError('Please enter a valid 10-digit primary phone number.');
+    if (!sanitizedIdNumber) return setError('Please enter your National ID / Ghana Card Number.');
+    if (!sanitizedCity) return setError('Please enter your city or town.');
 
     if (strength.score < 2) {
       setError('Password is too weak. Please add uppercase letters, numbers, or special characters.');
@@ -199,7 +267,7 @@ export default function AgentRegisterForm() {
     setLoading(true);
 
     try {
-      const generatedEmail = emailInput.trim() || `${formattedPhone}@horentals.com`;
+      const generatedEmail = sanitizedEmail || `${formattedPhone}@horentals.com`;
 
       await register({
         name: sanitizedName,
@@ -210,12 +278,13 @@ export default function AgentRegisterForm() {
 
       // Update Agent Profile with detailed credentials
       try {
-        const fullBio = `${agencyName ? `Agent at ${agencyName}.` : 'Registered Agent.'} Experience: ${experience}. Operating Area: ${operatingLocations || city}. Managed Types: ${propertyTypesManaged.join(', ')}. ID: ${idType} (${idNumber}). Address: ${digitalAddress || homeAddress || city}.`;
+        const defaultBio = `${sanitizedAgency ? `Agent at ${sanitizedAgency}.` : 'Registered Agent.'} Experience: ${experience}. Operating Area: ${sanitizedOps || sanitizedCity}. ID: ${idType} (${sanitizedIdNumber}). Address: ${sanitizedDigitalAddr || sanitizedHomeAddr || sanitizedCity}.`;
+        const fullBio = sanitizedBio || defaultBio;
         
         await graphqlRequest(UPDATE_AGENT_PROFILE, {
           bio: fullBio,
-          profileImage: '',
-          agentLocation: `${city}, ${region} Region`,
+          profileImage: profileImage,
+          agentLocation: `${sanitizedCity}, ${region} Region`,
           agentWhatsapp: formattedWhatsapp
         });
       } catch {
@@ -357,6 +426,50 @@ export default function AgentRegisterForm() {
                   autoComplete="name"
                   className="form-control"
                 />
+              </div>
+
+              <div className="form-group">
+                <label>Professional Profile Picture</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border)' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '2px solid var(--primary)' }}>
+                    {profileImage ? (
+                      <img src={profileImage} alt="Agent Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <User size={30} color="var(--primary)" />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label 
+                      htmlFor="profile-upload" 
+                      style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '6px', 
+                        padding: '6px 12px', 
+                        backgroundColor: 'var(--primary)', 
+                        color: '#FFFFFF', 
+                        borderRadius: 'var(--radius-sm)', 
+                        fontSize: '0.8rem', 
+                        fontWeight: 600, 
+                        cursor: uploadingImage ? 'not-allowed' : 'pointer' 
+                      }}
+                    >
+                      {uploadingImage ? <Loader size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                      {uploadingImage ? 'Uploading...' : profileImage ? 'Change Photo' : 'Upload Photo'}
+                    </label>
+                    <input 
+                      id="profile-upload" 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleImageUpload} 
+                      disabled={uploadingImage} 
+                      style={{ display: 'none' }} 
+                    />
+                    <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px', margin: 0 }}>
+                      JPG, PNG or WEBP (Max 10MB). Used for your public profile badge.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -620,41 +733,20 @@ export default function AgentRegisterForm() {
               </div>
 
               <div className="form-group">
-                <label>Types of Properties You Manage / List *</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
-                  {propertyTypeOptions.map((type) => {
-                    const isChecked = propertyTypesManaged.includes(type);
-                    return (
-                      <label
-                        key={type}
-                        onClick={() => togglePropertyType(type)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '8px 10px',
-                          borderRadius: 'var(--radius-sm)',
-                          border: `1px solid ${isChecked ? 'var(--primary)' : 'var(--border)'}`,
-                          backgroundColor: isChecked ? 'var(--primary-light)' : '#FFFFFF',
-                          color: isChecked ? 'var(--primary)' : 'var(--text-secondary)',
-                          fontSize: '0.78rem',
-                          fontWeight: isChecked ? 700 : 500,
-                          cursor: 'pointer',
-                          userSelect: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {}}
-                          style={{ accentColor: 'var(--primary)' }}
-                        />
-                        {type}
-                      </label>
-                    );
-                  })}
-                </div>
+                <label htmlFor="agentBio">Short Agent Bio / Profile Summary (Optional)</label>
+                <textarea
+                  id="agentBio"
+                  placeholder="Introduce yourself or your agency to prospective tenants (e.g. Specializing in student hostels, self-contains, and commercial properties around UHAS & Ho Central)..."
+                  value={agentBio}
+                  onChange={(e) => setAgentBio(e.target.value)}
+                  maxLength={300}
+                  rows={3}
+                  className="form-control"
+                  style={{ resize: 'vertical' }}
+                />
+                <span className={styles.passwordHelper} style={{ textAlign: 'right', display: 'block' }}>
+                  {agentBio.length}/300 characters
+                </span>
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>

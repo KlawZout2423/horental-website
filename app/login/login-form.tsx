@@ -172,6 +172,7 @@ export default function LoginForm() {
             onError={() => {
               setError('Google login failed. Please try again.');
             }}
+            useOneTap={false}
             shape="rectangular"
             theme="outline"
             text="continue_with"

@@ -857,3 +857,13 @@ export const MARK_ALL_NOTIFICATIONS_READ = `
   }
 `;
 
+export const VERIFY_AGENT = `
+  mutation VerifyAgent($userId: Int!, $status: String!) {
+    verifyAgent(userId: $userId, status: $status) {
+      id
+      name
+      verificationStatus
+    }
+  }
+`;
+
