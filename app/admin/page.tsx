@@ -1114,8 +1114,10 @@ export default function AdminPage() {
               className={`${styles.navItem} ${activeTab === 'landlords' ? styles.activeNavItem : ''}`}
             >
               <FileText size={16} />
-              <span>Landlords Database</span>
-              <span className={styles.navCountBadge}>{landlordRegistrations.length}</span>
+              <span>Agents / Landlords DB</span>
+              <span className={styles.navCountBadge}>
+                {users.filter(u => u.role === 'agent' || u.role === 'landlord' || u.role === 'partner').length + landlordRegistrations.length}
+              </span>
             </button>
 
             <button
@@ -1325,7 +1327,7 @@ export default function AdminPage() {
                 {activeTab === 'audits' && 'Contact Inquiry Audits'}
             {activeTab === 'traffic' && 'Traffic & Campaign Analytics'}
                 {activeTab === 'reports' && 'Property Reports & Flagged Listings'}
-                {activeTab === 'landlords' && 'Landlord Registrations'}
+                {activeTab === 'landlords' && 'Agents & Landlords Database'}
               </h1>
               <p className={styles.pageSubtitle}>
                 {activeTab === 'analytics' && 'Overview statistics, inventory performance, and user-submitted listing flags.'}
@@ -1335,7 +1337,7 @@ export default function AdminPage() {
                 {activeTab === 'audits' && 'Real-time record of customer call and WhatsApp inquiries to landlords.'}
             {activeTab === 'traffic' && 'View traffic sources, visit trends, top listings, and generate campaign tracking links.'}
                 {activeTab === 'reports' && 'Review user-flagged listings, reported scams, inaccurate photos, and manage property reports.'}
-                {activeTab === 'landlords' && 'Manage landlord platform agreements, personal information, and property details.'}
+                {activeTab === 'landlords' && 'View all registered agents, landlord submissions, verification status, and contact details.'}
               </p>
             </>
           )}
@@ -2825,28 +2827,40 @@ export default function AdminPage() {
             </>
           ) : activeTab === 'landlords' ? (
             <>
-              {/* Landlord Registrations Stats */}
+              {/* Agents & Landlords Stats */}
               <div className={styles.statsGrid} style={{ marginBottom: '20px' }}>
-                <div className={styles.statCard} style={{ borderLeft: '4px solid #3B82F6' }}>
-                  <span className={styles.statLabel}>Total Registrations</span>
-                  <span className={styles.statValue}>{landlordRegistrations.length}</span>
-                </div>
-                <div className={styles.statCard} style={{ borderLeft: '4px solid #F59E0B' }}>
-                  <span className={styles.statLabel}>Basic Plan</span>
-                  <span className={styles.statValue}>
-                    {landlordRegistrations.filter((r) => r.plan === 'Basic').length}
-                  </span>
-                </div>
                 <div className={styles.statCard} style={{ borderLeft: '4px solid var(--primary)' }}>
-                  <span className={styles.statLabel}>Premium Plan</span>
-                  <span className={styles.statValue}>
-                    {landlordRegistrations.filter((r) => r.plan === 'Premium').length}
+                  <span className={styles.statLabel}>Registered Agents</span>
+                  <span className={styles.statValue} style={{ color: 'var(--primary)' }}>
+                    {users.filter((u) => u.role === 'agent' || u.role === 'landlord' || u.role === 'partner').length}
                   </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Active platform agents</span>
+                </div>
+                <div className={styles.statCard} style={{ borderLeft: '4px solid #3B82F6' }}>
+                  <span className={styles.statLabel}>Landlord Submissions</span>
+                  <span className={styles.statValue}>{landlordRegistrations.length}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Direct property forms</span>
+                </div>
+                <div className={styles.statCard} style={{ borderLeft: '4px solid #10B981' }}>
+                  <span className={styles.statLabel}>Verified Agents</span>
+                  <span className={styles.statValue} style={{ color: '#10B981' }}>
+                    {users.filter((u) => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified').length}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Verified badges issued</span>
                 </div>
               </div>
 
-              {/* Landlord shareable links */}
+              {/* Shareable Links */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <a 
+                  href="/register-agent" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="btn btn-outline" 
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', textDecoration: 'none', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+                >
+                  🛡️ Open Agent Registration
+                </a>
                 <a 
                   href="/landlord-registration" 
                   target="_blank" 
@@ -2854,31 +2868,103 @@ export default function AdminPage() {
                   className="btn btn-outline" 
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', textDecoration: 'none', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
                 >
-                  🌐 Open Public Form
+                  🌐 Open Landlord Form
                 </a>
                 <button 
                   className="btn btn-outline"
                   onClick={() => {
-                    const link = `${window.location.origin}/landlord-registration`;
+                    const link = `${window.location.origin}/register-agent`;
                     navigator.clipboard.writeText(link);
                     alert('Copied link: ' + link);
                   }}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
                 >
-                  🔗 Copy Shareable Link
+                  🔗 Copy Agent Link
                 </button>
-                <button 
-                  className="btn btn-outline"
-                  onClick={() => {
-                    const link = `${window.location.origin}/`;
-                    setQrModalUrl(link);
-                    setQrModalTitle('HO Rentals Web App');
-                    setIsQrModalOpen(true);
-                  }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
-                >
-                  📱 View Web App QR
-                </button>
+              </div>
+
+              {/* Registered Agents Section */}
+              <div className={styles.card} style={{ marginBottom: '24px', padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      Registered Agents Directory ({users.filter((u) => u.role === 'agent' || u.role === 'landlord' || u.role === 'partner').length})
+                    </h3>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      All registered agents and landlords with active accounts.
+                    </p>
+                  </div>
+                </div>
+
+                <div className={styles.tableResponsive}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Agent Name</th>
+                        <th>Contact / WhatsApp</th>
+                        <th>Location</th>
+                        <th>Role</th>
+                        <th>Verification Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.filter((u) => u.role === 'agent' || u.role === 'landlord' || u.role === 'partner').length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                            No registered agents found.
+                          </td>
+                        </tr>
+                      ) : (
+                        users.filter((u) => u.role === 'agent' || u.role === 'landlord' || u.role === 'partner').map((ag) => {
+                          const waNumber = ag.agentWhatsapp || ag.phone || '';
+                          const waClean = waNumber.replace(/[^0-9]/g, '');
+                          const waLink = waClean ? `https://wa.me/${waClean.startsWith('0') ? '233' + waClean.substring(1) : waClean}` : '';
+                          return (
+                            <tr key={ag.id}>
+                              <td>
+                                <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{ag.name}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ag.email || ag.phone}</div>
+                              </td>
+                              <td>
+                                <div style={{ fontSize: '0.84rem', fontWeight: 600 }}>{ag.phone || '—'}</div>
+                                {waLink && (
+                                  <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.76rem', color: '#25D366', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    💬 WhatsApp
+                                  </a>
+                                )}
+                              </td>
+                              <td style={{ fontSize: '0.82rem' }}>{ag.agentLocation || 'Ho, Ghana'}</td>
+                              <td>
+                                <span className="badge" style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontSize: '0.72rem' }}>
+                                  {ag.role}
+                                </span>
+                              </td>
+                              <td>
+                                <span className="badge" style={{
+                                  backgroundColor: ag.verificationStatus === 'verified' ? '#ECFDF5' : '#FEF3C7',
+                                  color: ag.verificationStatus === 'verified' ? '#047857' : '#B45309',
+                                  fontSize: '0.72rem'
+                                }}>
+                                  {ag.verificationStatus || 'unverified'}
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  onClick={() => handleUpdateVerificationStatus(ag.id, ag.verificationStatus === 'verified' ? 'unverified' : 'verified')}
+                                  className="btn btn-outline"
+                                  style={{ fontSize: '0.74rem', padding: '4px 8px' }}
+                                >
+                                  {ag.verificationStatus === 'verified' ? 'Revoke Verified' : 'Verify Agent'}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               {/* Landlords search controls */}
