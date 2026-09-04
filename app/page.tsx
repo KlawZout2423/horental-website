@@ -405,31 +405,6 @@ export default function Home() {
                         <span>{chip.label}</span>
                         <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: showSelfContainedDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                       </button>
-
-                      {showSelfContainedDropdown && dropdownCoords && (
-                        <div
-                          ref={dropdownRef}
-                          className={styles.dropdownMenu}
-                          style={{
-                            position: 'fixed',
-                            top: `${dropdownCoords.top}px`,
-                            left: `${dropdownCoords.left}px`,
-                            transform: 'translateX(-50%)',
-                            zIndex: 999999,
-                          }}
-                        >
-                          {SELF_CONTAINED_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.type}
-                              type="button"
-                              className={styles.dropdownItem}
-                              onClick={() => handleSelfContainedSelect(opt.type)}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   );
                 }
