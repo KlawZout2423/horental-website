@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Building, 
@@ -378,7 +378,9 @@ export default function LandlordRegistrationPage() {
             List Property Direct
           </button>
         </div>
-        <AgentRegisterForm />
+        <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading Agent Registration...</div>}>
+          <AgentRegisterForm />
+        </Suspense>
       </div>
     );
   }
@@ -425,7 +427,7 @@ export default function LandlordRegistrationPage() {
 
       <div className={styles.topBar}>
         <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Building size={20} /> Ho Rentals — Landlord Registration
+          <Building size={20} /> Ho Rentals — Agent &amp; Landlord Registration
         </h1>
         <span className={styles.regionBadge}>Ho, Volta Region</span>
       </div>
