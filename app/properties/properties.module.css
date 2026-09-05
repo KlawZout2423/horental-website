@@ -359,6 +359,7 @@
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
   align-items: start;
+  grid-auto-rows: auto;
 }
 
 /* High Fidelity Premium Property Card */
@@ -373,10 +374,11 @@
   opacity: 1;
   text-decoration: none;
   color: inherit;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
   position: relative;
   width: 100%;
   min-height: 0;
+  contain: layout;
 }
 
 .propertyCard:hover {
@@ -441,6 +443,8 @@
   flex-direction: column;
   gap: 6px;
   flex-grow: 1;
+  flex-shrink: 0;
+  background-color: var(--bg-surface);
 }
 
 .cardMetaRow {
@@ -766,15 +770,15 @@
     100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(193,18,31,0); }
   }
 
-  /* Fix grid for mobile — single column, full width */
+  /* Fix grid for mobile — single column flex stack, full width */
   .grid {
-    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
     gap: 20px !important;
-    row-gap: 20px !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box;
-    align-items: start !important;
+    align-items: stretch !important;
   }
 
   .propertyCard {
