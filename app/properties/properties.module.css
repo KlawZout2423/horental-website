@@ -770,9 +770,11 @@
   .grid {
     grid-template-columns: 1fr !important;
     gap: 20px !important;
+    row-gap: 20px !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box;
+    align-items: start !important;
   }
 
   .propertyCard {
@@ -782,7 +784,7 @@
     min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     margin: 0 !important;
     box-sizing: border-box;
     border-radius: 18px !important;
@@ -823,9 +825,12 @@
     padding: 14px 16px !important;
     gap: 8px !important;
     flex-grow: 1 !important;
+    flex-shrink: 0 !important;
     opacity: 1 !important;
     visibility: visible !important;
     background-color: var(--bg-surface) !important;
+    position: relative !important;
+    z-index: 1 !important;
   }
 
   .cardTitle {
