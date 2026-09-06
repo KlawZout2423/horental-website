@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Building, 
   UserPlus, 
@@ -28,8 +28,6 @@ import { graphqlRequest, CREATE_LANDLORD_REGISTRATION } from '../../lib/graphql'
 import { formatGhanaPhone, isValidGhanaPhone } from '../../lib/types';
 import styles from './landlord-registration.module.css';
 
-import AgentRegisterForm from './agent-register-form';
-
 interface PhotoItem {
   file: File;
   previewUrl: string;
@@ -37,7 +35,6 @@ interface PhotoItem {
 
 export default function LandlordRegistrationPage() {
   const router = useRouter();
-  const [registrationMode, setRegistrationMode] = useState<'agent' | 'property'>('agent');
   const [currentStep, setCurrentStep] = useState(1);
 
   // --- Form States ---
@@ -338,96 +335,11 @@ export default function LandlordRegistrationPage() {
     }
   };
 
-  if (registrationMode === 'agent') {
-    return (
-      <div style={{ position: 'relative', width: '100%' }}>
-        <div style={{ maxWidth: '380px', margin: '20px auto -20px', display: 'flex', gap: '4px', backgroundColor: 'var(--bg-surface-secondary)', padding: '4px', borderRadius: '12px', zIndex: 20, border: '1px solid var(--border)' }}>
-          <button
-            onClick={() => setRegistrationMode('agent')}
-            style={{
-              flex: 1,
-              padding: '8px 12px',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              backgroundColor: '#FFFFFF',
-              color: 'var(--primary)',
-              boxShadow: 'var(--shadow-sm)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Register as Agent
-          </button>
-          <button
-            onClick={() => setRegistrationMode('property')}
-            style={{
-              flex: 1,
-              padding: '8px 12px',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              backgroundColor: 'transparent',
-              color: 'var(--text-secondary)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            List Property Direct
-          </button>
-        </div>
-        <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading Agent Registration...</div>}>
-          <AgentRegisterForm />
-        </Suspense>
-      </div>
-    );
-  }
-
   return (
     <div className={styles.app}>
-      <div style={{ maxWidth: '380px', margin: '0 auto 20px', display: 'flex', gap: '4px', backgroundColor: 'var(--bg-surface-secondary)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-        <button
-          onClick={() => setRegistrationMode('agent')}
-          style={{
-            flex: 1,
-            padding: '8px 12px',
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            backgroundColor: 'transparent',
-            color: 'var(--text-secondary)',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          Register as Agent
-        </button>
-        <button
-          onClick={() => setRegistrationMode('property')}
-          style={{
-            flex: 1,
-            padding: '8px 12px',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            backgroundColor: '#FFFFFF',
-            color: 'var(--primary)',
-            boxShadow: 'var(--shadow-sm)',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          List Property Direct
-        </button>
-      </div>
-
       <div className={styles.topBar}>
         <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Building size={20} /> Ho Rentals — Agent &amp; Landlord Registration
+          <Building size={20} /> Ho Rentals — Landlord &amp; Property Registration
         </h1>
         <span className={styles.regionBadge}>Ho, Volta Region</span>
       </div>
@@ -765,20 +677,20 @@ export default function LandlordRegistrationPage() {
               })}
             </div>
 
-            <div className={styles.sectionTitle}>Subscription plan</div>
+            <div className={styles.sectionTitle}>Subscription Plan</div>
             <div className={styles.planRow}>
               <label className={`${styles.planCard} ${plan === 'Basic' ? styles.planSelected : ''}`}>
                 <input type="radio" name="plan" value="Basic" checked={plan === 'Basic'} onChange={() => setPlan('Basic')} style={{ display: 'none' }} />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Basic Plan</div>
-                  <div style={{ fontSize: '0.78rem', opacity: 0.8, marginTop: '2px' }}>GHS 50 (per property)</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Free Starter Plan</div>
+                  <div style={{ fontSize: '0.78rem', opacity: 0.8, marginTop: '2px' }}>First 2 Listings Free (GH₵ 0)</div>
                 </div>
               </label>
               <label className={`${styles.planCard} ${plan === 'Premium' ? styles.planSelected : ''}`}>
                 <input type="radio" name="plan" value="Premium" checked={plan === 'Premium'} onChange={() => setPlan('Premium')} style={{ display: 'none' }} />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Premium Plan</div>
-                  <div style={{ fontSize: '0.78rem', opacity: 0.8, marginTop: '2px' }}>GHS 100 (per property)</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Pay-Per-Property</div>
+                  <div style={{ fontSize: '0.78rem', opacity: 0.8, marginTop: '2px' }}>GH₵ 10.00 / property (after 2 free)</div>
                 </div>
               </label>
             </div>
@@ -1025,3 +937,4 @@ export default function LandlordRegistrationPage() {
     </div>
   );
 }
+

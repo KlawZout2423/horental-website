@@ -10,6 +10,10 @@
   overflow: hidden;
 }
 
+.coverBanner {
+  display: none;
+}
+
 /* Collapsed strip — always visible, acts as toggle on mobile */
 .collapsedStrip {
   display: flex;
@@ -48,6 +52,15 @@
 
 /* ── Desktop: always expanded, no toggle ── */
 @media (min-width: 768px) {
+  .coverBanner {
+    display: block;
+    height: 6px;
+    background: linear-gradient(90deg, var(--primary) 0%, #8B0000 100%);
+    width: 100%;
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+  }
+
   .profileCard {
     flex-direction: row;
     align-items: center;
@@ -122,6 +135,7 @@
   margin: 0 auto;
   padding: 32px 20px 80px;
 }
+
 .backLink {
   display: inline-flex;
   align-items: center;
@@ -137,8 +151,6 @@
 .backLink:hover {
   color: var(--primary);
 }
-
-
 
 .avatarContainer {
   width: 56px;
@@ -183,10 +195,27 @@
 }
 
 .agentName {
-  font-size: 1.75rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+@media (min-width: 768px) {
+  .agentName {
+    font-size: 1.75rem;
+    margin-bottom: 8px;
+  }
+}
+
+.desktopLocationRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 .agentBio {
@@ -320,5 +349,29 @@
 @media (min-width: 768px) {
   .statsRow {
     margin: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 16px 14px 60px;
+  }
+  .contactRow {
+    flex-direction: column;
+    width: 100%;
+  }
+  .contactBtn {
+    width: 100%;
+    justify-content: center;
+  }
+  .statsRow {
+    gap: 8px;
+  }
+  .statBox {
+    padding: 8px 10px;
+    min-width: 75px;
+  }
+  .sectionTitle {
+    font-size: 1.15rem;
   }
 }

@@ -83,15 +83,17 @@ export default function Home() {
       setShowAuthModal(true);
       return;
     }
-    // Step 2: Must accept disclaimer (per session)
+    // Step 2: Must accept disclaimer
     if (typeof window !== 'undefined') {
-      const agreed = sessionStorage.getItem('agreed_agent_disclaimer') === 'true';
+      const agreed = 
+        localStorage.getItem('agreed_agent_disclaimer') === 'true' || 
+        sessionStorage.getItem('agreed_agent_disclaimer') === 'true';
       if (!agreed) {
         setModalAgentName(agentName);
         setPendingAgentRedirect(`/agents/${agentId}`);
         setVerifyModalOpen(true);
       } else {
-        // Already agreed this session — navigate directly
+        // Already agreed — navigate directly
         router.push(`/agents/${agentId}`);
       }
     }

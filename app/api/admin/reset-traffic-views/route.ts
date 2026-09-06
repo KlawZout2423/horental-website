@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../../../../lib/env';
 
 /**
  * POST /api/admin/reset-traffic-views
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const JWT_SECRET = process.env.JWT_SECRET || 'horentals-super-secret-jwt-key-2026';
+      const JWT_SECRET = getJwtSecret();
       const decoded = jwt.verify(authCookie, JWT_SECRET) as { id: number };
       
       const dbUser = await prisma.user.findUnique({

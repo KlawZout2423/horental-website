@@ -114,6 +114,11 @@ export const ME_QUERY = `
       profileImage
       agentLocation
       agentWhatsapp
+      agencyName
+      experienceYears
+      licenseNumber
+      subscriptionPlan
+      isProfileComplete
       verificationStatus
       mustChangePassword
     }
@@ -130,6 +135,15 @@ export const LOGIN_MUTATION = `
         email
         phone
         role
+        bio
+        profileImage
+        agentLocation
+        agentWhatsapp
+        agencyName
+        experienceYears
+        licenseNumber
+        subscriptionPlan
+        isProfileComplete
         verificationStatus
         mustChangePassword
       }
@@ -147,6 +161,15 @@ export const GOOGLE_AUTH_MUTATION = `
         email
         phone
         role
+        bio
+        profileImage
+        agentLocation
+        agentWhatsapp
+        agencyName
+        experienceYears
+        licenseNumber
+        subscriptionPlan
+        isProfileComplete
         verificationStatus
         mustChangePassword
       }
@@ -164,6 +187,15 @@ export const REGISTER_MUTATION = `
         email
         phone
         role
+        bio
+        profileImage
+        agentLocation
+        agentWhatsapp
+        agencyName
+        experienceYears
+        licenseNumber
+        subscriptionPlan
+        isProfileComplete
         verificationStatus
         mustChangePassword
       }
@@ -333,6 +365,14 @@ export const GET_USERS = `
       email
       phone
       role
+      bio
+      profileImage
+      agentLocation
+      agentWhatsapp
+      agencyName
+      experienceYears
+      licenseNumber
+      subscriptionPlan
       verificationStatus
       mustChangePassword
     }
@@ -703,8 +743,28 @@ export const GET_AGENT_PROPERTIES = `
 `;
 
 export const UPDATE_AGENT_PROFILE = `
-  mutation UpdateAgentProfile($bio: String!, $profileImage: String, $agentLocation: String, $agentWhatsapp: String) {
-    updateAgentProfile(bio: $bio, profileImage: $profileImage, agentLocation: $agentLocation, agentWhatsapp: $agentWhatsapp) {
+  mutation UpdateAgentProfile(
+    $bio: String
+    $profileImage: String
+    $agentLocation: String
+    $agentWhatsapp: String
+    $agencyName: String
+    $experienceYears: String
+    $licenseNumber: String
+    $subscriptionPlan: String
+    $isProfileComplete: Boolean
+  ) {
+    updateAgentProfile(
+      bio: $bio
+      profileImage: $profileImage
+      agentLocation: $agentLocation
+      agentWhatsapp: $agentWhatsapp
+      agencyName: $agencyName
+      experienceYears: $experienceYears
+      licenseNumber: $licenseNumber
+      subscriptionPlan: $subscriptionPlan
+      isProfileComplete: $isProfileComplete
+    ) {
       id
       name
       email
@@ -714,22 +774,11 @@ export const UPDATE_AGENT_PROFILE = `
       profileImage
       agentLocation
       agentWhatsapp
-    }
-  }
-`;
-
-export const GET_MY_PROPERTIES = `
-  query GetMyProperties {
-    agentProperties: properties {
-      id
-      title
-      type
-      status
-      price
-      location
-      imageUrl
-      isFeatured
-      createdAt
+      agencyName
+      experienceYears
+      licenseNumber
+      subscriptionPlan
+      isProfileComplete
     }
   }
 `;
@@ -766,70 +815,7 @@ export const REVIEW_VERIFICATION_REQUEST = `
   }
 `;
 
-export const GET_LANDLORD_AGENT_LINKS = `
-  query GetLandlordAgentLinks {
-    landlordAgentLinks {
-      id
-      landlordId
-      agentId
-      status
-      commissionShare
-      createdAt
-      landlord {
-        id
-        name
-        phone
-      }
-      agent {
-        id
-        name
-        phone
-      }
-    }
-  }
-`;
 
-export const GET_LEAD_INQUIRIES = `
-  query GetLeadInquiries {
-    leadInquiries {
-      id
-      propertyId
-      tenantName
-      tenantPhone
-      channel
-      status
-      createdAt
-      property {
-        id
-        title
-        location
-      }
-    }
-  }
-`;
-
-export const GET_FRAUD_ALERTS = `
-  query GetFraudAlerts {
-    fraudAlerts {
-      id
-      propertyId
-      userId
-      reason
-      severity
-      status
-      createdAt
-      property {
-        id
-        title
-      }
-      user {
-        id
-        name
-        email
-      }
-    }
-  }
-`;
 
 export const GET_SUBSCRIPTIONS = `
   query GetSubscriptions {
@@ -869,6 +855,19 @@ export const VERIFY_AGENT = `
       id
       name
       verificationStatus
+    }
+  }
+`;
+
+export const SUBMIT_VERIFICATION_REQUEST = `
+  mutation SubmitVerificationRequest($idType: String!, $idNumber: String!, $documentUrls: [String!]!) {
+    submitVerificationRequest(idType: $idType, idNumber: $idNumber, documentUrls: $documentUrls) {
+      id
+      idType
+      idNumber
+      documentUrls
+      status
+      createdAt
     }
   }
 `;

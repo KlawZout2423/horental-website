@@ -123,6 +123,11 @@ export const typeDefs = `#graphql
         profileImage: String
         agentLocation: String
         agentWhatsapp: String
+        agencyName: String
+        experienceYears: String
+        licenseNumber: String
+        subscriptionPlan: String
+        isProfileComplete: Boolean
         verificationStatus: String
         mustChangePassword: Boolean
         subscription: Subscription
@@ -206,6 +211,7 @@ export const typeDefs = `#graphql
     type Report {
         id: Int!
         propertyId: Int!
+        reporterId: Int
         reason: String!
         details: String
         status: String!
@@ -362,7 +368,7 @@ export const typeDefs = `#graphql
         publishLandlordRegistration(id: Int!): Property!
         updateReportStatus(id: Int!, status: String!): Report!
         deleteReport(id: Int!): Report!
-        updateAgentProfile(bio: String!, profileImage: String, agentLocation: String, agentWhatsapp: String): User!
+        updateAgentProfile(bio: String, profileImage: String, agentLocation: String, agentWhatsapp: String, agencyName: String, experienceYears: String, licenseNumber: String, subscriptionPlan: String, isProfileComplete: Boolean): User!
         verifyAgent(userId: Int!, status: String!): User!
         submitVerificationRequest(idType: String!, idNumber: String!, documentUrls: [String!]!): VerificationRequest!
         reviewVerificationRequest(id: Int!, status: String!, reviewerNotes: String): VerificationRequest!
@@ -373,5 +379,6 @@ export const typeDefs = `#graphql
         createSubscription(name: String!, price: Float!, billingCycle: String, momoNumber: String): Subscription!
         markNotificationRead(propertyId: Int!): Boolean!
         markAllNotificationsRead(propertyIds: [Int!]!): Boolean!
+        createReport(propertyId: Int!, reason: String!, details: String): Report!
     }
 `;

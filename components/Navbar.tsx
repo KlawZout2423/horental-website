@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -17,6 +17,7 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('app_theme') as 'light' | 'dark' | null;
@@ -44,6 +45,19 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Close desktop dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
@@ -116,7 +130,7 @@ export default function Navbar() {
           </button>
 
           {user ? (
-            <div className={styles.userInfo} onClick={toggleDropdown}>
+            <div className={styles.userInfo} onClick={toggleDropdown} ref={dropdownRef}>
               <div className={styles.avatar}>{getInitials(user.name)}</div>
               <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>{user.name.split(' ')[0]}</span>
               
@@ -130,6 +144,11 @@ export default function Navbar() {
                   {user.role === 'admin' && (
                     <Link href="/admin" className={styles.userMenuItem}>
                       <Shield size={16} /> Admin Panel
+                    </Link>
+                  )}
+                  {(user.role === 'agent' || user.role === 'landlord') && (
+                    <Link href="/dashboard" className={styles.userMenuItem}>
+                      <User size={16} /> My Dashboard
                     </Link>
                   )}
                   {(user.role === 'admin' || user.role === 'agent' || user.role === 'landlord') && (
@@ -203,6 +222,11 @@ export default function Navbar() {
           <Link href="/favorites" className={isActive('/favorites')} onClick={toggleMobileMenu}>
             <Heart size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Favorites
           </Link>
+          {user && (user.role === 'agent' || user.role === 'landlord') && (
+            <Link href="/dashboard" className={isActive('/dashboard')} onClick={toggleMobileMenu}>
+              <User size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> My Dashboard
+            </Link>
+          )}
           {user && (user.role === 'admin' || user.role === 'agent' || user.role === 'landlord') && (
             <Link href="/upload" className={isActive('/upload')} onClick={toggleMobileMenu}>
               <PlusCircle size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Upload Property

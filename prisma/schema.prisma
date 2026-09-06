@@ -17,6 +17,11 @@ model User {
   profileImage       String?
   agentLocation      String?
   agentWhatsapp      String?
+  agencyName         String?
+  experienceYears    String?
+  licenseNumber      String?
+  subscriptionPlan   String?  @default("starter")
+  isProfileComplete  Boolean  @default(false)
   verificationStatus String   @default("unverified") // "unverified" | "pending" | "verified" | "rejected"
   resetOtpCode       String?
   resetOtpExpires    DateTime?
@@ -34,6 +39,7 @@ model User {
   agentLinks          LandlordAgentLink[]   @relation("AgentLinks")
   fraudAlerts         FraudAlert[]
   notificationReads   NotificationRead[]
+  reports             Report[]
 }
 
 model Company {
@@ -86,6 +92,7 @@ model Property {
   leadInquiries LeadInquiry[]
   fraudAlerts  FraudAlert[]
   notificationReads NotificationRead[]
+  reports      Report[]
 
   @@index([status, isFeatured])
   @@index([price])
@@ -270,4 +277,20 @@ model NotificationRead {
 
   @@unique([userId, propertyId])
   @@index([userId])
+}
+
+model Report {
+  id         Int      @id @default(autoincrement())
+  propertyId Int
+  reporterId Int?
+  reason     String
+  details    String?
+  status     String   @default("pending") // "pending" | "reviewed" | "dismissed"
+  createdAt  DateTime @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  reporter User?    @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([status])
 }

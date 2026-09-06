@@ -213,176 +213,7 @@
   display: inline;
 }
 
-@media (max-width: 968px) {
-  .hero {
-    min-height: auto;
-    padding: 18px 16px 12px;
-  }
-  
-  .heroWrapper {
-    flex-direction: column;
-    text-align: center;
-    gap: 12px;
-  }
 
-  .heroLeft {
-    align-items: center;
-    text-align: center;
-    width: 100%;
-  }
-
-  .heroRight {
-    display: none;
-  }
-
-  .heroBadge {
-    margin-bottom: 6px !important;
-    padding: 4px 12px !important;
-    font-size: 0.78rem !important;
-  }
-
-  .title {
-    font-size: 1.55rem;
-    line-height: 1.2;
-  }
-
-  .subtitle {
-    font-size: 0.85rem;
-    margin-bottom: 10px;
-  }
-
-  .sectionHeaderSubtitle {
-    display: none !important;
-  }
-
-  .searchContainer {
-    width: 100%;
-    max-width: 100%;
-    min-height: 46px;
-    padding: 4px 4px 4px 14px;
-    margin-top: 4px;
-  }
-
-  .searchButton {
-    padding: 8px 18px;
-    font-size: 0.85rem;
-  }
-
-  .stickySearchBar {
-    position: sticky;
-    top: 70px;
-    z-index: 1000;
-    background-color: var(--bg-surface);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-    border-bottom: 1px solid var(--border);
-    overflow: visible;
-  }
-
-  .mobileSearchRow {
-    display: none;
-  }
-
-  .chipsOuter {
-    padding: 6px 16px 8px;
-    border-bottom: none;
-    overflow-x: auto;
-    justify-content: flex-start;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-
-  .chipsContainer {
-    width: max-content !important;
-    min-width: max-content !important;
-    flex-wrap: nowrap !important;
-  }
-
-  .chipsOuter::-webkit-scrollbar {
-    display: none;
-  }
-
-  .section {
-    padding: 28px 16px;
-  }
-
-  .listingsSection {
-    padding-top: 20px;
-    padding-bottom: 28px;
-  }
-
-  /* Single column grid on mobile */
-  .gridCards {
-    grid-template-columns: 1fr !important;
-    gap: 16px;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box;
-  }
-
-  .propertyCard {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-    margin: 0 !important;
-    box-sizing: border-box;
-  }
-
-  .imageWrapper {
-    width: 100% !important;
-    aspect-ratio: 16 / 10 !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    flex-shrink: 0 !important;
-    position: relative;
-    overflow: hidden !important;
-  }
-
-  .cardContent {
-    display: flex !important;
-    flex-direction: column !important;
-    padding: 14px 16px !important;
-    flex-grow: 1 !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
-
-  .cardFooter {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    padding: 10px 16px !important;
-    border-top: 1px solid var(--border) !important;
-  }
-
-  .sectionHeaderRow {
-    align-items: center;
-    margin-bottom: 16px;
-  }
-
-  .sectionHeaderTitle {
-    font-size: 1.35rem;
-    margin-bottom: 2px;
-  }
-
-  .sectionHeaderSubtitle {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-  }
-
-  .viewAllLink {
-    padding: 6px 14px !important;
-    font-size: 0.8rem !important;
-    font-weight: 700 !important;
-    border-radius: 20px !important;
-  }
-}
 
 .sectionHeaderRow {
   display: flex;
@@ -1507,3 +1338,168 @@
     gap: 16px;
   }
 }
+
+/* Comprehensive Mobile & Responsive Overrides (max-width: 968px) */
+@media (max-width: 968px) {
+  .hero {
+    min-height: auto;
+    padding: 18px 16px 12px;
+  }
+  
+  .heroWrapper {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .heroLeft {
+    align-items: center;
+    text-align: center;
+    width: 100%;
+  }
+
+  .heroRight {
+    display: none;
+  }
+
+  .title {
+    font-size: 1.55rem;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+
+  .sectionHeaderSubtitle {
+    display: none !important;
+  }
+
+  .searchContainer {
+    width: 100%;
+    max-width: 100%;
+    min-height: 46px;
+    padding: 4px 4px 4px 14px;
+    margin-top: 4px;
+  }
+
+  .searchButton {
+    padding: 8px 18px;
+    font-size: 0.85rem;
+  }
+
+  .chipsOuter {
+    padding: 6px 16px 8px;
+    border-bottom: none;
+    overflow-x: auto;
+    justify-content: flex-start;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .chipsContainer {
+    width: max-content !important;
+    min-width: max-content !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .chipsOuter::-webkit-scrollbar {
+    display: none;
+  }
+
+  .section {
+    padding: 24px 16px;
+  }
+
+  .listingsSection {
+    padding-top: 16px;
+    padding-bottom: 24px;
+  }
+
+  /* Single-column vertical layout on mobile — strictly prevents card overlapping */
+  .gridCards {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  .propertyCard {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    border-radius: 18px !important;
+    border: 1px solid var(--border) !important;
+    background-color: var(--bg-surface) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07) !important;
+    position: relative !important;
+    transform: none !important;
+  }
+
+  .propertyCard:active {
+    transform: scale(0.985) !important;
+  }
+
+  .imageWrapper {
+    width: 100% !important;
+    aspect-ratio: 16 / 10 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex-shrink: 0 !important;
+    position: relative;
+    overflow: hidden !important;
+    border-top-left-radius: 17px !important;
+    border-top-right-radius: 17px !important;
+  }
+
+  .cardContent {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 14px 16px !important;
+    gap: 8px !important;
+    flex-grow: 1 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    background-color: var(--bg-surface) !important;
+  }
+
+  .cardFooter {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 12px 16px !important;
+    background-color: var(--bg-surface) !important;
+    border-top: 1px solid var(--border) !important;
+  }
+
+  .sectionHeaderRow {
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .sectionHeaderTitle {
+    font-size: 1.35rem;
+    margin-bottom: 2px;
+  }
+
+  .viewAllLink {
+    padding: 6px 14px !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    border-radius: 20px !important;
+  }
+}
+

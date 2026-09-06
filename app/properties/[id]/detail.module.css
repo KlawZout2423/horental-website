@@ -69,7 +69,7 @@
   max-height: 480px;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background-color: #0f172a;
+  background-color: var(--bg-surface-secondary);
   box-shadow: var(--shadow-md);
 }
 
@@ -89,7 +89,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: blur(24px) brightness(0.4) scale(1.1);
+  filter: blur(24px) opacity(0.3);
   pointer-events: none;
   z-index: 1;
 }

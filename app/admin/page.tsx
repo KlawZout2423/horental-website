@@ -33,7 +33,7 @@ import {
   VERIFY_AGENT
 } from '../../lib/graphql';
 import { buildTrackingUrl } from '../../lib/trackVisit';
-import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2 } from 'lucide-react';
+import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import styles from './admin.module.css';
 import { getFriendlyErrorMessage, LandlordRegistration, getStatusLabel, getToggleStatusLabel } from '../../lib/types';
 
@@ -110,7 +110,7 @@ export default function AdminPage() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   
   // Navigation & loaders
-  const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'agents' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic'>('analytics');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
@@ -135,8 +135,11 @@ export default function AdminPage() {
   const [campCopied, setCampCopied] = useState(false);
   const [auditLogView, setAuditLogView] = useState<'all' | 'system' | 'contacts'>('all');
   const [auditFilter, setAuditFilter] = useState<'all' | 'call' | 'whatsapp' | 'book_viewing' | 'sms'>('all');
+  const [auditSearch, setAuditSearch] = useState('');
   const [selectedAuditLogIds, setSelectedAuditLogIds] = useState<number[]>([]);
   const [selectedContactLogIds, setSelectedContactLogIds] = useState<number[]>([]);
+  const [isContactsCollapsed, setIsContactsCollapsed] = useState(false);
+  const [isSecurityAuditsCollapsed, setIsSecurityAuditsCollapsed] = useState(false);
   const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set());
   const [loadingData, setLoadingData] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -144,6 +147,10 @@ export default function AdminPage() {
   const [selectedLandlord, setSelectedLandlord] = useState<LandlordRegistration | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<User | null>(null);
   const [landlordSearch, setLandlordSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [agentSearch, setAgentSearch] = useState('');
+  const [moderationSearch, setModerationSearch] = useState('');
+  const [collapsedSubmitters, setCollapsedSubmitters] = useState<Record<string, boolean>>({});
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrModalUrl, setQrModalUrl] = useState('');
   const [qrModalTitle, setQrModalTitle] = useState('');
@@ -152,77 +159,8 @@ export default function AdminPage() {
 
   // Edit Property States
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editLocation, setEditLocation] = useState('');
-  const [editDigitalAddress, setEditDigitalAddress] = useState('');
-  const [editLandmarks, setEditLandmarks] = useState('');
-  const [editLatitude, setEditLatitude] = useState<number | null>(null);
-  const [editLongitude, setEditLongitude] = useState<number | null>(null);
-  const [editImageUrl, setEditImageUrl] = useState('');
-  const [isUploadingEditImage, setIsUploadingEditImage] = useState(false);
-  const [editPrice, setEditPrice] = useState('');
-  const [editType, setEditType] = useState('');
-  const [editStatus, setEditStatus] = useState('');
-  const [editContact, setEditContact] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editHasWifi, setEditHasWifi] = useState(false);
-  const [editHasCctv, setEditHasCctv] = useState(false);
-  const [editHasFurnished, setEditHasFurnished] = useState(false);
-  const [editHasGatedFenced, setEditHasGatedFenced] = useState(false);
-  const [editIsNewlyBuilt, setEditIsNewlyBuilt] = useState(false);
-  const [editHasBed, setEditHasBed] = useState(false);
-  const [editHasStudyDesk, setEditHasStudyDesk] = useState(false);
-  const [editGhanaWaterShared, setEditGhanaWaterShared] = useState(false);
-  const [editGhanaWaterSeparate, setEditGhanaWaterSeparate] = useState(false);
-  const [editPolytank, setEditPolytank] = useState(false);
-  const [editBorehole, setEditBorehole] = useState(false);
-  const [editWell, setEditWell] = useState(false);
-  const [editEcgSharedMeter, setEditEcgSharedMeter] = useState(false);
-  const [editEcgSeparateMeter, setEditEcgSeparateMeter] = useState(false);
-  const [editEcgPostPaid, setEditEcgPostPaid] = useState(false);
-  const [editEcgPrepaid, setEditEcgPrepaid] = useState(false);
-  const [editIsFeatured, setEditIsFeatured] = useState(false);
-  const [editPricePeriod, setEditPricePeriod] = useState('semester');
-  const [editLandlordName, setEditLandlordName] = useState('');
-  const [editGallery, setEditGallery] = useState<EditGalleryItem[]>([]);
-
-  // Lands Specific Edit States
-  const [editLandPlotSize, setEditLandPlotSize] = useState('');
-  const [editLandDocType, setEditLandDocType] = useState('Site Plan');
-  const [editLandZoning, setEditLandZoning] = useState('Residential');
-
-  // Furnitures Specific Edit States
-  const [editFurnitureCondition, setEditFurnitureCondition] = useState('Brand New');
-  const [editFurnitureCategory, setEditFurnitureCategory] = useState('Bed & Mattress');
-  const [editFurnitureDelivery, setEditFurnitureDelivery] = useState('Buyer Pick-Up');
 
   const [isCleaningMedia, setIsCleaningMedia] = useState(false);
-
-  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    setIsUploadingEditImage(true);
-    setMessage(null);
-    try {
-      const formData = new FormData();
-      formData.append('images', file);
-      const res = await fetch('/api/upload-multiple', {
-        method: 'POST',
-        body: formData,
-      });
-      if (!res.ok) throw new Error('Image upload failed');
-      const data = await res.json();
-      const urls: string[] = data.imageUrls || data.images || [];
-      if (urls.length > 0) {
-        setEditImageUrl(urls[0]);
-        setMessage({ text: '📷 New property photo uploaded successfully.', isError: false });
-      }
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Failed to upload image.', isError: true });
-    } finally {
-      setIsUploadingEditImage(false);
-    }
-  };
 
   const handleRunStorageCleanup = async () => {
     if (!confirm('Scan and delete all orphaned/unused images from Cloudinary storage and database?')) {
@@ -256,6 +194,27 @@ export default function AdminPage() {
   const standardUsers = users.filter((u) => u.role !== 'agent' && u.role !== 'landlord');
   const agentUsers = users.filter((u) => u.role === 'agent' || u.role === 'landlord');
 
+  const filteredStandardUsers = standardUsers.filter((u) => {
+    if (!userSearch.trim()) return true;
+    const term = userSearch.toLowerCase();
+    return (
+      (u.name && u.name.toLowerCase().includes(term)) ||
+      (u.email && u.email.toLowerCase().includes(term)) ||
+      (u.phone && u.phone.includes(term))
+    );
+  });
+
+  const filteredAgentUsers = agentUsers.filter((ag) => {
+    if (!agentSearch.trim()) return true;
+    const term = agentSearch.toLowerCase();
+    return (
+      (ag.name && ag.name.toLowerCase().includes(term)) ||
+      (ag.email && ag.email.toLowerCase().includes(term)) ||
+      (ag.phone && ag.phone.includes(term)) ||
+      (ag.agentLocation && ag.agentLocation.toLowerCase().includes(term))
+    );
+  });
+
   // Security Redirect: Only allow Admin role
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
@@ -284,20 +243,30 @@ export default function AdminPage() {
     }
   }, [activeTab, user]);
 
+  const handleOpenQrModal = (url: string, title: string) => {
+    setQrModalUrl(url);
+    setQrModalTitle(title);
+    setIsQrModalOpen(true);
+  };
+
   async function loadInitialData() {
     setLoadingData(true);
     try {
-      const [statsData, usersData, propertiesData, logsData] = await Promise.all([
+      const [statsData, usersData, propertiesData, logsData, reportsData, landlordData] = await Promise.all([
         graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS),
         graphqlRequest<{ users: User[] }>(GET_USERS),
         graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES),
         graphqlRequest<{ contactLogs: ContactLogItem[] }>(GET_CONTACT_LOGS).catch(() => ({ contactLogs: [] })),
+        graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] })),
+        graphqlRequest<{ landlordRegistrations: LandlordRegistration[] }>(GET_LANDLORD_REGISTRATIONS).catch(() => ({ landlordRegistrations: [] }))
       ]);
       if (statsData) setStats(statsData.dashboardStats);
       if (usersData) setUsers(usersData.users);
       if (propertiesData) setProperties(propertiesData.properties);
       if (logsData) setContactLogs(logsData.contactLogs);
-      setLoadedTabs(prev => new Set([...prev, 'analytics', 'properties', 'users', 'moderation']));
+      if (reportsData) setReports(reportsData.reports || []);
+      if (landlordData) setLandlordRegistrations(landlordData.landlordRegistrations || []);
+      setLoadedTabs(prev => new Set([...prev, 'analytics', 'properties', 'users', 'moderation', 'reports', 'landlords']));
     } catch (err: any) {
       console.error('Error loading admin data:', err);
       setMessage({ text: getFriendlyErrorMessage(err, 'Failed to fetch dashboard data.'), isError: true });
@@ -554,6 +523,30 @@ export default function AdminPage() {
     }
   };
 
+  const handleApproveAllProperties = async (ids: string[], submitterName: string) => {
+    if (!confirm(`Are you sure you want to approve all ${ids.length} pending listing(s) for ${submitterName}?`)) return;
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      for (const id of ids) {
+        const parsedId = parseInt(id, 10);
+        if (!isNaN(parsedId)) {
+          await graphqlRequest(UPDATE_PROPERTY_STATUS, { id: parsedId, status: 'available' });
+        }
+      }
+      setProperties((prev) =>
+        prev.map((p) => (ids.includes(p.id) ? { ...p, status: 'available' } : p))
+      );
+      const statsData = await graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS);
+      if (statsData) setStats(statsData.dashboardStats);
+      setMessage({ text: `🎉 All ${ids.length} listings for ${submitterName} approved and published!`, isError: false });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to approve properties.', isError: true });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleVerifyAgent = async (userId: number | string, status: string) => {
     setActionLoading(true);
     setMessage(null);
@@ -576,9 +569,12 @@ export default function AdminPage() {
     setActionLoading(true);
     setMessage(null);
     try {
-      const parsedId = parseInt(id);
+      const parsedId = parseInt(id, 10);
       await graphqlRequest(DELETE_PROPERTY, { id: isNaN(parsedId) ? id : parsedId });
       setProperties((prev) => prev.filter((p) => p.id !== id));
+      if (!isNaN(parsedId)) {
+        setReports((prev) => prev.filter((r) => r.propertyId !== parsedId && r.property?.id !== id));
+      }
       const statsData = await graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS);
       if (statsData) setStats(statsData.dashboardStats);
       setMessage({ text: 'Listing deleted successfully.', isError: false });
@@ -697,11 +693,13 @@ export default function AdminPage() {
     );
   };
 
-  const handleSelectAllAuditLogs = () => {
-    if (selectedAuditLogIds.length === auditLogs.length) {
-      setSelectedAuditLogIds([]);
+  const handleSelectAllAuditLogs = (filteredList?: AuditLogItem[]) => {
+    const list = filteredList || auditLogs;
+    if (list.length > 0 && list.every((l) => selectedAuditLogIds.includes(l.id))) {
+      setSelectedAuditLogIds((prev) => prev.filter((id) => !list.some((l) => l.id === id)));
     } else {
-      setSelectedAuditLogIds(auditLogs.map((l) => l.id));
+      const idsToAdd = list.map((l) => l.id);
+      setSelectedAuditLogIds((prev) => Array.from(new Set([...prev, ...idsToAdd])));
     }
   };
 
@@ -711,16 +709,8 @@ export default function AdminPage() {
     if (!confirm(`Delete ${idsToDelete.length} selected security audit log(s)? This cannot be undone.`)) return;
     setActionLoading(true);
     try {
-      const DELETE_AUDIT_LOGS_MUTATION = `
-        mutation DeleteAuditLogs($ids: [Int!]!) {
-          deleteAuditLogs(ids: $ids) {
-            success
-            message
-          }
-        }
-      `;
       const res = await graphqlRequest<{ deleteAuditLogs: { success: boolean; message: string } }>(
-        DELETE_AUDIT_LOGS_MUTATION,
+        DELETE_AUDIT_LOGS,
         { ids: idsToDelete }
       );
       setMessage({ text: res.deleteAuditLogs.message, isError: false });
@@ -741,10 +731,11 @@ export default function AdminPage() {
   };
 
   const handleSelectAllContactLogs = (filteredList: ContactLogItem[]) => {
-    if (selectedContactLogIds.length === filteredList.length && filteredList.length > 0) {
-      setSelectedContactLogIds([]);
+    if (filteredList.length > 0 && filteredList.every((l) => selectedContactLogIds.includes(l.id))) {
+      setSelectedContactLogIds((prev) => prev.filter((id) => !filteredList.some((l) => l.id === id)));
     } else {
-      setSelectedContactLogIds(filteredList.map((l) => l.id));
+      const idsToAdd = filteredList.map((l) => l.id);
+      setSelectedContactLogIds((prev) => Array.from(new Set([...prev, ...idsToAdd])));
     }
   };
 
@@ -754,16 +745,8 @@ export default function AdminPage() {
     if (!confirm(`Delete ${idsToDelete.length} selected landlord contact inquiry log(s)? This cannot be undone.`)) return;
     setActionLoading(true);
     try {
-      const DELETE_CONTACT_LOGS_MUTATION = `
-        mutation DeleteContactLogs($ids: [Int!]!) {
-          deleteContactLogs(ids: $ids) {
-            success
-            message
-          }
-        }
-      `;
       const res = await graphqlRequest<{ deleteContactLogs: { success: boolean; message: string } }>(
-        DELETE_CONTACT_LOGS_MUTATION,
+        DELETE_CONTACT_LOGS,
         { ids: idsToDelete }
       );
       setMessage({ text: res.deleteContactLogs.message, isError: false });
@@ -779,251 +762,6 @@ export default function AdminPage() {
 
   const handleStartEdit = (p: Property) => {
     setEditingProperty(p);
-    setEditTitle(p.title);
-    setEditLocation(p.location);
-    setEditDigitalAddress(p.digitalAddress || '');
-    setEditLandmarks(p.landmarks || '');
-    setEditLatitude(p.latitude ?? null);
-    setEditLongitude(p.longitude ?? null);
-    setEditPrice(p.price.toString());
-    setEditType(p.type || 'Student Hostel');
-    setEditStatus(p.status || 'available');
-    setEditContact(p.contact || '');
-    setEditImageUrl(p.imageUrl || '');
-    setEditIsFeatured(p.isFeatured || false);
-    setEditLandlordName(p.landlordName || '');
-    if (p.gallery) {
-      setEditGallery(p.gallery.map(g => ({
-        id: g.id,
-        url: g.url,
-        previewUrl: g.url
-      })));
-    } else {
-      setEditGallery([]);
-    }
-    
-    const desc = p.description || '';
-    const descLower = desc.toLowerCase();
-    
-    setEditHasWifi(descLower.includes('wi-fi') || descLower.includes('wifi'));
-    setEditHasCctv(descLower.includes('cctv') || descLower.includes('camera'));
-    setEditHasFurnished(descLower.includes('furnished'));
-    setEditHasGatedFenced(descLower.includes('gated') || descLower.includes('fenced'));
-    setEditIsNewlyBuilt(descLower.includes('newly built') || descLower.includes('newly-built'));
-    setEditHasBed(descLower.includes('bed'));
-    setEditHasStudyDesk(descLower.includes('desk') || descLower.includes('study desk'));
-    
-    // Parse detailed water supply options
-    setEditGhanaWaterShared(descLower.includes('ghana water (shared)'));
-    setEditGhanaWaterSeparate(descLower.includes('ghana water (separate)'));
-    setEditPolytank(descLower.includes('polytank'));
-    setEditBorehole(descLower.includes('borehole'));
-    setEditWell(descLower.includes('well'));
-    
-    // Parse detailed meter options
-    setEditEcgSharedMeter(descLower.includes('ecg shared meter') || descLower.includes('shared meter'));
-    setEditEcgSeparateMeter(descLower.includes('ecg separate meter') || descLower.includes('separate meter') || descLower.includes('seprate meter'));
-    setEditEcgPostPaid(descLower.includes('ecg post-paid') || descLower.includes('post-paid') || descLower.includes('postpaid'));
-    setEditEcgPrepaid(descLower.includes('ecg prepaid') || descLower.includes('prepaid'));
-
-    // Parse category specs
-    const plotMatch = desc.match(/Plot Size:\s*([^,|\n]+)/i);
-    setEditLandPlotSize(plotMatch ? plotMatch[1].trim() : '');
-    
-    const docMatch = desc.match(/Title\/Docs:\s*([^,|\n]+)/i);
-    setEditLandDocType(docMatch ? docMatch[1].trim() : 'Site Plan');
-
-    const zoningMatch = desc.match(/Zoning:\s*([^,|\n]+)/i);
-    setEditLandZoning(zoningMatch ? zoningMatch[1].trim() : 'Residential');
-
-    const condMatch = desc.match(/Condition:\s*([^,|\n]+)/i);
-    setEditFurnitureCondition(condMatch ? condMatch[1].trim() : 'Brand New');
-
-    const catMatch = desc.match(/Category:\s*([^,|\n]+)/i);
-    setEditFurnitureCategory(catMatch ? catMatch[1].trim() : 'Bed & Mattress');
-
-    const delivMatch = desc.match(/Delivery:\s*([^,|\n]+)/i);
-    setEditFurnitureDelivery(delivMatch ? delivMatch[1].trim() : 'Buyer Pick-Up');
-
-    // Parse price period
-    if (descLower.includes('priceperiod: per month') || descLower.includes('priceperiod: month') || descLower.includes('per month')) {
-      setEditPricePeriod('month');
-    } else if (descLower.includes('priceperiod: per year') || descLower.includes('priceperiod: year') || descLower.includes('per year')) {
-      setEditPricePeriod('year');
-    } else if (descLower.includes('priceperiod: per plot') || descLower.includes('priceperiod: plot') || descLower.includes('per plot')) {
-      setEditPricePeriod('plot');
-    } else if (descLower.includes('priceperiod: per acre') || descLower.includes('priceperiod: acre') || descLower.includes('per acre')) {
-      setEditPricePeriod('acre');
-    } else if (descLower.includes('outright sale')) {
-      setEditPricePeriod('outright sale');
-    } else if (descLower.includes('priceperiod: per day') || descLower.includes('priceperiod: day') || descLower.includes('per day')) {
-      setEditPricePeriod('day');
-    } else {
-      setEditPricePeriod('semester');
-    }
-
-    const featuresIndex = desc.indexOf('\n\nFeatures:');
-    if (featuresIndex !== -1) {
-      setEditDescription(desc.substring(0, featuresIndex).trim());
-    } else {
-      setEditDescription(desc);
-    }
-  };
-
-  const handleSaveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingProperty) return;
-    setActionLoading(true);
-    setMessage(null);
-
-    try {
-      const parsedPrice = parseFloat(editPrice);
-      if (isNaN(parsedPrice)) throw new Error('Invalid price value.');
-
-      let finalDescription = editDescription.trim();
-      const amenitiesList: string[] = [];
-      
-      if (editType === 'Lands') {
-        const landSpecs: string[] = [];
-        if (editLandPlotSize.trim()) landSpecs.push(`Plot Size: ${editLandPlotSize.trim()}`);
-        if (editLandDocType) landSpecs.push(`Title/Docs: ${editLandDocType}`);
-        if (editLandZoning) landSpecs.push(`Zoning: ${editLandZoning}`);
-        if (landSpecs.length > 0) {
-          amenitiesList.push(`Land Specs: ${landSpecs.join(', ')}`);
-        }
-      } else if (editType === 'Furnitures') {
-        const furnSpecs: string[] = [];
-        if (editFurnitureCondition) furnSpecs.push(`Condition: ${editFurnitureCondition}`);
-        if (editFurnitureCategory) furnSpecs.push(`Category: ${editFurnitureCategory}`);
-        if (editFurnitureDelivery) furnSpecs.push(`Delivery: ${editFurnitureDelivery}`);
-        if (furnSpecs.length > 0) {
-          amenitiesList.push(`Furniture Specs: ${furnSpecs.join(', ')}`);
-        }
-      } else {
-        const otherOptions: string[] = [];
-        if (editHasWifi) otherOptions.push('WiFi');
-        if (editHasCctv) otherOptions.push('CCTV Camera');
-        if (editHasFurnished) otherOptions.push('Furnished');
-        if (editHasGatedFenced) otherOptions.push('Gated & Fenced');
-        if (editIsNewlyBuilt) otherOptions.push('Newly Built');
-        if (editHasBed) otherOptions.push('Bed');
-        if (editHasStudyDesk) otherOptions.push('Study Desk');
-        if (otherOptions.length > 0) {
-          amenitiesList.push(`Amenities: ${otherOptions.join(', ')}`);
-        }
-
-        // Compile detailed water options
-        const waterOptions: string[] = [];
-        if (editGhanaWaterShared) waterOptions.push('Ghana Water (Shared)');
-        if (editGhanaWaterSeparate) waterOptions.push('Ghana Water (Separate)');
-        if (editPolytank) waterOptions.push('Polytank');
-        if (editBorehole) waterOptions.push('Borehole');
-        if (editWell) waterOptions.push('Well');
-        if (waterOptions.length > 0) {
-          amenitiesList.push(`Water: ${waterOptions.join(', ')}`);
-        }
-
-        // Compile detailed meter options
-        const meterOptions: string[] = [];
-        if (editEcgSharedMeter) meterOptions.push('ECG Shared Meter');
-        if (editEcgSeparateMeter) meterOptions.push('ECG Separate Meter');
-        if (editEcgPostPaid) meterOptions.push('ECG Post-paid');
-        if (editEcgPrepaid) meterOptions.push('ECG Prepaid');
-        if (meterOptions.length > 0) {
-          amenitiesList.push(`Electricity: ${meterOptions.join(', ')}`);
-        }
-      }
-
-      if (amenitiesList.length > 0) {
-        finalDescription += `\n\nFeatures: ${amenitiesList.join(' | ')}`;
-      }
-
-      finalDescription += `\n\nPricePeriod: per ${editPricePeriod}`;
-
-      // Upload new images
-      const newFiles = editGallery.filter(item => item.file);
-      let uploadedUrls: string[] = [];
-      if (newFiles.length > 0) {
-        const formData = new FormData();
-        newFiles.forEach(item => {
-          if (item.file) formData.append('images', item.file);
-        });
-        const uploadRes = await fetch('/api/upload-multiple', {
-          method: 'POST',
-          body: formData,
-        });
-        if (!uploadRes.ok) {
-          throw new Error('Failed to upload new gallery images.');
-        }
-        const data = await uploadRes.json();
-        uploadedUrls = data.imageUrls || data.images || [];
-      }
-
-      let newUrlIndex = 0;
-      const finalGalleryUrls: string[] = [];
-      editGallery.forEach(item => {
-        if (item.file) {
-          if (uploadedUrls[newUrlIndex]) {
-            finalGalleryUrls.push(uploadedUrls[newUrlIndex]);
-            newUrlIndex++;
-          }
-        } else {
-          finalGalleryUrls.push(item.url);
-        }
-      });
-
-      if (finalGalleryUrls.length === 0) {
-        throw new Error('Please keep or upload at least one image.');
-      }
-
-      const input = {
-        title: editTitle,
-        location: editLocation,
-        digitalAddress: editDigitalAddress.trim() || undefined,
-        landmarks: editLandmarks.trim() || undefined,
-        latitude: editLatitude !== null ? editLatitude : undefined,
-        longitude: editLongitude !== null ? editLongitude : undefined,
-        price: parsedPrice,
-        type: editType,
-        status: editStatus,
-        description: finalDescription,
-        contact: editContact,
-        landlordName: editLandlordName.trim() || undefined,
-        imageUrl: finalGalleryUrls[0],
-        gallery: finalGalleryUrls.map((url, index) => ({
-          url,
-          caption: `${editTitle} - Image ${index + 1}`,
-          order: index + 1,
-        })),
-        isFeatured: editIsFeatured,
-      };
-
-      const parsedId = parseInt(editingProperty.id, 10);
-      const res = await graphqlRequest<{ updateProperty: Property }>(UPDATE_PROPERTY, { 
-        id: isNaN(parsedId) ? editingProperty.id : parsedId, 
-        input 
-      });
-
-      const updatedProperty = res.updateProperty;
-
-      setProperties((prev) =>
-        prev.map((p) =>
-          p.id === editingProperty.id
-            ? { ...p, ...updatedProperty }
-            : p
-        )
-      );
-
-      const statsData = await graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS);
-      if (statsData) setStats(statsData.dashboardStats);
-
-      setMessage({ text: 'Listing updated successfully.', isError: false });
-      setEditingProperty(null);
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Failed to update property details.', isError: true });
-    } finally {
-      setActionLoading(false);
-    }
   };
 
   if (authLoading || !user || user.role !== 'admin') {
@@ -1131,13 +869,24 @@ export default function AdminPage() {
             </button>
 
             <button
+              onClick={() => setActiveTab('agents')}
+              className={`${styles.navItem} ${activeTab === 'agents' ? styles.activeNavItem : ''}`}
+            >
+              <ShieldCheck size={16} />
+              <span>Verified Agents</span>
+              <span className={styles.navCountBadge}>
+                {agentUsers.length}
+              </span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('landlords')}
               className={`${styles.navItem} ${activeTab === 'landlords' ? styles.activeNavItem : ''}`}
             >
               <FileText size={16} />
-              <span>Agents / Landlords DB</span>
+              <span>Landlord Submissions</span>
               <span className={styles.navCountBadge}>
-                {agentUsers.length + landlordRegistrations.length}
+                {landlordRegistrations.length}
               </span>
             </button>
 
@@ -1190,10 +939,11 @@ export default function AdminPage() {
               {activeTab === 'properties' && 'Properties'}
               {activeTab === 'moderation' && 'Pending Approvals'}
               {activeTab === 'users' && 'Users'}
+              {activeTab === 'agents' && 'Verified Agents'}
               {activeTab === 'audits' && 'Audit Logs'}
               {activeTab === 'traffic' && 'Traffic Analytics'}
               {activeTab === 'reports' && 'Flagged Reports'}
-              {activeTab === 'landlords' && 'Agents & Landlords DB'}
+              {activeTab === 'landlords' && 'Landlord Submissions'}
               {activeTab === 'upload' && 'Upload Property'}
             </span>
           </div>
@@ -1276,10 +1026,22 @@ export default function AdminPage() {
                     <Users size={16} /> User Directory ({standardUsers.length})
                   </button>
                   <button
+                    onClick={() => { setActiveTab('agents'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'agents' ? styles.activeNavItem : ''}`}
+                  >
+                    <ShieldCheck size={16} /> Verified Agents ({agentUsers.length})
+                  </button>
+                  <button
                     onClick={() => { setActiveTab('audits'); setIsMobileDrawerOpen(false); }}
                     className={`${styles.navItem} ${activeTab === 'audits' ? styles.activeNavItem : ''}`}
                   >
                     <Activity size={16} /> Contact Audit Logs ({contactLogs.length})
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('traffic'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'traffic' ? styles.activeNavItem : ''}`}
+                  >
+                    <TrendingUp size={16} /> Traffic Analytics
                   </button>
                   <button
                     onClick={() => { setActiveTab('reports'); setIsMobileDrawerOpen(false); }}
@@ -1291,7 +1053,7 @@ export default function AdminPage() {
                     onClick={() => { setActiveTab('landlords'); setIsMobileDrawerOpen(false); }}
                     className={`${styles.navItem} ${activeTab === 'landlords' ? styles.activeNavItem : ''}`}
                   >
-                    <FileText size={16} /> Agents & Landlords ({agentUsers.length + landlordRegistrations.length})
+                    <FileText size={16} /> Landlord Submissions ({landlordRegistrations.length})
                   </button>
                   <button
                     onClick={() => { setActiveTab('upload'); setIsMobileDrawerOpen(false); }}
@@ -1346,8 +1108,9 @@ export default function AdminPage() {
                 {activeTab === 'properties' && 'Property Listings'}
                 {activeTab === 'moderation' && 'Pending Agent Approvals'}
                 {activeTab === 'users' && 'Account Manager'}
+                {activeTab === 'agents' && 'Registered & Verified Agents'}
                 {activeTab === 'audits' && 'Contact Inquiry Audits'}
-            {activeTab === 'traffic' && 'Traffic & Campaign Analytics'}
+                {activeTab === 'traffic' && 'Traffic & Campaign Analytics'}
                 {activeTab === 'reports' && 'Property Reports & Flagged Listings'}
                 {activeTab === 'landlords' && 'Agents & Landlords Database'}
               </h1>
@@ -1356,8 +1119,9 @@ export default function AdminPage() {
                 {activeTab === 'properties' && 'View, search, edit availability, and delete published property listings.'}
                 {activeTab === 'moderation' && 'Review, approve, or reject property listings posted by independent agents.'}
                 {activeTab === 'users' && 'Manage registered accounts and adjust credentials and system roles.'}
+                {activeTab === 'agents' && 'Manage registered independent agents, verification statuses, and billing tiers.'}
                 {activeTab === 'audits' && 'Real-time record of customer call and WhatsApp inquiries to landlords.'}
-            {activeTab === 'traffic' && 'View traffic sources, visit trends, top listings, and generate campaign tracking links.'}
+                {activeTab === 'traffic' && 'View traffic sources, visit trends, top listings, and generate campaign tracking links.'}
                 {activeTab === 'reports' && 'Review user-flagged listings, reported scams, inaccurate photos, and manage property reports.'}
                 {activeTab === 'landlords' && 'View all registered agents, landlord submissions, verification status, and contact details.'}
               </p>
@@ -1524,7 +1288,7 @@ export default function AdminPage() {
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '10px' }}>
                         {Object.entries(typeCounts).map(([type, count], index) => {
-                          const percentage = Math.round((count / properties.length) * 100);
+                          const percentage = properties.length > 0 ? Math.round((count / properties.length) * 100) : 0;
                           const color = colorsList[index % colorsList.length];
                           return (
                             <div 
@@ -1758,6 +1522,15 @@ export default function AdminPage() {
                               </button>
 
                               <button
+                                onClick={() => handleOpenQrModal(`${typeof window !== 'undefined' ? window.location.origin : 'https://horentals.com'}/properties/${p.id}`, p.title)}
+                                title="View & Download QR Code"
+                                className="btn btn-outline"
+                                style={{ padding: '6px', height: '32px', width: '32px', color: 'var(--primary)', borderColor: 'var(--border)' }}
+                              >
+                                <QrCode size={14} />
+                              </button>
+
+                              <button
                                 onClick={() => handleStartEdit(p)}
                                 disabled={actionLoading}
                                 className="btn btn-outline"
@@ -1803,7 +1576,7 @@ export default function AdminPage() {
                           </div>
                         </div>
                         <span className={`badge badge-${p.status === 'available' ? 'available' : 'rented'}`}>
-                          {p.status}
+                          {getStatusLabel(p.status, p.type)}
                         </span>
                       </div>
 
@@ -1823,7 +1596,7 @@ export default function AdminPage() {
                           className={`btn ${p.status === 'available' ? 'btn-secondary' : 'btn-outline'}`}
                           style={{ padding: '8px 12px', fontSize: '0.8rem' }}
                         >
-                          {p.status === 'available' ? 'Mark Rented' : 'Mark Available'}
+                          {getToggleStatusLabel(p.status, p.type)}
                         </button>
                         <button
                           onClick={() => handleToggleFeatured(p.id, p.isFeatured ?? false)}
@@ -1832,6 +1605,14 @@ export default function AdminPage() {
                           style={{ padding: '8px 12px', fontSize: '0.8rem', color: p.isFeatured ? '#F59E0B' : 'var(--text-secondary)' }}
                         >
                           <Star size={14} fill={p.isFeatured ? '#F59E0B' : 'none'} /> {p.isFeatured ? 'Featured' : 'Feature'}
+                        </button>
+                        <button
+                          onClick={() => handleOpenQrModal(`${typeof window !== 'undefined' ? window.location.origin : 'https://horentals.com'}/properties/${p.id}`, p.title)}
+                          className="btn btn-outline"
+                          style={{ padding: '8px', minWidth: '40px', flex: '0 0 auto', color: 'var(--primary)' }}
+                          title="View & Download QR Code"
+                        >
+                          <QrCode size={15} />
                         </button>
                         <button
                           onClick={() => handleStartEdit(p)}
@@ -1858,142 +1639,348 @@ export default function AdminPage() {
               </div>
             </>
           ) : activeTab === 'moderation' ? (
-            <>
-              {/* Desktop Table View */}
-              <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Listing Info</th>
-                      <th>Type</th>
-                      <th>Price (GH₵)</th>
-                      <th>Location</th>
-                      <th>Agent Name</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingProperties.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                          No pending approvals found. All agent listings are reviewed!
-                        </td>
-                      </tr>
-                    ) : (
-                      pendingProperties.map((p) => (
-                        <tr key={p.id}>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <img 
-                                src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'} 
-                                alt={p.title} 
-                                style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)', flexShrink: 0 }}
-                              />
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.title}</span>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Posted: {p.createdAt ? new Date(parseInt(p.createdAt) || p.createdAt).toLocaleDateString() : 'N/A'}</span>
+            (() => {
+            const filteredPending = pendingProperties.filter((p) => {
+              if (!moderationSearch.trim()) return true;
+              const q = moderationSearch.toLowerCase();
+              const sName = p.owner?.name || p.landlordName || 'Unknown';
+              const sContact = p.contact || p.owner?.email || '';
+              return (
+                sName.toLowerCase().includes(q) ||
+                sContact.toLowerCase().includes(q) ||
+                p.title.toLowerCase().includes(q) ||
+                p.location.toLowerCase().includes(q) ||
+                p.type.toLowerCase().includes(q)
+              );
+            });
+
+            // Group filtered pending properties by submitter (Agent or Landlord)
+            interface SubmitterGroup {
+              key: string;
+              submitterName: string;
+              role: string;
+              phone: string;
+              email: string;
+              avatar?: string | null;
+              properties: Property[];
+            }
+
+            const groupedMap: Record<string, SubmitterGroup> = {};
+
+            filteredPending.forEach((p) => {
+              const name = (p.owner?.name || p.landlordName || (p.owner?.email ? p.owner.email.split('@')[0] : 'Direct Submissions')).trim();
+              const key = name.toLowerCase();
+              if (!groupedMap[key]) {
+                groupedMap[key] = {
+                  key,
+                  submitterName: name,
+                  role: p.owner?.role || (p.landlordName ? 'landlord' : 'agent'),
+                  phone: p.contact || '',
+                  email: p.owner?.email || '',
+                  avatar: null,
+                  properties: []
+                };
+              }
+              groupedMap[key].properties.push(p);
+            });
+
+            const submitterGroups = Object.values(groupedMap);
+
+            return (
+              <>
+                {/* Moderation Search & Summary Bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                  <div style={{ position: 'relative', maxWidth: '420px', width: '100%' }}>
+                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      placeholder="Search pending by agent name, phone, title..."
+                      value={moderationSearch}
+                      onChange={(e) => setModerationSearch(e.target.value)}
+                      className="form-control"
+                      style={{ paddingLeft: '38px', borderRadius: '10px', fontSize: '0.88rem' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '6px 12px', borderRadius: '16px', backgroundColor: 'var(--bg-surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                      👥 {submitterGroups.length} Submitter{submitterGroups.length === 1 ? '' : 's'}
+                    </span>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '6px 12px', borderRadius: '16px', backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#D97706', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                      ⏳ {filteredPending.length} Total Pending
+                    </span>
+                  </div>
+                </div>
+
+                {submitterGroups.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '48px 16px', backgroundColor: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                    <CheckCircle size={40} style={{ color: '#10B981', margin: '0 auto 12px' }} />
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+                      {moderationSearch ? 'No matching pending listings found' : 'All Agent Listings are Reviewed!'}
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      {moderationSearch ? 'Try a different search query.' : 'There are currently no listings awaiting admin approval.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {submitterGroups.map((group) => {
+                      const isCollapsed = !!collapsedSubmitters[group.key];
+                      const propIds = group.properties.map((p) => p.id);
+
+                      return (
+                        <div 
+                          key={group.key}
+                          style={{ 
+                            backgroundColor: 'var(--bg-surface)', 
+                            border: '1px solid var(--border)', 
+                            borderRadius: '16px', 
+                            overflow: 'hidden',
+                            boxShadow: 'var(--shadow-sm)'
+                          }}
+                        >
+                          {/* Group Submitter Header Bar */}
+                          <div 
+                            style={{ 
+                              padding: '14px 18px', 
+                              backgroundColor: 'var(--bg-surface-secondary)', 
+                              borderBottom: isCollapsed ? 'none' : '1px solid var(--border)',
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center', 
+                              flexWrap: 'wrap', 
+                              gap: '12px' 
+                            }}
+                          >
+                            <div 
+                              onClick={() => setCollapsedSubmitters(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
+                              style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1, minWidth: '220px' }}
+                              title="Click to collapse / expand this group"
+                            >
+                              <div style={{ width: 38, height: 38, borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', overflow: 'hidden', flexShrink: 0 }}>
+                                {group.avatar ? (
+                                  <img src={group.avatar} alt={group.submitterName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  group.submitterName.slice(0, 2).toUpperCase()
+                                )}
+                              </div>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>
+                                    {group.submitterName}
+                                  </span>
+                                  <span className={`badge badge-${group.role === 'agent' ? 'primary' : 'available'}`} style={{ fontSize: '0.68rem', textTransform: 'capitalize' }}>
+                                    {group.role}
+                                  </span>
+                                  <span style={{ fontSize: '0.74rem', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#D97706' }}>
+                                    {group.properties.length} Pending Listing{group.properties.length === 1 ? '' : 's'}
+                                  </span>
+                                </div>
+                                {group.phone && (
+                                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    📞 <a href={`tel:${group.phone}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{group.phone}</a>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          </td>
-                          <td style={{ textTransform: 'capitalize', fontWeight: 600, color: 'var(--text-secondary)' }}>{p.type}</td>
-                          <td style={{ fontWeight: 700 }}>{p.price.toLocaleString()}</td>
-                          <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{p.location}</td>
-                          <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{p.owner?.name || p.landlordName || 'Unknown Agent'}</td>
-                          <td>
-                            <div className={styles.actionsCell} style={{ justifyContent: 'flex-end', gap: '8px' }}>
-                              <Link
-                                href={`/properties/${p.id}`}
-                                target="_blank"
-                                className="btn btn-outline"
-                                style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', borderColor: 'var(--primary-light)' }}
-                              >
-                                Preview
-                              </Link>
+
+                            {/* Batch Approve All for this Submitter */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <button
-                                onClick={() => handleApproveProperty(p.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApproveAllProperties(propIds, group.submitterName);
+                                }}
                                 disabled={actionLoading}
                                 className="btn"
-                                style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}
+                                style={{
+                                  backgroundColor: '#10B981',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  padding: '7px 14px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 700,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  cursor: 'pointer'
+                                }}
+                                title={`Approve all ${group.properties.length} listings for ${group.submitterName}`}
                               >
-                                Approve
+                                <CheckCircle size={14} /> Approve All ({group.properties.length})
                               </button>
+
                               <button
-                                onClick={() => handleDeleteProperty(p.id)}
-                                disabled={actionLoading}
+                                onClick={() => setCollapsedSubmitters(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
                                 className="btn btn-outline"
-                                style={{ padding: '6px 14px', fontSize: '0.8rem', height: '32px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                                style={{ padding: '7px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-surface)' }}
+                                title={isCollapsed ? 'Expand group' : 'Collapse group'}
                               >
-                                Reject
+                                {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
                               </button>
                             </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile Card List View */}
-              <div className={styles.mobileCardList}>
-                {pendingProperties.length === 0 ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No pending approvals found. All agent listings are reviewed!</p>
-                ) : (
-                  pendingProperties.map((p) => (
-                    <div key={p.id} className={styles.adminCardItem}>
-                      <div className={styles.adminCardHeader}>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                          <img
-                            src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'}
-                            alt={p.title}
-                            style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}
-                          />
-                          <div>
-                            <div className={styles.adminCardTitle}>{p.title}</div>
-                            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textTransform: 'capitalize', fontWeight: 600 }}>{p.type} • {p.location}</span>
                           </div>
+
+                          {/* Submitter Group Content (Desktop Table & Mobile Cards) */}
+                          {!isCollapsed && (
+                            <>
+                              {/* Desktop Table View */}
+                              <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`} style={{ margin: 0, border: 'none', borderRadius: 0 }}>
+                                <table className={styles.table}>
+                                  <thead>
+                                    <tr>
+                                      <th>Listing Info</th>
+                                      <th>Type</th>
+                                      <th>Price (GH₵)</th>
+                                      <th>Location</th>
+                                      <th>Date Submitted</th>
+                                      <th style={{ textAlign: 'right' }}>Actions</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {group.properties.map((p) => (
+                                      <tr key={p.id}>
+                                        <td>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <img 
+                                              src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'} 
+                                              alt={p.title} 
+                                              style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}
+                                            />
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                              <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.title}</span>
+                                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID #{p.id}</span>
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td style={{ textTransform: 'capitalize', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.84rem' }}>{p.type}</td>
+                                        <td style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.92rem' }}>GH₵ {p.price.toLocaleString()}</td>
+                                        <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.84rem' }}>{p.location}</td>
+                                        <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                          {p.createdAt ? new Date(isNaN(Number(p.createdAt)) ? p.createdAt : Number(p.createdAt)).toLocaleDateString() : 'N/A'}
+                                        </td>
+                                        <td>
+                                          <div className={styles.actionsCell} style={{ justifyContent: 'flex-end', gap: '6px' }}>
+                                            <Link
+                                              href={`/properties/${p.id}`}
+                                              target="_blank"
+                                              className="btn btn-outline"
+                                              style={{ padding: '6px 12px', fontSize: '0.78rem', height: '30px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', borderColor: 'var(--primary-light)' }}
+                                            >
+                                              Preview
+                                            </Link>
+                                            <button
+                                              onClick={() => handleApproveProperty(p.id)}
+                                              disabled={actionLoading}
+                                              className="btn"
+                                              style={{ padding: '6px 12px', fontSize: '0.78rem', height: '30px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}
+                                            >
+                                              Approve
+                                            </button>
+                                            <button
+                                              onClick={() => handleDeleteProperty(p.id)}
+                                              disabled={actionLoading}
+                                              className="btn btn-outline"
+                                              style={{ padding: '6px 12px', fontSize: '0.78rem', height: '30px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                                            >
+                                              Reject
+                                            </button>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+
+                              {/* Mobile Card List View for this Submitter */}
+                              <div className={styles.mobileCardList} style={{ padding: '12px' }}>
+                                {group.properties.map((p) => (
+                                  <div key={p.id} className={styles.adminCardItem} style={{ marginBottom: '10px' }}>
+                                    <div className={styles.adminCardHeader}>
+                                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                        <img
+                                          src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'}
+                                          alt={p.title}
+                                          style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}
+                                        />
+                                        <div>
+                                          <div className={styles.adminCardTitle} style={{ fontSize: '0.92rem' }}>{p.title}</div>
+                                          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textTransform: 'capitalize', fontWeight: 600 }}>{p.type} • {p.location}</span>
+                                        </div>
+                                      </div>
+                                      <span className="badge badge-pending" style={{ fontSize: '0.65rem' }}>Pending</span>
+                                    </div>
+
+                                    <div className={styles.adminCardMeta}>
+                                      <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.98rem' }}>GH₵ {p.price.toLocaleString()}</span>
+                                      <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                                        {p.createdAt ? new Date(isNaN(Number(p.createdAt)) ? p.createdAt : Number(p.createdAt)).toLocaleDateString() : 'N/A'}
+                                      </span>
+                                    </div>
+
+                                    <div className={styles.adminCardActions}>
+                                      <Link
+                                        href={`/properties/${p.id}`}
+                                        target="_blank"
+                                        className="btn btn-outline"
+                                        style={{ padding: '8px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                                      >
+                                        Preview
+                                      </Link>
+                                      <button
+                                        onClick={() => handleApproveProperty(p.id)}
+                                        disabled={actionLoading}
+                                        className="btn"
+                                        style={{ padding: '8px 12px', fontSize: '0.8rem', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700 }}
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteProperty(p.id)}
+                                        disabled={actionLoading}
+                                        className="btn btn-outline"
+                                        style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--danger)' }}
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          )}
                         </div>
-                        <span className="badge badge-pending">Pending</span>
-                      </div>
-
-                      <div className={styles.adminCardMeta}>
-                        <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1rem' }}>GH₵ {p.price.toLocaleString()}</span>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Agent: <strong>{p.owner?.name || p.landlordName || 'Unknown'}</strong></span>
-                      </div>
-
-                      <div className={styles.adminCardActions}>
-                        <Link
-                          href={`/properties/${p.id}`}
-                          target="_blank"
-                          className="btn btn-outline"
-                          style={{ padding: '8px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
-                        >
-                          Preview
-                        </Link>
-                        <button
-                          onClick={() => handleApproveProperty(p.id)}
-                          disabled={actionLoading}
-                          className="btn"
-                          style={{ padding: '8px 12px', fontSize: '0.8rem', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700 }}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProperty(p.id)}
-                          disabled={actionLoading}
-                          className="btn btn-outline"
-                          style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--danger)' }}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                      );
+                    })}
+                  </div>
                 )}
-              </div>
-            </>
+              </>
+            );
+          })()
           ) : activeTab === 'users' ? (
             <>
+              {/* User Search Bar */}
+              <div style={{ marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ position: 'relative', maxWidth: '380px', width: '100%' }}>
+                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search users by name, email, or phone..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="form-control"
+                    style={{ paddingLeft: '36px', fontSize: '0.85rem' }}
+                  />
+                </div>
+                {userSearch && (
+                  <button onClick={() => setUserSearch('')} className="btn btn-outline" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+                    Clear
+                  </button>
+                )}
+              </div>
+
               {/* Desktop Table View */}
               <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
                 <table className={styles.table}>
@@ -2008,14 +1995,14 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {standardUsers.length === 0 ? (
+                    {filteredStandardUsers.length === 0 ? (
                       <tr>
                         <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                          No standard users found in the database. (Agents and Landlords are managed in the Agents / Landlords DB tab)
+                          {userSearch ? 'No users matching your search.' : 'No standard users found in the database. (Agents and Landlords are managed in the Agents / Landlords DB tab)'}
                         </td>
                       </tr>
                     ) : (
-                      standardUsers.map((u) => (
+                      filteredStandardUsers.map((u) => (
                         <tr key={u.id}>
                           <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{u.name}</td>
                           <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{u.email}</td>
@@ -2068,10 +2055,10 @@ export default function AdminPage() {
 
               {/* Mobile Card List View */}
               <div className={styles.mobileCardList}>
-                {standardUsers.length === 0 ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No standard users found in the database.</p>
+                {filteredStandardUsers.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>{userSearch ? 'No users matching your search.' : 'No standard users found in the database.'}</p>
                 ) : (
-                  standardUsers.map((u) => (
+                  filteredStandardUsers.map((u) => (
                     <div key={u.id} className={styles.adminCardItem}>
                       <div className={styles.adminCardHeader}>
                         <div>
@@ -2144,6 +2131,27 @@ export default function AdminPage() {
                   </div>
                 </div>
               </div>
+              
+              {/* Search Bar for Audits & Contact Inquiry Leads */}
+              <div style={{ position: 'relative', marginBottom: '18px', width: '100%' }}>
+                <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Search logs by customer name, phone number, landlord phone, action type, or property..."
+                  value={auditSearch}
+                  onChange={(e) => setAuditSearch(e.target.value)}
+                  className="form-control"
+                  style={{ paddingLeft: '38px', paddingRight: auditSearch ? '70px' : '14px', borderRadius: '10px', fontSize: '0.88rem', backgroundColor: 'var(--bg-surface)' }}
+                />
+                {auditSearch && (
+                  <button
+                    onClick={() => setAuditSearch('')}
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
 
               {/* Category selector & Modern Cleanup Action Bar */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '14px', background: 'var(--bg-surface)', padding: '14px 18px', borderRadius: '14px', border: '1px solid var(--border)' }}>
@@ -2185,8 +2193,8 @@ export default function AdminPage() {
                     aria-label="Filter Audit Logs"
                   >
                     <option value="all">📁 All Logs ({auditLogs.length + contactLogs.length})</option>
-                    <option value="system">🛡️ System Security Audits ({auditLogs.length})</option>
                     <option value="contacts">📞 Landlord Contacts ({contactLogs.length})</option>
+                    <option value="system">🛡️ System Security Audits ({auditLogs.length})</option>
                   </select>
                 </div>
 
@@ -2226,40 +2234,134 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* System Security Audit Logs Section */}
-              {(auditLogView === 'all' || auditLogView === 'system') && (
-                <div style={{ marginBottom: '32px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      🛡️ System & Account Security Audit Trail
-                    </h3>
-                  </div>
+              {/* Landlord Contacts Section (First) */}
+              {(auditLogView === 'all' || auditLogView === 'contacts') && (() => {
+                const filteredContactLogs = contactLogs.filter((log) => {
+                  const matchesFilter = auditFilter === 'all' || log.actionType === auditFilter;
+                  if (!matchesFilter) return false;
+                  if (!auditSearch.trim()) return true;
+                  const q = auditSearch.toLowerCase();
+                  return (
+                    (log.customerName || '').toLowerCase().includes(q) ||
+                    (log.customerPhone || '').toLowerCase().includes(q) ||
+                    (log.landlordPhone || '').toLowerCase().includes(q) ||
+                    (log.actionType || '').toLowerCase().includes(q) ||
+                    (log.property?.title || '').toLowerCase().includes(q)
+                  );
+                });
 
-                  {/* Batch Selection Action Bar for Security Audits */}
-                  {selectedAuditLogIds.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', marginBottom: '14px', animation: 'fadeIn 0.2s ease' }}>
-                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <CheckCircle size={15} /> {selectedAuditLogIds.length} security log(s) selected
-                      </span>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button
-                          onClick={() => handleDeleteSelectedAuditLogs()}
-                          disabled={actionLoading}
-                          className="btn"
-                          style={{ background: '#EF4444', color: '#FFFFFF', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                        >
-                          <Trash2 size={13} /> Delete Selected ({selectedAuditLogIds.length})
-                        </button>
-                        <button
-                          onClick={() => setSelectedAuditLogIds([])}
-                          className="btn btn-outline"
-                          style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}
-                        >
-                          Cancel
-                        </button>
+                return (
+                  <div style={{ marginBottom: auditLogView === 'all' ? '24px' : '0px' }}>
+                    <div 
+                      onClick={() => setIsContactsCollapsed(!isContactsCollapsed)}
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        marginBottom: isContactsCollapsed ? '0px' : '14px', 
+                        padding: '12px 16px', 
+                        borderRadius: '12px', 
+                        backgroundColor: 'var(--bg-surface-secondary)', 
+                        border: '1px solid var(--border)',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        transition: 'background-color 0.15s ease'
+                      }}
+                      title={isContactsCollapsed ? 'Click to expand table' : 'Click to collapse table'}
+                    >
+                      <h3 style={{ fontSize: '1.02rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        📞 Landlord Inquiries &amp; Contact Logs ({filteredContactLogs.length})
+                      </h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)' }}>
+                        <span>{isContactsCollapsed ? 'Expand' : 'Collapse'}</span>
+                        {isContactsCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
                       </div>
                     </div>
-                  )}
+
+                    {!isContactsCollapsed && (
+                      <>
+
+                    {/* Batch Selection Action Bar for Contact Leads */}
+                    {selectedContactLogIds.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', marginBottom: '14px', animation: 'fadeIn 0.2s ease' }}>
+                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <CheckCircle size={15} /> {selectedContactLogIds.length} contact lead(s) selected
+                        </span>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            onClick={() => handleDeleteSelectedContactLogs()}
+                            disabled={actionLoading}
+                            className="btn"
+                            style={{ background: '#EF4444', color: '#FFFFFF', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                          >
+                            <Trash2 size={13} /> Delete Selected ({selectedContactLogIds.length})
+                          </button>
+                          <button
+                            onClick={() => setSelectedContactLogIds([])}
+                            className="btn btn-outline"
+                            style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Desktop Lead Buttons */}
+                    <div className={styles.desktopFilters} style={{ gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => setAuditFilter('all')}
+                        className={`btn ${auditFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                      >
+                        All Leads ({contactLogs.length})
+                      </button>
+                      <button
+                        onClick={() => setAuditFilter('call')}
+                        className={`btn ${auditFilter === 'call' ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                      >
+                        📞 Calls ({contactLogs.filter((l) => l.actionType === 'call').length})
+                      </button>
+                      <button
+                        onClick={() => setAuditFilter('whatsapp')}
+                        className={`btn ${auditFilter === 'whatsapp' ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                      >
+                        💬 WhatsApp ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})
+                      </button>
+                      <button
+                        onClick={() => setAuditFilter('book_viewing')}
+                        className={`btn ${auditFilter === 'book_viewing' ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                      >
+                        📅 Viewings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})
+                      </button>
+                      <button
+                        onClick={() => setAuditFilter('sms')}
+                        className={`btn ${auditFilter === 'sms' ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                      >
+                        📱 SMS ({contactLogs.filter((l) => l.actionType === 'sms').length})
+                      </button>
+                    </div>
+
+                    {/* Mobile Lead Select Dropdown */}
+                    <div className={styles.mobileFilters} style={{ marginBottom: '12px' }}>
+                      <select
+                        value={auditFilter}
+                        onChange={(e) => setAuditFilter(e.target.value as 'all' | 'call' | 'whatsapp' | 'book_viewing' | 'sms')}
+                        className="form-control"
+                        style={{ fontSize: '0.85rem', fontWeight: 700, padding: '8px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-surface)' }}
+                        aria-label="Filter Leads"
+                      >
+                        <option value="all">🔍 All Inquiry Leads ({contactLogs.length})</option>
+                        <option value="call">📞 Phone Calls ({contactLogs.filter((l) => l.actionType === 'call').length})</option>
+                        <option value="whatsapp">💬 WhatsApp Inquiries ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})</option>
+                        <option value="book_viewing">📅 Viewing Bookings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})</option>
+                        <option value="sms">📱 SMS Leads ({contactLogs.filter((l) => l.actionType === 'sms').length})</option>
+                      </select>
+                    </div>
 
                   <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
                     <table className={styles.table}>
@@ -2268,63 +2370,65 @@ export default function AdminPage() {
                           <th style={{ width: '40px', textAlign: 'center' }}>
                             <input
                               type="checkbox"
-                              checked={auditLogs.length > 0 && selectedAuditLogIds.length === auditLogs.length}
-                              onChange={handleSelectAllAuditLogs}
-                              aria-label="Select all security audit logs"
+                              checked={filteredContactLogs.length > 0 && filteredContactLogs.every((l) => selectedContactLogIds.includes(l.id))}
+                              onChange={() => handleSelectAllContactLogs(filteredContactLogs)}
+                              aria-label="Select all contact inquiry logs"
                               style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
                             />
                           </th>
                           <th>Timestamp</th>
-                          <th>Action</th>
-                          <th>Details</th>
-                          <th>User / Email</th>
+                          <th>Customer Name</th>
+                          <th>Customer Phone</th>
+                          <th>Action Type</th>
+                          <th>Landlord Number</th>
+                          <th>Property Title</th>
                           <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {auditLogs.length === 0 ? (
+                        {filteredContactLogs.length === 0 ? (
                           <tr>
-                            <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                              No security audit logs recorded yet. Crucial actions (logins, password resets, role updates) will appear here.
+                            <td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                              {auditSearch ? 'No matching contact records found.' : 'No contact lead records found.'}
                             </td>
                           </tr>
                         ) : (
-                          auditLogs.map((log) => {
-                            const isSelected = selectedAuditLogIds.includes(log.id);
+                          filteredContactLogs.map((log) => {
+                            const isSelected = selectedContactLogIds.includes(log.id);
                             return (
                               <tr key={log.id} style={{ backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.04)' : undefined }}>
                                 <td style={{ textAlign: 'center' }}>
                                   <input
                                     type="checkbox"
                                     checked={isSelected}
-                                    onChange={() => handleToggleSelectAuditLog(log.id)}
-                                    aria-label={`Select log ${log.id}`}
+                                    onChange={() => handleToggleSelectContactLog(log.id)}
+                                    aria-label={`Select contact log ${log.id}`}
                                     style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
                                   />
                                 </td>
                                 <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                                   {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
                                 </td>
+                                <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
+                                <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
                                 <td>
-                                  <span className={`badge ${
-                                    log.action.includes('RESET') ? 'badge-primary' :
-                                    log.action.includes('LOGIN') ? 'badge-available' :
-                                    log.action.includes('ROLE') ? 'badge-primary' : 'badge-available'
-                                  }`} style={{ fontSize: '0.68rem', padding: '3px 8px', fontWeight: 700 }}>
-                                    {log.action}
+                                  <span className="badge badge-available" style={{ fontSize: '0.68rem', padding: '3px 8px', textTransform: 'capitalize' }}>
+                                    {log.actionType === 'call' && '📞 Phone Call'}
+                                    {log.actionType === 'whatsapp' && '💬 WhatsApp'}
+                                    {log.actionType === 'book_viewing' && '📅 Viewing'}
+                                    {log.actionType === 'sms' && '📱 SMS Lead'}
+                                    {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
                                   </span>
                                 </td>
-                                <td style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                                  {log.details}
-                                </td>
-                                <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
-                                  {log.userEmail || 'System'}
+                                <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
+                                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                  {log.property ? log.property.title : 'N/A'}
                                 </td>
                                 <td style={{ textAlign: 'center' }}>
                                   <button
-                                    onClick={() => handleDeleteSelectedAuditLogs([log.id])}
+                                    onClick={() => handleDeleteSelectedContactLogs([log.id])}
                                     disabled={actionLoading}
-                                    title="Delete this audit log"
+                                    title="Delete this contact record"
                                     style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                                     onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
                                     onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
@@ -2340,212 +2444,228 @@ export default function AdminPage() {
                     </table>
                   </div>
 
-                  {/* Mobile Security Audit Cards */}
+                  {/* Mobile Contact Cards */}
                   <div className={styles.mobileCardList}>
-                    {auditLogs.length === 0 ? (
-                      <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>No security audit logs recorded yet.</p>
+                    {filteredContactLogs.length === 0 ? (
+                      <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>{auditSearch ? 'No matching contact records.' : 'No contact records found.'}</p>
                     ) : (
-                      auditLogs.map((log) => {
-                        const isSelected = selectedAuditLogIds.includes(log.id);
+                      filteredContactLogs.map((log) => {
+                        const isSelected = selectedContactLogIds.includes(log.id);
                         return (
                           <div key={log.id} className={styles.adminCardItem} style={{ border: isSelected ? '1px solid var(--primary)' : undefined }}>
                             <div className={styles.adminCardHeader}>
-                              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
-                                  onChange={() => handleToggleSelectAuditLog(log.id)}
-                                  style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                  onChange={() => handleToggleSelectContactLog(log.id)}
+                                  style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--primary)', flexShrink: 0 }}
                                 />
-                                <div>
-                                  <div className={styles.adminCardTitle} style={{ fontSize: '0.9rem' }}>{log.details}</div>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                    {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                                  </span>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div className={styles.adminCardTitle} style={{ fontSize: '0.98rem', fontWeight: 800, wordBreak: 'break-word' }}>{log.customerName}</div>
+                                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '2px', wordBreak: 'break-all' }}>
+                                    👤 Phone: <a href={`tel:${log.customerPhone}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>{log.customerPhone}</a>
+                                  </div>
                                 </div>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>{log.action}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                <span className={`badge ${
+                                  log.actionType === 'whatsapp' ? 'badge-pending' :
+                                  log.actionType === 'book_viewing' ? 'badge-primary' : 'badge-available'
+                                }`} style={{ fontSize: '0.65rem' }}>
+                                  {log.actionType}
+                                </span>
                                 <button
-                                  onClick={() => handleDeleteSelectedAuditLogs([log.id])}
+                                  onClick={() => handleDeleteSelectedContactLogs([log.id])}
                                   disabled={actionLoading}
-                                  title="Delete log"
+                                  title="Delete contact record"
                                   style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '2px', cursor: 'pointer' }}
                                 >
                                   <Trash2 size={15} style={{ color: '#EF4444' }} />
                                 </button>
                               </div>
                             </div>
-                            {log.userEmail && (
-                              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', paddingLeft: '28px' }}>
-                                User: {log.userEmail}
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', paddingLeft: '28px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)', gap: '8px' }}>
+                                <span style={{ flexShrink: 0 }}>🏢 Property:</span>
+                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right', wordBreak: 'break-word' }}>
+                                  {log.property ? (
+                                    <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
+                                      {log.property.title}
+                                    </Link>
+                                  ) : 'N/A'}
+                                </span>
                               </div>
-                            )}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)', flexWrap: 'wrap', gap: '6px' }}>
+                                <span style={{ flexShrink: 0 }}>📞 Landlord:</span>
+                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <a href={`tel:${log.landlordPhone}`} style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{log.landlordPhone}</a>
+                                  <a href={`tel:${log.landlordPhone}`} title="Call Landlord" style={{ color: 'var(--primary)', fontSize: '0.9rem', display: 'inline-flex' }}>
+                                    📞
+                                  </a>
+                                  {(() => {
+                                    const cleanWa = (log.landlordPhone || '').replace(/[^0-9]/g, '');
+                                    const waTarget = cleanWa.startsWith('233') ? cleanWa : (cleanWa.startsWith('0') ? '233' + cleanWa.substring(1) : (cleanWa.length === 9 ? '233' + cleanWa : cleanWa));
+                                    return (
+                                      <a href={`https://wa.me/${waTarget}`} target="_blank" rel="noopener noreferrer" title="WhatsApp Landlord" style={{ color: '#25D366', fontSize: '0.9rem', display: 'inline-flex' }}>
+                                        💬
+                                      </a>
+                                    );
+                                  })()}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                <span>🕒 Time:</span>
+                                <span>
+                                  {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         );
                       })
                     )}
                   </div>
+                  </>
+                  )}
                 </div>
-              )}
+              );
+            })()}
 
-              {/* Landlord Contacts Section */}
-              {(auditLogView === 'all' || auditLogView === 'contacts') && (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      📞 Landlord Inquiries & Contact Logs
-                    </h3>
-                  </div>
+              {/* System Security Audit Logs Section (Second) */}
+              {(auditLogView === 'all' || auditLogView === 'system') && (() => {
+                const filteredAuditLogs = auditLogs.filter((log) => {
+                  if (!auditSearch.trim()) return true;
+                  const q = auditSearch.toLowerCase();
+                  return (
+                    (log.action || '').toLowerCase().includes(q) ||
+                    (log.details || '').toLowerCase().includes(q) ||
+                    (log.userEmail || '').toLowerCase().includes(q)
+                  );
+                });
 
-                  {/* Batch Selection Action Bar for Contact Leads */}
-                  {selectedContactLogIds.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', marginBottom: '14px', animation: 'fadeIn 0.2s ease' }}>
-                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <CheckCircle size={15} /> {selectedContactLogIds.length} contact lead(s) selected
-                      </span>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button
-                          onClick={() => handleDeleteSelectedContactLogs()}
-                          disabled={actionLoading}
-                          className="btn"
-                          style={{ background: '#EF4444', color: '#FFFFFF', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                        >
-                          <Trash2 size={13} /> Delete Selected ({selectedContactLogIds.length})
-                        </button>
-                        <button
-                          onClick={() => setSelectedContactLogIds([])}
-                          className="btn btn-outline"
-                          style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}
-                        >
-                          Cancel
-                        </button>
+                return (
+                  <div>
+                    <div 
+                      onClick={() => setIsSecurityAuditsCollapsed(!isSecurityAuditsCollapsed)}
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        marginBottom: isSecurityAuditsCollapsed ? '0px' : '14px', 
+                        padding: '12px 16px', 
+                        borderRadius: '12px', 
+                        backgroundColor: 'var(--bg-surface-secondary)', 
+                        border: '1px solid var(--border)',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        transition: 'background-color 0.15s ease'
+                      }}
+                      title={isSecurityAuditsCollapsed ? 'Click to expand table' : 'Click to collapse table'}
+                    >
+                      <h3 style={{ fontSize: '1.02rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        🛡️ System &amp; Account Security Audit Trail ({filteredAuditLogs.length})
+                      </h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)' }}>
+                        <span>{isSecurityAuditsCollapsed ? 'Expand' : 'Collapse'}</span>
+                        {isSecurityAuditsCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Lead Filters */}
-                  {/* Desktop Lead Buttons */}
-                  <div className={styles.desktopFilters} style={{ gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                    <button
-                      onClick={() => setAuditFilter('all')}
-                      className={`btn ${auditFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
-                      style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
-                    >
-                      All Leads ({contactLogs.length})
-                    </button>
-                    <button
-                      onClick={() => setAuditFilter('call')}
-                      className={`btn ${auditFilter === 'call' ? 'btn-primary' : 'btn-outline'}`}
-                      style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
-                    >
-                      📞 Calls ({contactLogs.filter((l) => l.actionType === 'call').length})
-                    </button>
-                    <button
-                      onClick={() => setAuditFilter('whatsapp')}
-                      className={`btn ${auditFilter === 'whatsapp' ? 'btn-primary' : 'btn-outline'}`}
-                      style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
-                    >
-                      💬 WhatsApp ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})
-                    </button>
-                    <button
-                      onClick={() => setAuditFilter('book_viewing')}
-                      className={`btn ${auditFilter === 'book_viewing' ? 'btn-primary' : 'btn-outline'}`}
-                      style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
-                    >
-                      📅 Viewings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})
-                    </button>
-                  </div>
 
-                  {/* Mobile Lead Select Dropdown */}
-                  <div className={styles.mobileFilters} style={{ marginBottom: '12px' }}>
-                    <select
-                      value={auditFilter}
-                      onChange={(e) => setAuditFilter(e.target.value as 'all' | 'call' | 'whatsapp' | 'book_viewing')}
-                      className="form-control"
-                      style={{ fontSize: '0.85rem', fontWeight: 700, padding: '8px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-surface)' }}
-                      aria-label="Filter Leads"
-                    >
-                      <option value="all">🔍 All Inquiry Leads ({contactLogs.length})</option>
-                      <option value="call">📞 Phone Calls ({contactLogs.filter((l) => l.actionType === 'call').length})</option>
-                      <option value="whatsapp">💬 WhatsApp Inquiries ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})</option>
-                      <option value="book_viewing">📅 Viewing Bookings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})</option>
-                    </select>
-                  </div>
+                    {!isSecurityAuditsCollapsed && (
+                      <>
 
-                  <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
-                    <table className={styles.table}>
-                      <thead>
-                        <tr>
-                          {(() => {
-                            const filtered = contactLogs.filter((l) => auditFilter === 'all' || l.actionType === auditFilter);
-                            return (
-                              <th style={{ width: '40px', textAlign: 'center' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={filtered.length > 0 && selectedContactLogIds.length === filtered.length}
-                                  onChange={() => handleSelectAllContactLogs(filtered)}
-                                  aria-label="Select all contact inquiry logs"
-                                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
-                                />
-                              </th>
-                            );
-                          })()}
-                          <th>Timestamp</th>
-                          <th>Customer Name</th>
-                          <th>Customer Phone</th>
-                          <th>Action Type</th>
-                          <th>Landlord Number</th>
-                          <th>Property Title</th>
-                          <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {contactLogs.filter((l) => auditFilter === 'all' || l.actionType === auditFilter).length === 0 ? (
+                    {/* Batch Selection Action Bar for Security Audits */}
+                    {selectedAuditLogIds.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', marginBottom: '14px', animation: 'fadeIn 0.2s ease' }}>
+                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <CheckCircle size={15} /> {selectedAuditLogIds.length} security log(s) selected
+                        </span>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            onClick={() => handleDeleteSelectedAuditLogs()}
+                            disabled={actionLoading}
+                            className="btn"
+                            style={{ background: '#EF4444', color: '#FFFFFF', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                          >
+                            <Trash2 size={13} /> Delete Selected ({selectedAuditLogIds.length})
+                          </button>
+                          <button
+                            onClick={() => setSelectedAuditLogIds([])}
+                            className="btn btn-outline"
+                            style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
+                      <table className={styles.table}>
+                        <thead>
                           <tr>
-                            <td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                              No matching contact lead records found.
-                            </td>
+                            <th style={{ width: '40px', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={filteredAuditLogs.length > 0 && filteredAuditLogs.every((l) => selectedAuditLogIds.includes(l.id))}
+                                onChange={() => handleSelectAllAuditLogs(filteredAuditLogs)}
+                                aria-label="Select all security audit logs"
+                                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                              />
+                            </th>
+                            <th>Timestamp</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                            <th>User / Email</th>
+                            <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                           </tr>
-                        ) : (
-                          contactLogs
-                            .filter((l) => auditFilter === 'all' || l.actionType === auditFilter)
-                            .map((log) => {
-                              const isSelected = selectedContactLogIds.includes(log.id);
+                        </thead>
+                        <tbody>
+                          {filteredAuditLogs.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                                {auditSearch ? 'No security logs match your search.' : 'No security audit logs recorded yet. Crucial actions (logins, password resets, role updates) will appear here.'}
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredAuditLogs.map((log) => {
+                              const isSelected = selectedAuditLogIds.includes(log.id);
                               return (
                                 <tr key={log.id} style={{ backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.04)' : undefined }}>
                                   <td style={{ textAlign: 'center' }}>
                                     <input
                                       type="checkbox"
                                       checked={isSelected}
-                                      onChange={() => handleToggleSelectContactLog(log.id)}
-                                      aria-label={`Select contact log ${log.id}`}
+                                      onChange={() => handleToggleSelectAuditLog(log.id)}
+                                      aria-label={`Select log ${log.id}`}
                                       style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
                                     />
                                   </td>
                                   <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                                     {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
                                   </td>
-                                  <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
-                                  <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
                                   <td>
-                                    <span className="badge badge-available" style={{ fontSize: '0.68rem', padding: '3px 8px', textTransform: 'capitalize' }}>
-                                      {log.actionType === 'call' && '📞 Phone Call'}
-                                      {log.actionType === 'whatsapp' && '💬 WhatsApp'}
-                                      {log.actionType === 'book_viewing' && '📅 Viewing'}
-                                      {log.actionType === 'sms' && '📱 SMS Lead'}
-                                      {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
+                                    <span className={`badge ${
+                                      log.action.includes('RESET') ? 'badge-primary' :
+                                      log.action.includes('LOGIN') ? 'badge-available' :
+                                      log.action.includes('ROLE') ? 'badge-primary' : 'badge-available'
+                                    }`} style={{ fontSize: '0.68rem', padding: '3px 8px', fontWeight: 700 }}>
+                                      {log.action}
                                     </span>
                                   </td>
-                                  <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
-                                  <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                    {log.property ? log.property.title : 'N/A'}
+                                  <td style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
+                                    {log.details}
+                                  </td>
+                                  <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
+                                    {log.userEmail || 'System'}
                                   </td>
                                   <td style={{ textAlign: 'center' }}>
                                     <button
-                                      onClick={() => handleDeleteSelectedContactLogs([log.id])}
+                                      onClick={() => handleDeleteSelectedAuditLogs([log.id])}
                                       disabled={actionLoading}
-                                      title="Delete this contact record"
+                                      title="Delete this audit log"
                                       style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                                       onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
                                       onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
@@ -2556,20 +2676,18 @@ export default function AdminPage() {
                                 </tr>
                               );
                             })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
 
-                  {/* Mobile Contact Cards */}
-                  <div className={styles.mobileCardList}>
-                    {contactLogs.filter((l) => auditFilter === 'all' || l.actionType === auditFilter).length === 0 ? (
-                      <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>No matching contact records.</p>
-                    ) : (
-                      contactLogs
-                        .filter((l) => auditFilter === 'all' || l.actionType === auditFilter)
-                        .map((log) => {
-                          const isSelected = selectedContactLogIds.includes(log.id);
+                    {/* Mobile Security Audit Cards */}
+                    <div className={styles.mobileCardList}>
+                      {filteredAuditLogs.length === 0 ? (
+                        <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>{auditSearch ? 'No matching security records.' : 'No security audit logs recorded yet.'}</p>
+                      ) : (
+                        filteredAuditLogs.map((log) => {
+                          const isSelected = selectedAuditLogIds.includes(log.id);
                           return (
                             <div key={log.id} className={styles.adminCardItem} style={{ border: isSelected ? '1px solid var(--primary)' : undefined }}>
                               <div className={styles.adminCardHeader}>
@@ -2577,71 +2695,43 @@ export default function AdminPage() {
                                   <input
                                     type="checkbox"
                                     checked={isSelected}
-                                    onChange={() => handleToggleSelectContactLog(log.id)}
+                                    onChange={() => handleToggleSelectAuditLog(log.id)}
                                     style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--primary)' }}
                                   />
                                   <div>
-                                    <div className={styles.adminCardTitle} style={{ fontSize: '0.98rem', fontWeight: 800 }}>{log.customerName}</div>
-                                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                      👤 Phone: <a href={`tel:${log.customerPhone}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>{log.customerPhone}</a>
-                                    </div>
+                                    <div className={styles.adminCardTitle} style={{ fontSize: '0.9rem' }}>{log.details}</div>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                      {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                    </span>
                                   </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span className={`badge ${
-                                    log.actionType === 'whatsapp' ? 'badge-pending' :
-                                    log.actionType === 'book_viewing' ? 'badge-primary' : 'badge-available'
-                                  }`} style={{ fontSize: '0.65rem' }}>
-                                    {log.actionType}
-                                  </span>
+                                  <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>{log.action}</span>
                                   <button
-                                    onClick={() => handleDeleteSelectedContactLogs([log.id])}
+                                    onClick={() => handleDeleteSelectedAuditLogs([log.id])}
                                     disabled={actionLoading}
-                                    title="Delete contact record"
+                                    title="Delete log"
                                     style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '2px', cursor: 'pointer' }}
                                   >
                                     <Trash2 size={15} style={{ color: '#EF4444' }} />
                                   </button>
                                 </div>
                               </div>
-                              
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', paddingLeft: '28px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                                  <span>🏢 Property:</span>
-                                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
-                                    {log.property ? (
-                                      <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
-                                        {log.property.title}
-                                      </Link>
-                                    ) : 'N/A'}
-                                  </span>
+                              {log.userEmail && (
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', paddingLeft: '28px' }}>
+                                  User: {log.userEmail}
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                                  <span>📞 Landlord Contact:</span>
-                                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                    <a href={`tel:${log.landlordPhone}`} style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{log.landlordPhone}</a>
-                                    <a href={`tel:${log.landlordPhone}`} title="Call Landlord" style={{ color: 'var(--primary)', fontSize: '0.9rem', display: 'inline-flex' }}>
-                                      📞
-                                    </a>
-                                    <a href={`https://wa.me/${log.landlordPhone.startsWith('0') ? '233' + log.landlordPhone.substring(1) : log.landlordPhone}`} target="_blank" rel="noopener noreferrer" title="WhatsApp Landlord" style={{ color: '#25D366', fontSize: '0.9rem', display: 'inline-flex' }}>
-                                      💬
-                                    </a>
-                                  </span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                  <span>🕒 Time:</span>
-                                  <span>
-                                    {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                                  </span>
-                                </div>
-                              </div>
+                              )}
                             </div>
                           );
                         })
+                      )}
+                    </div>
+                    </>
                     )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </>
           ) : activeTab === 'reports' ? (
             <>
@@ -2849,28 +2939,30 @@ export default function AdminPage() {
                 )}
               </div>
             </>
-          ) : activeTab === 'landlords' ? (
+          ) : activeTab === 'agents' ? (
             <>
-              {/* Agents & Landlords Stats */}
+              {/* Registered Agents Stats */}
               <div className={styles.statsGrid} style={{ marginBottom: '20px' }}>
                 <div className={styles.statCard} style={{ borderLeft: '4px solid var(--primary)' }}>
                   <span className={styles.statLabel}>Registered Agents</span>
                   <span className={styles.statValue} style={{ color: 'var(--primary)' }}>
-                    {users.filter((u) => u.role === 'agent' || u.role === 'landlord').length}
+                    {agentUsers.length}
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Active platform agents</span>
-                </div>
-                <div className={styles.statCard} style={{ borderLeft: '4px solid #3B82F6' }}>
-                  <span className={styles.statLabel}>Landlord Submissions</span>
-                  <span className={styles.statValue}>{landlordRegistrations.length}</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Direct property forms</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Active platform accounts</span>
                 </div>
                 <div className={styles.statCard} style={{ borderLeft: '4px solid #10B981' }}>
                   <span className={styles.statLabel}>Verified Agents</span>
                   <span className={styles.statValue} style={{ color: '#10B981' }}>
-                    {users.filter((u) => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified').length}
+                    {agentUsers.filter((u) => u.verificationStatus === 'verified').length}
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Verified badges issued</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Verified badges active</span>
+                </div>
+                <div className={styles.statCard} style={{ borderLeft: '4px solid #F59E0B' }}>
+                  <span className={styles.statLabel}>Unverified Agents</span>
+                  <span className={styles.statValue} style={{ color: '#F59E0B' }}>
+                    {agentUsers.filter((u) => u.verificationStatus !== 'verified').length}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Pending ID verification</span>
                 </div>
               </div>
 
@@ -2885,15 +2977,6 @@ export default function AdminPage() {
                 >
                   🛡️ Open Agent Registration
                 </a>
-                <a 
-                  href="/landlord-registration" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="btn btn-outline" 
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', textDecoration: 'none', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
-                >
-                  🌐 Open Landlord Form
-                </a>
                 <button 
                   className="btn btn-outline"
                   onClick={() => {
@@ -2905,6 +2988,13 @@ export default function AdminPage() {
                 >
                   🔗 Copy Agent Link
                 </button>
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => handleOpenQrModal(`${typeof window !== 'undefined' ? window.location.origin : 'https://horentals.com'}/register-agent`, 'Agent Registration Portal')}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+                >
+                  <QrCode size={14} /> Agent QR
+                </button>
               </div>
 
               {/* Registered Agents Section */}
@@ -2912,11 +3002,22 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
                     <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      Registered Agents Directory ({users.filter((u) => u.role === 'agent' || u.role === 'landlord').length})
+                      Registered Agents Directory ({agentUsers.length})
                     </h3>
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                      All registered agents and landlords with active accounts.
+                      All registered agents with active platform accounts.
                     </p>
+                  </div>
+                  <div style={{ position: 'relative', maxWidth: '320px', width: '100%' }}>
+                    <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      placeholder="Search agents by name, phone, location..."
+                      value={agentSearch}
+                      onChange={(e) => setAgentSearch(e.target.value)}
+                      className="form-control"
+                      style={{ paddingLeft: '32px', fontSize: '0.82rem', height: '34px' }}
+                    />
                   </div>
                 </div>
 
@@ -2927,23 +3028,27 @@ export default function AdminPage() {
                         <th>Agent Name</th>
                         <th>Contact / WhatsApp</th>
                         <th>Location</th>
-                        <th>Role</th>
+                        <th>Listings &amp; Billing</th>
                         <th>Verification Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {users.filter((u) => u.role === 'agent' || u.role === 'landlord').length === 0 ? (
+                      {filteredAgentUsers.length === 0 ? (
                         <tr>
                           <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                            No registered agents found.
+                            {agentSearch ? 'No agents matching your search.' : 'No registered agents found.'}
                           </td>
                         </tr>
                       ) : (
-                        users.filter((u) => u.role === 'agent' || u.role === 'landlord').map((ag) => {
+                        filteredAgentUsers.map((ag) => {
                           const waNumber = ag.agentWhatsapp || ag.phone || '';
                           const waClean = waNumber.replace(/[^0-9]/g, '');
                           const waLink = waClean ? `https://wa.me/${waClean.startsWith('0') ? '233' + waClean.substring(1) : waClean}` : '';
+                          const agentListings = properties.filter((p) => String(p.owner?.id) === String(ag.id));
+                          const count = agentListings.length;
+                          const billableCount = Math.max(0, count - 2);
+
                           return (
                             <tr key={ag.id}>
                               <td>
@@ -2960,9 +3065,23 @@ export default function AdminPage() {
                               </td>
                               <td style={{ fontSize: '0.82rem' }}>{ag.agentLocation || 'Ho, Ghana'}</td>
                               <td>
-                                <span className="badge" style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontSize: '0.72rem' }}>
-                                  {ag.role}
-                                </span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                  <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
+                                    {count} {count === 1 ? 'Listing' : 'Listings'}
+                                  </span>
+                                  <span style={{
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    padding: '2px 6px',
+                                    borderRadius: '8px',
+                                    display: 'inline-block',
+                                    width: 'fit-content',
+                                    backgroundColor: billableCount > 0 ? '#FEF3C7' : '#ECFDF5',
+                                    color: billableCount > 0 ? '#92400E' : '#047857'
+                                  }}>
+                                    {billableCount === 0 ? `Free Tier (${count}/2)` : `${billableCount} Billable (${billableCount * 10} GHS/mo)`}
+                                  </span>
+                                </div>
                               </td>
                               <td>
                                 <span className="badge" style={{
@@ -3032,6 +3151,62 @@ export default function AdminPage() {
                   </table>
                 </div>
               </div>
+            </>
+          ) : activeTab === 'landlords' ? (
+            <>
+              {/* Landlords Stats */}
+              <div className={styles.statsGrid} style={{ marginBottom: '20px' }}>
+                <div className={styles.statCard} style={{ borderLeft: '4px solid #3B82F6' }}>
+                  <span className={styles.statLabel}>Total Landlord Forms</span>
+                  <span className={styles.statValue}>{landlordRegistrations.length}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Direct property submissions</span>
+                </div>
+                <div className={styles.statCard} style={{ borderLeft: '4px solid #10B981' }}>
+                  <span className={styles.statLabel}>Published / Verified</span>
+                  <span className={styles.statValue} style={{ color: '#10B981' }}>
+                    {landlordRegistrations.filter((r) => r.status === 'Verified').length}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Live listings published</span>
+                </div>
+                <div className={styles.statCard} style={{ borderLeft: '4px solid #F59E0B' }}>
+                  <span className={styles.statLabel}>Pending Review</span>
+                  <span className={styles.statValue} style={{ color: '#F59E0B' }}>
+                    {landlordRegistrations.filter((r) => r.status !== 'Verified').length}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Awaiting admin approval</span>
+                </div>
+              </div>
+
+              {/* Shareable Links */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <a 
+                  href="/landlord-registration" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="btn btn-outline" 
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', textDecoration: 'none', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+                >
+                  🌐 Open Landlord Form
+                </a>
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => {
+                    const link = `${window.location.origin}/landlord-registration`;
+                    navigator.clipboard.writeText(link);
+                    alert('Copied link: ' + link);
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+                >
+                  🔗 Copy Landlord Link
+                </button>
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => handleOpenQrModal(`${typeof window !== 'undefined' ? window.location.origin : 'https://horentals.com'}/landlord-registration`, 'Landlord Property Submission Portal')}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+                >
+                  <QrCode size={14} /> Landlord QR
+                </button>
+              </div>
 
               {/* Landlords search controls */}
               <div className={styles.tableControls} style={{ marginBottom: '20px' }}>
@@ -3078,7 +3253,7 @@ export default function AdminPage() {
                           </div>
 
                           <div className={styles.landlordMetaText} style={{ marginTop: '2px', fontWeight: 600 }}>
-                            Registered: {r.createdAt ? new Date(parseInt(r.createdAt) || r.createdAt).toLocaleDateString() : 'Unknown'}
+                            Registered: {r.createdAt ? (isNaN(Number(r.createdAt)) ? new Date(r.createdAt) : new Date(Number(r.createdAt))).toLocaleDateString() : 'Unknown'}
                           </div>
 
                           <div className={styles.landlordBadgesRow}>
@@ -3485,11 +3660,16 @@ export default function AdminPage() {
                   style={{ padding: '10px 24px', fontWeight: 700, fontSize: '0.88rem' }}
                   onClick={() => {
                     try {
-                      const url = buildTrackingUrl(campBaseUrl, campPlatform, 'social', campCampaign, campContent);
+                      let base = (campBaseUrl || '').trim();
+                      if (!base) base = 'https://horentals.com';
+                      if (!base.startsWith('http://') && !base.startsWith('https://')) {
+                        base = `https://${base}`;
+                      }
+                      const url = buildTrackingUrl(base, campPlatform, 'social', campCampaign, campContent);
                       setCampGenerated(url);
                       setCampCopied(false);
                     } catch {
-                      setCampGenerated('Invalid base URL — must include https://');
+                      setCampGenerated('Invalid base URL.');
                     }
                   }}
                 >
@@ -3514,14 +3694,6 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
-          ) : activeTab === 'upload' ? (
-            <div style={{ backgroundColor: 'var(--bg-surface)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Plus size={20} style={{ color: 'var(--primary)' }} />
-                <span>Upload Property Listing</span>
-              </h2>
-              <UploadPage isEmbedded={true} onSuccess={() => { setActiveTab('properties'); loadAdminDashboardData(); }} />
-            </div>
           ) : null}
         </div>
       </main>
@@ -3674,15 +3846,34 @@ export default function AdminPage() {
                       </a>
                     )}
                   </div>
+                  <div><strong>Agency / Brand Name:</strong> {selectedAgent.agencyName || 'Independent Agent'}</div>
+                  <div><strong>Years Experience:</strong> {selectedAgent.experienceYears || '—'}</div>
+                  <div><strong>Ghana Card / License No:</strong> {selectedAgent.licenseNumber || '—'}</div>
+                  <div><strong>Subscription Plan:</strong> {selectedAgent.subscriptionPlan || 'Free Plan'}</div>
                   <div style={{ gridColumn: '1 / -1' }}><strong>Email Address:</strong> {selectedAgent.email || '—'}</div>
                   <div style={{ gridColumn: '1 / -1' }}><strong>Location / Operating Area:</strong> {selectedAgent.agentLocation || 'Ho, Ghana'}</div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <strong>Listings &amp; Monthly Billing:</strong>{' '}
+                    {(() => {
+                      const count = properties.filter(p => String(p.owner?.id) === String(selectedAgent.id)).length;
+                      const billable = Math.max(0, count - 2);
+                      return (
+                        <span>
+                          <strong>{count}</strong> total properties •{' '}
+                          <span style={{ color: billable > 0 ? '#B45309' : '#047857', fontWeight: 700 }}>
+                            {billable === 0 ? `Free Starter Tier (${count}/2 used)` : `${billable} Billable Listings (GH₵ ${billable * 10}.00/month due)`}
+                          </span>
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
 
               {/* Bio & Credentials Details */}
               <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                 <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '12px' }}>
-                  Submitted Bio &amp; ID Credentials
+                  Submitted Bio &amp; About Agent
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.5, margin: 0 }}>
                   {selectedAgent.bio || 'No bio details provided.'}
@@ -3727,396 +3918,22 @@ export default function AdminPage() {
 
       {editingProperty && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
+          <div className={styles.modalContent} style={{ maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className={styles.modalHeader}>
               <h2>Edit Property Details</h2>
               <button onClick={() => setEditingProperty(null)} className={styles.modalCloseBtn}>&times;</button>
             </div>
-            
-            <form onSubmit={handleSaveEdit} className={styles.editForm}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-                {/* Property Images Gallery Section */}
-                <div className="form-group" style={{ padding: '14px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  <label style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <ImageIcon size={16} style={{ color: 'var(--primary)' }} /> Property Image Gallery
-                  </label>
-                  
-                  <label className={styles.editFileUploader}>
-                    <UploadCloud size={28} style={{ color: 'var(--primary)' }} />
-                    <span style={{ fontWeight: 600 }}>Click to browse and add images to gallery</span>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={(e) => {
-                        if (e.target.files) {
-                          const filesArray = Array.from(e.target.files);
-                          const newItems = filesArray.map(file => ({
-                            url: '',
-                            file,
-                            previewUrl: URL.createObjectURL(file)
-                          }));
-                          setEditGallery(prev => [...prev, ...newItems]);
-                        }
-                      }}
-                      className={styles.editFileInput}
-                    />
-                  </label>
-
-                  {editGallery.length > 0 && (
-                    <div className={styles.editPreviews}>
-                      {editGallery.map((item, index) => (
-                        <div key={index} className={styles.editPreviewCard}>
-                          <img src={item.previewUrl} alt={`gallery-${index}`} className={styles.editPreviewImage} />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditGallery(prev => prev.filter((_, i) => i !== index));
-                            }}
-                            className={styles.editRemovePreview}
-                            title="Remove image"
-                          >
-                            &times;
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '8px' }}>
-                    * The first image in the gallery will automatically be used as the cover/thumbnail image.
-                  </span>
-                </div>
-
-                <div className="form-group">
-                  <label>Title</label>
-                  <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required className="form-control" />
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label>Location / Area</label>
-                    <input type="text" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} required className="form-control" placeholder="e.g. Bankoe, Ho" />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Price & Duration</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} required className="form-control" style={{ flex: 1 }} />
-                      <select value={editPricePeriod} onChange={(e) => setEditPricePeriod(e.target.value)} className="form-control" style={{ width: '160px', backgroundColor: 'var(--bg-surface)' }}>
-                        <option value="plot">per plot</option>
-                        <option value="acre">per acre</option>
-                        <option value="semester">per semester</option>
-                        <option value="academic year">per academic year</option>
-                        <option value="outright sale">Outright Sale (Total)</option>
-                        <option value="year">per year</option>
-                        <option value="month">per month</option>
-                        <option value="day">per day</option>
-                        <option value="item">per item</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Digital Address & Landmarks */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label>Ghana Digital Address (GhanaPostGPS)</label>
-                    <input type="text" value={editDigitalAddress} onChange={(e) => setEditDigitalAddress(e.target.value)} className="form-control" placeholder="e.g. VH-0123-4567" />
-                  </div>
-                  <div className="form-group">
-                    <label>Nearby Landmarks / Directions</label>
-                    <input type="text" value={editLandmarks} onChange={(e) => setEditLandmarks(e.target.value)} className="form-control" placeholder="e.g. 3 mins from UHAS gate" />
-                  </div>
-                </div>
-
-                {/* GPS Location Coordinates Picker */}
-                <div className="form-group" style={{ padding: '14px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
-                    <label style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <MapPin size={16} style={{ color: 'var(--primary)' }} /> GPS Map Location Coordinates
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if ('geolocation' in navigator) {
-                          navigator.geolocation.getCurrentPosition(
-                            (pos) => {
-                              setEditLatitude(pos.coords.latitude);
-                              setEditLongitude(pos.coords.longitude);
-                              setMessage({ text: `🎯 GPS location detected! (Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)})`, isError: false });
-                            },
-                            (err) => {
-                              setMessage({ text: `GPS error: ${err.message}. Please allow location access or type coordinates manually.`, isError: true });
-                            },
-                            { enableHighAccuracy: true }
-                          );
-                        } else {
-                          setMessage({ text: 'Geolocation is not supported by your browser.', isError: true });
-                        }
-                      }}
-                      className="btn btn-outline"
-                      style={{ padding: '4px 10px', fontSize: '0.78rem', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--primary)', borderColor: 'var(--primary)' }}
-                    >
-                      <MapPin size={12} /> Detect Current GPS Location
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Latitude</label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="e.g. 6.6080"
-                        value={editLatitude !== null ? editLatitude : ''}
-                        onChange={(e) => setEditLatitude(e.target.value ? parseFloat(e.target.value) : null)}
-                        className="form-control"
-                        style={{ fontSize: '0.82rem', padding: '6px 10px' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Longitude</label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="e.g. 0.4700"
-                        value={editLongitude !== null ? editLongitude : ''}
-                        onChange={(e) => setEditLongitude(e.target.value ? parseFloat(e.target.value) : null)}
-                        className="form-control"
-                        style={{ fontSize: '0.82rem', padding: '6px 10px' }}
-                      />
-                    </div>
-                  </div>
-
-                  {editLatitude !== null && editLongitude !== null && (
-                    <div style={{ marginTop: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span>📍 Pin Coordinates: ({editLatitude.toFixed(4)}, {editLongitude.toFixed(4)})</span>
-                      <a
-                        href={`https://www.google.com/maps?q=${editLatitude},${editLongitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}
-                      >
-                        Preview on Google Maps ↗
-                      </a>
-                    </div>
-                  )}
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label>Type / Category</label>
-                    <select value={editType} onChange={(e) => setEditType(e.target.value)} required className="form-control" style={{ backgroundColor: 'var(--bg-surface)' }}>
-                      <option value="Student Hostel">Student Hostel</option>
-                      <option value="Single Room">Single Room</option>
-                      <option value="Chamber & Hall">Chamber & Hall</option>
-                      <option value="Single Room SC">Single Room SC (Self-Contained)</option>
-                      <option value="Chamber and Hall SC">Chamber & Hall SC (Self-Contained)</option>
-                      <option value="Two Bedroom SC">Two Bedroom SC (Self-Contained)</option>
-                      <option value="Three Bedroom SC">Three Bedroom SC (Self-Contained)</option>
-                      <option value="Four Bedroom SC">Four Bedroom SC (Self-Contained)</option>
-                      <option value="Furnitures">Furnitures</option>
-                      <option value="Lands">Lands</option>
-                      <option value="Shops">Shops</option>
-                      <option value="Short Stay">Short Stay</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label>Status</label>
-                    <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} required className="form-control" style={{ backgroundColor: 'var(--bg-surface)' }}>
-                      <option value="available">Available</option>
-                      <option value="rented">Occupied / Sold / Taken</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Category-Specific Specifications */}
-                {editType === 'Lands' && (
-                  <div style={{ padding: '14px', backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(245,158,11,0.3)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                    <div className="form-group">
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Plot Size</label>
-                      <input type="text" value={editLandPlotSize} onChange={(e) => setEditLandPlotSize(e.target.value)} placeholder="e.g. 70 x 100 ft" className="form-control" style={{ fontSize: '0.85rem' }} />
-                    </div>
-                    <div className="form-group">
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Documents / Title</label>
-                      <select value={editLandDocType} onChange={(e) => setEditLandDocType(e.target.value)} className="form-control" style={{ fontSize: '0.85rem' }}>
-                        <option value="Site Plan">Site Plan</option>
-                        <option value="Indenture">Indenture</option>
-                        <option value="Land Title Certificate">Land Title Certificate</option>
-                        <option value="Leasehold Document">Leasehold Document</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Zoning</label>
-                      <select value={editLandZoning} onChange={(e) => setEditLandZoning(e.target.value)} className="form-control" style={{ fontSize: '0.85rem' }}>
-                        <option value="Residential">Residential</option>
-                        <option value="Commercial">Commercial</option>
-                        <option value="Agricultural">Agricultural</option>
-                        <option value="Mixed-Use">Mixed-Use</option>
-                        <option value="Industrial">Industrial</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {editType === 'Furnitures' && (
-                  <div style={{ padding: '14px', backgroundColor: 'rgba(59,130,246,0.08)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(59,130,246,0.3)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                    <div className="form-group">
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Condition</label>
-                      <select value={editFurnitureCondition} onChange={(e) => setEditFurnitureCondition(e.target.value)} className="form-control" style={{ fontSize: '0.85rem' }}>
-                        <option value="Brand New">Brand New</option>
-                        <option value="Fairly Used / Like New">Fairly Used / Like New</option>
-                        <option value="Used - Good">Used - Good</option>
-                        <option value="Needs Minor Repair">Needs Minor Repair</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Category</label>
-                      <select value={editFurnitureCategory} onChange={(e) => setEditFurnitureCategory(e.target.value)} className="form-control" style={{ fontSize: '0.85rem' }}>
-                        <option value="Bed & Mattress">Bed & Mattress</option>
-                        <option value="Sofa / Couch">Sofa / Couch</option>
-                        <option value="Study Desk & Chair">Study Desk & Chair</option>
-                        <option value="Wardrobe / Storage">Wardrobe / Storage</option>
-                        <option value="TV & Electronics">TV & Electronics</option>
-                        <option value="Kitchen Appliances">Kitchen Appliances</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Delivery Option</label>
-                      <select value={editFurnitureDelivery} onChange={(e) => setEditFurnitureDelivery(e.target.value)} className="form-control" style={{ fontSize: '0.85rem' }}>
-                        <option value="Buyer Pick-Up">Buyer Pick-Up</option>
-                        <option value="Free Local Delivery">Free Local Delivery</option>
-                        <option value="Paid Delivery Available">Paid Delivery Available</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label>Landlord Name</label>
-                    <input type="text" value={editLandlordName} onChange={(e) => setEditLandlordName(e.target.value)} className="form-control" placeholder="e.g. Mr. John Doe" />
-                  </div>
-                  <div className="form-group">
-                    <label>Landlord Contact Number</label>
-                    <input type="tel" value={editContact} onChange={(e) => setEditContact(e.target.value)} required className="form-control" />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Description & Details</label>
-                  <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} required rows={4} className="form-control" style={{ resize: 'vertical' }} />
-                </div>
-
-                <div className="form-group">
-                  <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Key Features Included</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                    
-                    {/* Water source */}
-                    <div>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>💧 Water Supply</span>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editGhanaWaterShared} onChange={(e) => setEditGhanaWaterShared(e.target.checked)} />
-                          <span>Ghana Water (Shared)</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editGhanaWaterSeparate} onChange={(e) => setEditGhanaWaterSeparate(e.target.checked)} />
-                          <span>Ghana Water (Separate)</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editPolytank} onChange={(e) => setEditPolytank(e.target.checked)} />
-                          <span>Polytank</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editBorehole} onChange={(e) => setEditBorehole(e.target.checked)} />
-                          <span>Borehole</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editWell} onChange={(e) => setEditWell(e.target.checked)} />
-                          <span>Well</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Meter source */}
-                    <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '12px' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>⚡ Electricity Meter</span>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editEcgSharedMeter} onChange={(e) => setEditEcgSharedMeter(e.target.checked)} />
-                          <span>ECG Shared Meter</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editEcgSeparateMeter} onChange={(e) => setEditEcgSeparateMeter(e.target.checked)} />
-                          <span>ECG Separate Meter</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editEcgPostPaid} onChange={(e) => setEditEcgPostPaid(e.target.checked)} />
-                          <span>ECG Post-paid</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editEcgPrepaid} onChange={(e) => setEditEcgPrepaid(e.target.checked)} />
-                          <span>ECG Prepaid</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Other Amenities */}
-                    <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '12px' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>📶 Other Amenities</span>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editHasWifi} onChange={(e) => setEditHasWifi(e.target.checked)} />
-                          <span>WiFi</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editHasCctv} onChange={(e) => setEditHasCctv(e.target.checked)} />
-                          <span>CCTV Camera</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editHasFurnished} onChange={(e) => setEditHasFurnished(e.target.checked)} />
-                          <span>Furnished</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editHasGatedFenced} onChange={(e) => setEditHasGatedFenced(e.target.checked)} />
-                          <span>Gated & Fenced</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editIsNewlyBuilt} onChange={(e) => setEditIsNewlyBuilt(e.target.checked)} />
-                          <span>Newly Built</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editHasBed} onChange={(e) => setEditHasBed(e.target.checked)} />
-                          <span>Bed</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                          <input type="checkbox" checked={editHasStudyDesk} onChange={(e) => setEditHasStudyDesk(e.target.checked)} />
-                          <span>Study Desk</span>
-                        </label>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-
-                <div className="form-group" style={{ marginTop: '4px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', border: '1px solid var(--accent)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--accent-light)', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--accent)', fontWeight: 700 }}>
-                    <input type="checkbox" checked={editIsFeatured} onChange={(e) => setEditIsFeatured(e.target.checked)} style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
-                    <span>⭐ Promote / Feature on Landing Page (Paid Subscriber)</span>
-                  </label>
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-                <button type="button" onClick={() => setEditingProperty(null)} className="btn btn-outline">Cancel</button>
-                <button type="submit" disabled={actionLoading} className="btn btn-primary">Save Changes</button>
-              </div>
-            </form>
+            <div style={{ padding: '16px 0' }}>
+              <UploadPage
+                isEmbedded={true}
+                initialData={editingProperty}
+                onSuccess={() => {
+                  setEditingProperty(null);
+                  setMessage({ text: 'Property updated successfully!', isError: false });
+                  loadAdminDashboardData(false);
+                }}
+              />
+            </div>
           </div>
         </div>
       )}

@@ -10,7 +10,8 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 let prismaInstance: PrismaClient;
 
-if (globalForPrisma.prisma) {
+// Ensure fresh client instance in development when schema updates
+if (globalForPrisma.prisma && process.env.NODE_ENV === 'production') {
   prismaInstance = globalForPrisma.prisma;
 } else {
   // Use connection pooling with standard node-postgres
@@ -27,7 +28,7 @@ if (globalForPrisma.prisma) {
     log: ['error', 'warn'],
   });
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV === 'production') {
     globalForPrisma.prisma = prismaInstance;
   }
 }

@@ -9,9 +9,9 @@ import { User, RegisterInput } from './types';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  googleLogin: (idToken: string) => Promise<void>;
-  register: (input: RegisterInput) => Promise<void>;
+  login: (email: string, password: string, redirectUrl?: string) => Promise<void>;
+  googleLogin: (idToken: string, redirectUrl?: string) => Promise<void>;
+  register: (input: RegisterInput, redirectUrl?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updatedUser: User) => void;
 }
@@ -123,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, redirectUrl?: string) => {
     setLoading(true);
     try {
       const data = await graphqlRequest<{ login: { token: string; user: User } }>(
@@ -157,6 +157,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (loggedUser.role === 'admin') {
         router.push('/admin');
+      } else if (redirectUrl && redirectUrl !== '/login' && redirectUrl !== '/register') {
+        router.push(redirectUrl);
       } else {
         router.push('/');
       }
@@ -167,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const googleLogin = async (idToken: string) => {
+  const googleLogin = async (idToken: string, redirectUrl?: string) => {
     setLoading(true);
     try {
       const data = await graphqlRequest<{ googleAuth: { token: string; user: User } }>(
@@ -198,6 +200,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (loggedUser.role === 'admin') {
         router.push('/admin');
+      } else if (redirectUrl && redirectUrl !== '/login' && redirectUrl !== '/register') {
+        router.push(redirectUrl);
       } else {
         router.push('/');
       }
@@ -208,7 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (input: RegisterInput) => {
+  const register = async (input: RegisterInput, redirectUrl?: string) => {
     setLoading(true);
     try {
       const data = await graphqlRequest<{ register: { token: string; user: User } }>(
@@ -238,7 +242,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }, 1000);
       }
 
-      router.push('/');
+      if (registeredUser.role === 'admin') {
+        router.push('/admin');
+      } else if (redirectUrl === 'none') {
+        // Leave navigation to the component
+      } else if (redirectUrl && redirectUrl !== '/login' && redirectUrl !== '/register') {
+        router.push(redirectUrl);
+      } else if (registeredUser.role === 'agent') {
+        router.push('/upload');
+      } else {
+        router.push('/');
+      }
     } catch (error) {
       throw error;
     } finally {

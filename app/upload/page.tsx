@@ -3,17 +3,56 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
-import { graphqlRequest, CREATE_PROPERTY, UPDATE_AGENT_PROFILE, GET_AGENT_PROPERTIES } from '../../lib/graphql';
-import { UploadCloud, Image as ImageIcon, Sparkles, Loader } from 'lucide-react';
-import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, User } from '../../lib/types';
+import { graphqlRequest, CREATE_PROPERTY, UPDATE_PROPERTY, UPDATE_AGENT_PROFILE, GET_AGENT_PROPERTIES, GET_VERIFICATION_REQUESTS } from '../../lib/graphql';
+import { UploadCloud, Image as ImageIcon, Sparkles, Loader, AlertTriangle } from 'lucide-react';
+import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, parsePropertyDescription, Property, User } from '../../lib/types';
 import VerifiedAgentModal from '../../components/VerifiedAgentModal';
 import styles from './upload.module.css';
 
+// ── Inline sub-component: show admin rejection notes to rejected agents ──────
+function RejectionNotesBox({ userId }: { userId: number }) {
+  const [notes, setNotes] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    graphqlRequest<{ verificationRequests: Array<{ status: string; reviewerNotes?: string; createdAt: string }> }>(GET_VERIFICATION_REQUESTS)
+      .then(data => {
+        const myRequests = (data?.verificationRequests || [])
+          .filter(r => r.status === 'rejected' && r.reviewerNotes)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setNotes(myRequests[0]?.reviewerNotes || null);
+      })
+      .catch(() => setNotes(null))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) return null;
+  if (!notes) return (
+    <div style={{ background: '#450a0a', border: '1px solid #991b1b', borderRadius: '0.6rem', padding: '14px 18px', width: '100%', textAlign: 'left' }}>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: '#fca5a5', fontWeight: 700, marginBottom: '4px' }}>
+        <AlertTriangle size={16} /> Reason for Rejection
+      </div>
+      <p style={{ color: '#fca5a5', fontSize: '0.84rem', margin: 0 }}>No specific reason was provided. Please contact support for clarification.</p>
+    </div>
+  );
+  return (
+    <div style={{ background: '#450a0a', border: '1px solid #991b1b', borderRadius: '0.6rem', padding: '14px 18px', width: '100%', textAlign: 'left' }}>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: '#fca5a5', fontWeight: 700, marginBottom: '6px' }}>
+        <AlertTriangle size={16} /> Reason for Rejection
+      </div>
+      <p style={{ color: '#fca5a5', fontSize: '0.84rem', margin: 0, lineHeight: 1.6 }}>{notes}</p>
+    </div>
+  );
+}
+
+
 export default function UploadPage({
   isEmbedded = false,
+  initialData,
   onSuccess
 }: {
   isEmbedded?: boolean;
+  initialData?: Property | null;
   onSuccess?: () => void;
 }) {
   const { user, loading: authLoading, updateUser } = useAuth();
@@ -130,6 +169,106 @@ export default function UploadPage({
     }
   };
 
+  // Pre-fill state when editing an existing property via initialData
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title || '');
+      setLocation(initialData.location || '');
+      setPrice(initialData.price !== undefined ? String(initialData.price) : '');
+      setType(initialData.type || 'Student Hostel');
+      setStatus(initialData.status || 'available');
+      setContact(initialData.contact || '');
+      setDigitalAddress(initialData.digitalAddress || '');
+      setLandmarks(initialData.landmarks || '');
+      setLatitude(initialData.latitude ?? null);
+      setLongitude(initialData.longitude ?? null);
+      setLandlordName(initialData.landlordName || '');
+
+      if (initialData.gallery && initialData.gallery.length > 0) {
+        setImagePreviews(initialData.gallery.map((g) => g.url));
+      } else if (initialData.imageUrl) {
+        setImagePreviews([initialData.imageUrl]);
+      } else {
+        setImagePreviews([]);
+      }
+      setImageFiles([]);
+
+      let desc = initialData.description || '';
+
+      const pricePeriodMatch = desc.match(/PricePeriod:\s*per\s*([^\n]+)/i);
+      if (pricePeriodMatch) {
+        setPricePeriod(pricePeriodMatch[1].trim());
+        desc = desc.replace(/PricePeriod:\s*per\s*[^\n]+/i, '').trim();
+      }
+
+      const roomsMatch = desc.match(/Rooms Available:\s*([^\n]+)/i);
+      if (roomsMatch) {
+        setRooms(roomsMatch[1].trim());
+        desc = desc.replace(/Rooms Available:\s*[^\n]+/i, '').trim();
+      }
+
+      const advanceMatch = desc.match(/Advance Required:\s*([^\n]+)/i);
+      if (advanceMatch) {
+        setAdvance(advanceMatch[1].trim());
+        desc = desc.replace(/Advance Required:\s*[^\n]+/i, '').trim();
+      }
+
+      const availableFromMatch = desc.match(/Available From:\s*([^\n]+)/i);
+      if (availableFromMatch) {
+        setAvailableFrom(availableFromMatch[1].trim());
+        desc = desc.replace(/Available From:\s*[^\n]+/i, '').trim();
+      }
+
+      const featuresIdx = desc.indexOf('Features:');
+      if (featuresIdx !== -1) {
+        const featuresPart = desc.substring(featuresIdx + 9).trim();
+        desc = desc.substring(0, featuresIdx).trim();
+
+        const lowerFeatures = featuresPart.toLowerCase();
+        setHasWifi(lowerFeatures.includes('wifi'));
+        setHasAc(lowerFeatures.includes('ac'));
+        setHasCctv(lowerFeatures.includes('cctv'));
+        setHasFurnished(lowerFeatures.includes('furnished'));
+        setHasGatedFenced(lowerFeatures.includes('gated'));
+        setIsNewlyBuilt(lowerFeatures.includes('newly built'));
+        setHasBed(lowerFeatures.includes('bed'));
+        setHasStudyDesk(lowerFeatures.includes('study desk'));
+        setHasPrivateKitchen(lowerFeatures.includes('kitchen (private)'));
+        setHasSharedKitchen(lowerFeatures.includes('kitchen (shared)'));
+        setHasPrivateBathroom(lowerFeatures.includes('bathroom (private)'));
+        setHasSharedBathroom(lowerFeatures.includes('bathroom (shared)'));
+        setHasBalcony(lowerFeatures.includes('balcony'));
+
+        setGhanaWaterShared(lowerFeatures.includes('ghana water (shared)'));
+        setGhanaWaterSeparate(lowerFeatures.includes('ghana water (separate)'));
+        setPolytank(lowerFeatures.includes('polytank'));
+        setBorehole(lowerFeatures.includes('borehole'));
+        setWell(lowerFeatures.includes('well'));
+
+        setEcgSharedMeter(lowerFeatures.includes('ecg shared meter'));
+        setEcgSeparateMeter(lowerFeatures.includes('ecg separate meter'));
+        setEcgPostPaid(lowerFeatures.includes('ecg post-paid'));
+        setEcgPrepaid(lowerFeatures.includes('ecg prepaid'));
+
+        const plotMatch = featuresPart.match(/Plot Size:\s*([^,|]+)/i);
+        if (plotMatch) setLandPlotSize(plotMatch[1].trim());
+        const docMatch = featuresPart.match(/Title\/Docs:\s*([^,|]+)/i);
+        if (docMatch) setLandDocType(docMatch[1].trim());
+        const zoningMatch = featuresPart.match(/Zoning:\s*([^,|]+)/i);
+        if (zoningMatch) setLandZoning(zoningMatch[1].trim());
+
+        const condMatch = featuresPart.match(/Condition:\s*([^,|]+)/i);
+        if (condMatch) setFurnitureCondition(condMatch[1].trim());
+        const catMatch = featuresPart.match(/Category:\s*([^,|]+)/i);
+        if (catMatch) setFurnitureCategory(catMatch[1].trim());
+        const delMatch = featuresPart.match(/Delivery:\s*([^,|]+)/i);
+        if (delMatch) setFurnitureDelivery(delMatch[1].trim());
+      }
+
+      setDescription(desc.trim());
+    }
+  }, [initialData]);
+
   // Check login status and role privileges
   useEffect(() => {
     if (isEmbedded) return;
@@ -152,45 +291,61 @@ export default function UploadPage({
     }
   };
 
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((url) => {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+      });
+    };
+  }, [imagePreviews]);
+
   const handleRemoveImage = (index: number) => {
+    setImagePreviews((prev) => {
+      if (prev[index] && prev[index].startsWith('blob:')) {
+        URL.revokeObjectURL(prev[index]);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (imageFiles.length === 0) {
-      setError('Please upload at least one image of your property.');
-      return;
-    }
-
     setSubmitting(true);
 
     try {
-      // 1. Upload images via REST Multipart request
-      const formData = new FormData();
-      imageFiles.forEach((file) => {
-        formData.append('images', file);
-      });
+      let urls: string[] = [];
 
-      const uploadRes = await fetch('/api/upload-multiple', {
-        method: 'POST',
-        credentials: 'same-origin', // HttpOnly cookie sent automatically
-        body: formData,
-      });
+      if (imageFiles.length > 0) {
+        const formData = new FormData();
+        imageFiles.forEach((file) => {
+          formData.append('images', file);
+        });
 
-      if (!uploadRes.ok) {
-        const errText = await uploadRes.text();
-        throw new Error(`Upload failed: ${errText || uploadRes.statusText}`);
+        const uploadRes = await fetch('/api/upload-multiple', {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          const errText = await uploadRes.text();
+          throw new Error(`Upload failed: ${errText || uploadRes.statusText}`);
+        }
+
+        const uploadBody = await uploadRes.json();
+        const uploadedUrls: string[] = uploadBody.imageUrls || uploadBody.images || [];
+
+        const existingUrls = imagePreviews.filter((p) => !p.startsWith('blob:'));
+        urls = [...existingUrls, ...uploadedUrls];
+      } else {
+        urls = imagePreviews.filter((p) => !p.startsWith('blob:'));
       }
 
-      const uploadBody = await uploadRes.json();
-      const urls: string[] = uploadBody.imageUrls || uploadBody.images || [];
-
       if (urls.length === 0) {
-        throw new Error('No image URLs returned from the file hosting service.');
+        throw new Error('Please upload at least one image of your property.');
       }
 
       const formattedContact = formatGhanaPhone(contact);
@@ -198,7 +353,6 @@ export default function UploadPage({
         throw new Error('Please enter a valid 10-digit Ghanaian phone number for landlord contact (e.g. 0241234567).');
       }
 
-      // 2. Perform the GraphQL property creation mutation
       const parsedPrice = parseFloat(price);
       if (isNaN(parsedPrice)) {
         throw new Error('Invalid price value.');
@@ -242,7 +396,6 @@ export default function UploadPage({
           amenitiesList.push(`Amenities: ${otherOptions.join(', ')}`);
         }
 
-        // Compile detailed water options
         const waterOptions: string[] = [];
         if (ghanaWaterShared) waterOptions.push('Ghana Water (Shared)');
         if (ghanaWaterSeparate) waterOptions.push('Ghana Water (Separate)');
@@ -253,7 +406,6 @@ export default function UploadPage({
           amenitiesList.push(`Water: ${waterOptions.join(', ')}`);
         }
 
-        // Compile detailed meter options
         const meterOptions: string[] = [];
         if (ecgSharedMeter) meterOptions.push('ECG Shared Meter');
         if (ecgSeparateMeter) meterOptions.push('ECG Separate Meter');
@@ -268,7 +420,6 @@ export default function UploadPage({
         finalDescription += `\n\nFeatures: ${amenitiesList.join(' | ')}`;
       }
 
-      // Append extra fields to description
       if (rooms) finalDescription += `\n\nRooms Available: ${rooms}`;
       if (advance) finalDescription += `\nAdvance Required: ${advance}`;
       if (availableFrom) finalDescription += `\nAvailable From: ${availableFrom}`;
@@ -287,7 +438,7 @@ export default function UploadPage({
         status,
         description: finalDescription,
         contact,
-        imageUrl: urls[0], // First image is the thumbnail
+        imageUrl: urls[0],
         gallery: urls.map((url, index) => ({
           url,
           caption: `${title} - Image ${index + 1}`,
@@ -296,7 +447,12 @@ export default function UploadPage({
         landlordName: landlordName.trim() || undefined,
       };
 
-      await graphqlRequest(CREATE_PROPERTY, { input });
+      if (initialData && initialData.id) {
+        const idInt = typeof initialData.id === 'number' ? initialData.id : parseInt(String(initialData.id), 10);
+        await graphqlRequest(UPDATE_PROPERTY, { id: idInt, input });
+      } else {
+        await graphqlRequest(CREATE_PROPERTY, { input });
+      }
       
       if (user?.role === 'agent' || user?.role === 'landlord') {
         setShowSuccessNotice(true);
@@ -310,7 +466,7 @@ export default function UploadPage({
       }
     } catch (err: any) {
       console.error('Submit property error:', err);
-      setError(err.message || 'An error occurred while uploading your property.');
+      setError(err.message || 'An error occurred while saving your property.');
     } finally {
       setSubmitting(false);
     }
@@ -362,6 +518,16 @@ export default function UploadPage({
 
     if (!user?.profileImage && !agentPhotoFile && !agentPhotoPreview) {
       setAgentModalError('Please select a profile photo for your agent profile card.');
+      return;
+    }
+
+    if (!agentWhatsappInput.trim()) {
+      setAgentModalError('Please enter your WhatsApp contact number.');
+      return;
+    }
+
+    if (!agentLocationInput.trim()) {
+      setAgentModalError('Please enter your primary service area / location.');
       return;
     }
 
@@ -423,13 +589,16 @@ export default function UploadPage({
   // Block unverified agents from uploading — they must be verified by admin first
   // Admins and landlords bypass this check
   if ((user.role === 'agent') && user.verificationStatus !== 'verified') {
+    const isRejected = user.verificationStatus === 'rejected';
+    const isPendingVerif = user.verificationStatus === 'pending' || user.verificationStatus === 'unverified';
+
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', padding: '20px' }}>
         <div style={{
           maxWidth: '520px',
           width: '100%',
           background: 'var(--bg-surface)',
-          border: '1px solid var(--border)',
+          border: `1px solid ${isRejected ? 'rgba(239,68,68,0.3)' : 'var(--border)'}`,
           borderRadius: 'var(--radius-lg)',
           padding: '48px 36px',
           textAlign: 'center',
@@ -444,14 +613,16 @@ export default function UploadPage({
             width: '80px',
             height: '80px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(245,158,11,0.05) 100%)',
-            border: '2px solid rgba(245,158,11,0.3)',
+            background: isRejected
+              ? 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.05) 100%)'
+              : 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(245,158,11,0.05) 100%)',
+            border: isRejected ? '2px solid rgba(239,68,68,0.3)' : '2px solid rgba(245,158,11,0.3)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '2.4rem',
           }}>
-            🕐
+            {isRejected ? '❌' : '🕐'}
           </div>
 
           {/* Badge */}
@@ -459,72 +630,83 @@ export default function UploadPage({
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            background: 'rgba(245,158,11,0.1)',
-            border: '1px solid rgba(245,158,11,0.3)',
+            background: isRejected ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+            border: isRejected ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(245,158,11,0.3)',
             borderRadius: '999px',
             padding: '5px 14px',
             fontSize: '0.74rem',
             fontWeight: 700,
-            color: '#B45309',
+            color: isRejected ? '#DC2626' : '#B45309',
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
           }}>
-            ⏳ Pending Verification
+            {isRejected ? '🚫 Verification Rejected' : '⏳ Pending Verification'}
           </div>
 
           {/* Heading */}
           <div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 10px' }}>
-              Account Under Review
+              {isRejected ? 'Verification Declined' : 'Account Under Review'}
             </h1>
             <p style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
-              Welcome, <strong style={{ color: 'var(--text-primary)' }}>{user.name}</strong>! Your agent account has been created and is currently being reviewed by the HO Rentals team.
+              {isRejected
+                ? <>Your verification request was not approved. Please review the reason below and re-submit with correct documents.</>
+                : <>Welcome, <strong style={{ color: 'var(--text-primary)' }}>{user.name}</strong>! Your agent account is currently being reviewed by the HO Rentals team.</>}
             </p>
           </div>
 
+          {/* Rejection reason box */}
+          {isRejected && (
+            <RejectionNotesBox userId={typeof user.id === 'string' ? parseInt(user.id, 10) : user.id} />
+          )}
+
           {/* Info steps */}
-          <div style={{
-            width: '100%',
-            background: 'var(--bg-surface-secondary)',
-            borderRadius: 'var(--radius-md)',
-            padding: '20px',
-            textAlign: 'left',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '14px',
-          }}>
-            {[
-              { icon: '✅', title: 'Account Created', desc: 'Your agent account is successfully set up.', done: true },
-              { icon: '🔍', title: 'Identity Verification', desc: 'Our team is reviewing your registration details.', done: false },
-              { icon: '📋', title: 'Admin Approval', desc: 'You will be approved once your information is verified.', done: false },
-              { icon: '🏠', title: 'Upload Properties', desc: 'After approval, you can list properties on HO Rentals.', done: false },
-            ].map((step, i) => (
-              <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: step.done ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.08)',
-                  border: `1.5px solid ${step.done ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.3)'}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.9rem',
-                  flexShrink: 0,
-                }}>
-                  {step.icon}
+          {!isRejected && (
+            <div style={{
+              width: '100%',
+              background: 'var(--bg-surface-secondary)',
+              borderRadius: 'var(--radius-md)',
+              padding: '20px',
+              textAlign: 'left',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+            }}>
+              {[
+                { icon: '✅', title: 'Account Created', desc: 'Your agent account is successfully set up.', done: true },
+                { icon: '🔍', title: 'Identity Verification', desc: 'Our team is reviewing your registration details.', done: false },
+                { icon: '📋', title: 'Admin Approval', desc: 'You will be approved once your information is verified.', done: false },
+                { icon: '🏠', title: 'Upload Properties', desc: 'After approval, you can list properties on HO Rentals.', done: false },
+              ].map((step, i) => (
+                <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: step.done ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.08)',
+                    border: `1.5px solid ${step.done ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.3)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.9rem',
+                    flexShrink: 0,
+                  }}>
+                    {step.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.87rem', color: step.done ? '#047857' : 'var(--text-primary)' }}>{step.title}</div>
+                    <div style={{ fontSize: '0.80rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{step.desc}</div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.87rem', color: step.done ? '#047857' : 'var(--text-primary)' }}>{step.title}</div>
-                  <div style={{ fontSize: '0.80rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{step.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Contact info */}
           <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
-            This usually takes <strong>24–48 hours</strong>. If you have questions, contact us via WhatsApp or email.
+            {isRejected
+              ? 'Please contact support if you believe this was a mistake, or re-register with correct documents.'
+              : <>This usually takes <strong>24–48 hours</strong>. If you have questions, contact us via WhatsApp or email.</>}
           </p>
 
           {/* Action buttons */}
@@ -536,15 +718,25 @@ export default function UploadPage({
             >
               ← Back to Home
             </button>
-            <a
-              href="https://wa.me/233571542612?text=Hello%2C%20I%20registered%20as%20an%20agent%20on%20HO%20Rentals%20and%20am%20awaiting%20verification."
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-primary"
-              style={{ flex: 1, padding: '12px 16px', fontSize: '0.88rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              💬 Contact Support
-            </a>
+            {isRejected ? (
+              <button
+                onClick={() => router.push('/register-agent')}
+                className="btn btn-primary"
+                style={{ flex: 1, padding: '12px 16px', fontSize: '0.88rem', fontWeight: 700 }}
+              >
+                🔄 Re-register as Agent
+              </button>
+            ) : (
+              <a
+                href="https://wa.me/233571542612?text=Hello%2C%20I%20registered%20as%20an%20agent%20on%20HO%20Rentals%20and%20am%20awaiting%20verification."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary"
+                style={{ flex: 1, padding: '12px 16px', fontSize: '0.88rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                💬 Contact Support
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -552,19 +744,65 @@ export default function UploadPage({
   }
 
   if (showSuccessNotice) {
+    const isBillableListing = agentPropertyCount !== null && agentPropertyCount >= 2;
     return (
-      <div className={styles.container} style={{ maxWidth: '640px', padding: '60px 20px', textAlign: 'center' }}>
-        <div className="card glass animate-slide-up" style={{ padding: '40px 28px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px', backgroundColor: 'var(--bg-surface)' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
-            🎉
+      <div className={styles.container} style={{ maxWidth: '640px', padding: '40px 20px', textAlign: 'center' }}>
+        <div className="card glass animate-slide-up" style={{ padding: '36px 24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px', backgroundColor: 'var(--bg-surface)' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: isBillableListing ? '#FEF3C7' : '#ECFDF5', color: isBillableListing ? '#D97706' : '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
+            {isBillableListing ? '⚡' : '🎉'}
           </div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-            Property Submitted for Verification!
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+            {isBillableListing ? 'Listing Submitted — Direct MoMo Payment Required' : 'Property Submitted for Verification!'}
           </h2>
-          <p style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: '480px', margin: 0 }}>
-            Your property listing has been successfully uploaded and is currently pending review by our verification team. It will officially go live on HO Rentals once approved by the admin.
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: '500px', margin: 0 }}>
+            {isBillableListing ? (
+              <>
+                You have used your <strong>2 Free Listings</strong>. Extra listings are <strong>GH₵ 10.00 / month</strong> to cover storage, hosting, and priority tenant search ranking.
+              </>
+            ) : (
+              <>
+                Your property listing has been successfully uploaded (Free Listing Quota: {agentPropertyCount !== null ? agentPropertyCount + 1 : 1}/2 used) and is currently pending review.
+              </>
+            )}
           </p>
+
+          {isBillableListing && (
+            <div style={{
+              width: '100%',
+              backgroundColor: 'var(--bg-surface-secondary)',
+              border: '1px solid #F59E0B',
+              borderRadius: 'var(--radius-md)',
+              padding: '16px 20px',
+              textAlign: 'left',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              fontSize: '0.85rem'
+            }}>
+              <div style={{ fontWeight: 800, color: '#D97706', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                💳 Direct Mobile Money Payment Details:
+              </div>
+              <div>• <strong>Amount Due:</strong> <span style={{ color: 'var(--primary)', fontWeight: 800 }}>GH₵ 10.00 / month</span></div>
+              <div>• <strong>MTN MoMo / Telecel Cash:</strong> <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>0204940602</span> (HO Rentals)</div>
+              <div>• <strong>Payment Reference:</strong> <span style={{ fontWeight: 700 }}>{user?.name || user?.phone || 'Agent Name'}</span></div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Once sent, tap the WhatsApp button below or call us to activate your listing immediately!
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '12px', width: '100%' }}>
+            {isBillableListing && (
+              <a
+                href={`https://wa.me/233204940602?text=${encodeURIComponent(`Hello HO Rentals, I just uploaded my 3rd+ property listing "${title}" and sent GH₵ 10.00 via MoMo (Reference: ${user?.name || ''}). Please activate my listing.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '12px 20px', fontSize: '0.9rem', fontWeight: 700, backgroundColor: '#25D366', borderColor: '#25D366', color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                💬 WhatsApp Admin to Confirm MoMo Payment
+              </a>
+            )}
             <button
               onClick={() => {
                 setShowSuccessNotice(false);
@@ -581,11 +819,11 @@ export default function UploadPage({
               Upload Another Property
             </button>
             <button
-              onClick={() => router.push(`/agents/${user.id}`)}
-              className="btn btn-primary"
+              onClick={() => router.push(`/dashboard`)}
+              className="btn btn-outline"
               style={{ padding: '12px 20px', fontSize: '0.88rem', flex: '1 1 180px' }}
             >
-              View My Agent Profile
+              Go to Agent Dashboard
             </button>
           </div>
         </div>
@@ -641,30 +879,42 @@ export default function UploadPage({
               Your profile photo, bio, location, and WhatsApp line will be displayed on property cards and agent cards so tenants can verify your identity and contact you directly.
             </p>
 
-            {agentModalError && (
-              <div style={{ backgroundColor: 'var(--danger-light)', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '12px 16px', borderRadius: 'var(--radius-sm)', marginBottom: '16px', fontSize: '0.88rem' }}>
-                {agentModalError}
-              </div>
-            )}
+            <form onSubmit={handleSaveFullAgentProfile} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {agentModalError && (
+                <div style={{ backgroundColor: 'var(--danger-light)', color: 'var(--danger)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem' }}>
+                  {agentModalError}
+                </div>
+              )}
 
-            <form onSubmit={handleSaveFullAgentProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Photo Uploader */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: 'var(--bg-surface-secondary)', padding: '14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', border: '2px solid var(--primary)' }}>
+              {/* Photo upload */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '70px',
+                  height: '70px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '2px solid var(--primary)',
+                  backgroundColor: 'var(--bg-surface-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '2rem',
+                  flexShrink: 0
+                }}>
                   {agentPhotoPreview ? (
                     <img src={agentPhotoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     '👤'
                   )}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>
-                    Agent Profile Photo *
+                <div>
+                  <label htmlFor="agentPhotoUpload" className="btn btn-outline" style={{ fontSize: '0.82rem', padding: '6px 12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <UploadCloud size={14} /> Upload Profile Photo
                   </label>
                   <input
+                    id="agentPhotoUpload"
                     type="file"
                     accept="image/*"
-                    id="modalAgentPhotoInput"
                     style={{ display: 'none' }}
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
@@ -674,16 +924,16 @@ export default function UploadPage({
                       }
                     }}
                   />
-                  <label htmlFor="modalAgentPhotoInput" className="btn btn-secondary" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <UploadCloud size={14} /> {agentPhotoPreview ? 'Change Photo' : 'Select Photo File'}
-                  </label>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Clear professional headshot for trust badge
+                  </div>
                 </div>
               </div>
 
               {/* Bio Input */}
               <div className="form-group">
                 <label htmlFor="agentBioInput" style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Agent Bio / Description *
+                  Short Professional Bio
                 </label>
                 <textarea
                   id="agentBioInput"
@@ -814,16 +1064,24 @@ export default function UploadPage({
                 {user.bio || 'Verified Rental Agent on HO Rentals'}
               </p>
 
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px', padding: '3px 10px', backgroundColor: agentPropertyCount !== null && agentPropertyCount >= 2 ? '#FEF3C7' : '#ECFDF5', border: `1px solid ${agentPropertyCount !== null && agentPropertyCount >= 2 ? '#F59E0B' : '#10B981'}`, borderRadius: '12px', fontSize: '0.76rem', fontWeight: 700, color: agentPropertyCount !== null && agentPropertyCount >= 2 ? '#92400E' : '#065F46' }}>
-                <span>🏷️ Agent Listing Rate:</span>
-                {agentPropertyCount !== null ? (
-                  agentPropertyCount < 2 ? (
-                    <span>First 2 FREE ({agentPropertyCount} of 2 used) — Next listing is FREE</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: agentPropertyCount !== null && agentPropertyCount >= 2 ? '#FEF3C7' : '#ECFDF5', border: `1px solid ${agentPropertyCount !== null && agentPropertyCount >= 2 ? '#F59E0B' : '#10B981'}`, borderRadius: '12px', fontSize: '0.78rem', fontWeight: 700, color: agentPropertyCount !== null && agentPropertyCount >= 2 ? '#92400E' : '#065F46' }}>
+                  <span>🏷️ Listing Quota:</span>
+                  {agentPropertyCount !== null ? (
+                    agentPropertyCount < 2 ? (
+                      <span>Free Tier ({agentPropertyCount} of 2 used) — This upload is 100% FREE</span>
+                    ) : (
+                      <span>3rd+ Property (Free limit filled) — GH₵ 10.00 / month</span>
+                    )
                   ) : (
-                    <span>GH₵10.00 per property listed (Free tier limit reached)</span>
-                  )
-                ) : (
-                  <span>First 2 properties FREE, subsequent listings GH₵10.00 each</span>
+                    <span>First 2 properties FREE, subsequent listings GH₵ 10.00/mo</span>
+                  )}
+                </div>
+
+                {agentPropertyCount !== null && agentPropertyCount >= 2 && (
+                  <div style={{ fontSize: '0.78rem', color: '#B45309', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '6px 12px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                    💡 <strong>Direct Payment:</strong> Send <strong>GH₵ 10.00</strong> via MoMo to <strong>0204940602</strong> after uploading so admin can activate this listing.
+                  </div>
                 )}
               </div>
             </div>
@@ -1436,11 +1694,11 @@ export default function UploadPage({
           >
             {submitting ? (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <Loader className="animate-spin" size={18} /> Uploading files & creating listing...
+                <Loader className="animate-spin" size={18} /> {initialData ? 'Saving changes...' : 'Uploading files & creating listing...'}
               </span>
             ) : (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <Sparkles size={18} /> List Property
+                <Sparkles size={18} /> {initialData ? 'Save Changes' : 'List Property'}
               </span>
             )}
           </button>
@@ -1451,7 +1709,7 @@ export default function UploadPage({
     if (isEmbedded) {
       return (
         <div className="card glass" style={{ padding: '28px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', backgroundColor: 'var(--bg-surface)' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '20px', color: 'var(--text-primary)' }}>List a New Property</h2>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '20px', color: 'var(--text-primary)' }}>{initialData ? 'Edit Property Details' : 'List a New Property'}</h2>
           {formContent}
         </div>
       );

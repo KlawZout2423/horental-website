@@ -121,20 +121,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
 
   // Connect & Audit States
-  const [showConnectModal, setShowConnectModal] = useState(false);
-  const [connectActionType, setConnectActionType] = useState<'call' | 'whatsapp' | null>(null);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
   const [isLoggingContact, setIsLoggingContact] = useState(false);
-
-  // Viewing Appointment states
-  const [showViewingModal, setShowViewingModal] = useState(false);
-  const [viewingDate, setViewingDate] = useState('');
-  const [viewingTimeSlot, setViewingTimeSlot] = useState('Morning (9am - 12pm)');
-  const [viewingName, setViewingName] = useState('');
-  const [viewingPhone, setViewingPhone] = useState('');
-  const [isBookingViewing, setIsBookingViewing] = useState(false);
-  const [viewingSubmitted, setViewingSubmitted] = useState(false);
 
   // Report Listing & Toast states
   const [showReportModal, setShowReportModal] = useState(false);
@@ -171,47 +158,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
     }
   };
 
-  const handleBookViewingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsBookingViewing(true);
-    try {
-      const landlordPhone = property?.contact || '';
-      const formattedDate = viewingDate || 'Next available date';
-      
-      const message = encodeURIComponent(
-        `Hi! I would like to book a physical viewing for "${property?.title}" on ${formattedDate} (${viewingTimeSlot}).\n\nName: ${viewingName}\nPhone: ${viewingPhone}`
-      );
-
-      try {
-        await graphqlRequest(`
-          mutation CreateContactLog($customerName: String!, $customerPhone: String!, $actionType: String!, $propertyId: Int!, $landlordPhone: String!) {
-            createContactLog(customerName: $customerName, customerPhone: $customerPhone, actionType: $actionType, propertyId: $propertyId, landlordPhone: $landlordPhone) {
-              id
-            }
-          }
-        `, {
-          customerName: viewingName,
-          customerPhone: viewingPhone,
-          actionType: 'book_viewing',
-          propertyId: parseInt(id, 10),
-          landlordPhone
-        });
-      } catch (logErr) {
-        console.error('Contact log creation failed:', logErr);
-      }
-
-      setIsBookingViewing(false);
-      setViewingSubmitted(true);
-      if (typeof window !== 'undefined') {
-        window.open(`https://wa.me/233204940602?text=${message}`, '_blank');
-      }
-    } catch (err) {
-      console.error('Booking viewing failed:', err);
-      setIsBookingViewing(false);
-    }
-  };
-
-  const handleConnectClick = async (actionType: 'call' | 'whatsapp') => {
+  const handleConnectClick = async (actionType: 'call' | 'whatsapp' | 'sms') => {
     if (user) {
       setIsLoggingContact(true);
       try {
@@ -235,6 +182,17 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         const cleanPhone = landlordPhone.replace(/[^0-9]/g, '');
         if (actionType === 'call') {
           window.location.href = `tel:${cleanPhone}`;
+        } else if (actionType === 'sms') {
+          const price = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
+          const isAgentListing = property!.owner?.role === 'agent';
+          const rawPhone = property!.contact ? property!.contact.replace(/[^0-9+]/g, '') : '';
+          const targetPhone = isAgentListing && rawPhone ? rawPhone : '+233204940602';
+
+          const msg = isAgentListing
+            ? `Hello Agent ${property!.owner?.name || ''},\n\nI am interested in your property listed on HO Rentals:\n\n📌 ${property!.title}\n📍 ${property!.location}\n💰 ${price}\n🆔 ID: #${property!.id}\n\nI would like to arrange a viewing.`
+            : `Hello HO Rentals,\n\nI am interested in:\n\n📌 ${property!.title}\n📍 ${property!.location}\n💰 ${price}\n🆔 ID: #${property!.id}`;
+
+          window.location.href = `sms:${targetPhone}?body=${encodeURIComponent(msg)}`;
         } else {
           // Agent listings go directly to Agent's WhatsApp, Landlord listings go to HO Rentals
           const price = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
@@ -269,12 +227,19 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         }
       } catch (err: any) {
         console.error('Failed to log contact audit record:', err);
-        // Fallback WhatsApp
+        // Fallback WhatsApp or SMS
         const price2 = `GH₵${property!.price.toLocaleString()} ${getPricePeriodLabel(property!.description, false)}`;
         const isAgentListing2 = property!.owner?.role === 'agent';
         const cleanPhone2 = (property?.contact || '').replace(/[^0-9]/g, '');
 
-        if (isAgentListing2 && cleanPhone2) {
+        if (actionType === 'call') {
+          window.location.href = `tel:${cleanPhone2}`;
+        } else if (actionType === 'sms') {
+          const rawPhone = property?.contact ? property.contact.replace(/[^0-9+]/g, '') : '';
+          const targetPhone = isAgentListing2 && rawPhone ? rawPhone : '+233204940602';
+          const msg2 = `Hello, I am interested in ${property?.title} (GH₵${property?.price}) on HO Rentals.`;
+          window.location.href = `sms:${targetPhone}?body=${encodeURIComponent(msg2)}`;
+        } else if (isAgentListing2 && cleanPhone2) {
           const formattedAgentWa = cleanPhone2.startsWith('0')
             ? '233' + cleanPhone2.slice(1)
             : cleanPhone2.startsWith('233')
@@ -308,108 +273,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
     }
   };
 
-  const handleConnectSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!property) return;
-    setIsLoggingContact(true);
-    try {
-      const landlordPhone = property.contact || '';
-      const query = `
-        mutation CreateContactLog($customerName: String!, $customerPhone: String!, $actionType: String!, $propertyId: Int!, $landlordPhone: String!) {
-          createContactLog(customerName: $customerName, customerPhone: $customerPhone, actionType: $actionType, propertyId: $propertyId, landlordPhone: $landlordPhone) {
-            id
-          }
-        }
-      `;
-      
-      await graphqlRequest(query, {
-        customerName,
-        customerPhone,
-        actionType: connectActionType,
-        propertyId: parseInt(property.id, 10),
-        landlordPhone
-      });
 
-      setShowConnectModal(false);
-
-      const cleanPhone = landlordPhone.replace(/[^0-9]/g, '');
-      if (connectActionType === 'call') {
-        window.location.href = `tel:${cleanPhone}`;
-      } else {
-        const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
-        const isAgentListing = property.owner?.role === 'agent';
-
-        if (isAgentListing && cleanPhone) {
-          const formattedAgentWa = cleanPhone.startsWith('0')
-            ? '233' + cleanPhone.slice(1)
-            : cleanPhone.startsWith('233')
-              ? cleanPhone
-              : '233' + cleanPhone;
-
-          const msg = encodeURIComponent(
-            `Hello Agent ${property.owner?.name || ''},\n\nI am interested in your property listed on HO Rentals:\n\n` +
-            `📌 *${property.title}*\n` +
-            `📍 Location: ${property.location}\n` +
-            `💰 Price: ${price}\n` +
-            `🆔 Listing ID: #${property.id}\n\n` +
-            `I would like to arrange a viewing.`
-          );
-          window.open(`https://wa.me/${formattedAgentWa}?text=${msg}`, '_blank');
-        } else {
-          const msg = encodeURIComponent(
-            `Hello HO Rentals,\n\nI am interested in the following property listed on your platform:\n\n` +
-            `📌 *${property.title}*\n` +
-            `📍 Location: ${property.location}\n` +
-            `💰 Price: ${price}\n` +
-            `🆔 Listing ID: #${property.id}`
-          );
-          window.open(`https://wa.me/233204940602?text=${msg}`, '_blank');
-        }
-      }
-
-      setCustomerName('');
-      setCustomerPhone('');
-    } catch (err: any) {
-      console.error('Failed to log contact audit record:', err);
-      setShowConnectModal(false);
-      const cleanPhone = property.contact.replace(/[^0-9]/g, '');
-      if (connectActionType === 'call') {
-        window.location.href = `tel:${cleanPhone}`;
-      } else {
-        const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
-        const isAgentListing = property.owner?.role === 'agent';
-
-        if (isAgentListing && cleanPhone) {
-          const formattedAgentWa = cleanPhone.startsWith('0')
-            ? '233' + cleanPhone.slice(1)
-            : cleanPhone.startsWith('233')
-              ? cleanPhone
-              : '233' + cleanPhone;
-
-          const msg = encodeURIComponent(
-            `Hello Agent ${property.owner?.name || ''},\n\nI am interested in your property listed on HO Rentals:\n\n` +
-            `📌 *${property.title}*\n` +
-            `📍 Location: ${property.location}\n` +
-            `💰 Price: ${price}\n` +
-            `🆔 Listing ID: #${property.id}\n\n` +
-            `I would like to arrange a viewing.`
-          );
-          window.open(`https://wa.me/${formattedAgentWa}?text=${msg}`, '_blank');
-        } else {
-          const msg = encodeURIComponent(
-            `Hello HO Rentals,\n\nI am interested in:\n\n` +
-            `📌 *${property.title}*\n` +
-            `📍 ${property.location}\n` +
-            `💰 ${price}\n` +
-            `🆔 ID: #${property.id}`
-          );
-          window.open(`https://wa.me/233204940602?text=${msg}`, '_blank');
-        }
-      }
-    } finally {
-      setIsLoggingContact(false);
-    }
-  };
 
   useEffect(() => {
     async function loadPropertyDetails() {
@@ -931,27 +795,16 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     className="btn btn-secondary" 
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
-                    <MessageSquare size={16} /> WhatsApp HO Rentals
+                    <MessageSquare size={16} /> {property.owner?.role === 'agent' ? 'WhatsApp Agent' : 'WhatsApp HO Rentals'}
                   </button>
 
-                  <a
-                    href={(() => {
-                      const price = `GH₵${property.price.toLocaleString()} ${getPricePeriodLabel(property.description, false)}`;
-                      const isAgentListing = property.owner?.role === 'agent';
-                      const rawPhone = property.contact ? property.contact.replace(/[^0-9+]/g, '') : '';
-                      const targetPhone = isAgentListing && rawPhone ? rawPhone : '+233241234567';
-
-                      const msg = isAgentListing
-                        ? `Hello Agent ${property.owner?.name || ''},\n\nI am interested in your property listed on HO Rentals:\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n🆔 ID: #${property.id}\n\nI would like to arrange a viewing.`
-                        : `Hello HO Rentals,\n\nI am interested in:\n\n📌 ${property.title}\n📍 ${property.location}\n💰 ${price}\n🆔 ID: #${property.id}`;
-
-                      return `sms:${targetPhone}?body=${encodeURIComponent(msg)}`;
-                    })()}
+                  <button
+                    onClick={() => handleConnectClick('sms')}
                     className="btn btn-outline"
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
                     <MessageSquare size={16} /> {property.owner?.role === 'agent' ? 'SMS Agent' : 'SMS HO Rentals'}
-                  </a>
+                  </button>
                 </div>
               </>
             );
@@ -960,108 +813,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
       </div>
 
 
-      {showConnectModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(8px)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-lg)',
-            width: '100%',
-            maxWidth: '440px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            padding: '28px',
-            boxShadow: 'var(--shadow-lg)',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px'
-          }}>
-            <button
-              onClick={() => setShowConnectModal(false)}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                background: 'transparent',
-                border: 'none',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                color: 'var(--text-muted)'
-              }}
-            >
-              &times;
-            </button>
 
-            <div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>
-                Connect with Landlord
-              </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                To connect with the landlord via {connectActionType === 'call' ? 'phone call' : 'WhatsApp'}, please enter your details. We will log your request and connect you.
-              </p>
-            </div>
-
-            <form onSubmit={handleConnectSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Your Name</label>
-                <input
-                  id="connect-customer-name"
-                  name="customerName"
-                  type="text"
-                  placeholder="e.g. John Doe"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  required
-                  className="form-control"
-                  style={{ padding: '12px' }}
-                  autoComplete="name"
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Your Phone Number</label>
-                <input
-                  id="connect-customer-phone"
-                  name="customerPhone"
-                  type="tel"
-                  placeholder="e.g. 0241234567"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(formatGhanaPhone(e.target.value))}
-                  required
-                  maxLength={10}
-                  className="form-control"
-                  style={{ padding: '12px' }}
-                  autoComplete="tel"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoggingContact}
-                className="btn btn-primary"
-                style={{ width: '100%', padding: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '8px' }}
-              >
-                {isLoggingContact ? 'Connecting...' : `Proceed to ${connectActionType === 'call' ? 'Call' : 'WhatsApp'}`}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
 
 

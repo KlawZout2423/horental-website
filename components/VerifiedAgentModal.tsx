@@ -23,7 +23,9 @@ export default function VerifiedAgentModal({
 
   useEffect(() => {
     if (typeof window !== 'undefined' && isOpen) {
-      const isAlreadyAgreed = sessionStorage.getItem('agreed_agent_disclaimer') === 'true';
+      const isAlreadyAgreed = 
+        localStorage.getItem('agreed_agent_disclaimer') === 'true' || 
+        sessionStorage.getItem('agreed_agent_disclaimer') === 'true';
       setHasAgreed(isAlreadyAgreed);
     }
   }, [isOpen]);
@@ -32,6 +34,7 @@ export default function VerifiedAgentModal({
 
   const handleConfirm = () => {
     if (typeof window !== 'undefined') {
+      localStorage.setItem('agreed_agent_disclaimer', 'true');
       sessionStorage.setItem('agreed_agent_disclaimer', 'true');
     }
     if (onAccept) {

@@ -92,6 +92,7 @@ export default function RegisterForm() {
 
     try {
       const generatedEmail = `${formattedPhone}@horentals.com`;
+      const targetDestination = role === 'agent' ? '/upload' : redirectUrl;
 
       await register({
         name: sanitizedName,
@@ -99,14 +100,7 @@ export default function RegisterForm() {
         phone: formattedPhone,
         password,
         role,
-      });
-
-      // Redirect agents to upload page to confirm their role works immediately
-      if (role === 'agent') {
-        router.push('/upload');
-      } else {
-        router.push(redirectUrl);
-      }
+      }, targetDestination);
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Failed to create your account. Please try again.';
       setError(errMsg);
@@ -184,6 +178,14 @@ export default function RegisterForm() {
                 🏢 Rental Agent
               </button>
             </div>
+            {role === 'agent' && (
+              <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                Want a verified badge with Ghana Card ID?{' '}
+                <Link href="/register-agent" style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                  Apply via Full Agent Registration &rarr;
+                </Link>
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -209,9 +211,8 @@ export default function RegisterForm() {
                 type="tel"
                 placeholder="24 123 4567"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+                onChange={(e) => setPhone(e.target.value)}
                 required
-                maxLength={10}
                 autoComplete="tel"
                 className={`form-control ${styles.phoneInput}`}
               />
@@ -228,7 +229,7 @@ export default function RegisterForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 autoComplete="new-password"
                 className={`form-control ${styles.passwordInput}`}
               />
@@ -335,11 +336,11 @@ export default function RegisterForm() {
           <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
           <GoogleLogin
             onSuccess={(credentialResponse) => {
               if (credentialResponse.credential) {
-                googleLogin(credentialResponse.credential).catch((err) => {
+                googleLogin(credentialResponse.credential, redirectUrl).catch((err) => {
                   setError(err.message || 'Google login failed');
                 });
               }
@@ -351,7 +352,7 @@ export default function RegisterForm() {
             shape="rectangular"
             theme="outline"
             text="continue_with"
-            width="320"
+            width="100%"
           />
         </div>
 

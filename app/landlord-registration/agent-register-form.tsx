@@ -284,7 +284,7 @@ export default function AgentRegisterForm() {
           phone: formattedPhone,
           password,
           role: 'agent',
-        });
+        }, 'none');
       }
 
       // Update Agent Profile with detailed credentials

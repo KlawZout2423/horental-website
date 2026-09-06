@@ -12,12 +12,20 @@ const USER_SAFE_SELECT = {
   id: true,
   name: true,
   email: true,
+  phone: true,
   // password intentionally excluded from safe select — never expose hash over API
   role: true,
-  phone: true,
-  mustChangePassword: true,
-  createdAt: true,
+  bio: true,
+  profileImage: true,
+  agentLocation: true,
+  agentWhatsapp: true,
+  agencyName: true,
+  experienceYears: true,
+  licenseNumber: true,
+  subscriptionPlan: true,
+  isProfileComplete: true,
   verificationStatus: true,
+  mustChangePassword: true,
 };
 
 const PROPERTY_SAFE_SELECT = {
@@ -445,11 +453,26 @@ export const resolvers = {
       if (!user) throw new Error('Not authenticated');
       const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { id: true, role: true }
+        select: { id: true, role: true, phone: true }
       });
-      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+      if (!dbUser) throw new Error('User not found');
 
+      // Admin gets all contact audit logs across the platform
+      if (dbUser.role === 'admin') {
+        return prisma.contactLog.findMany({
+          include: { property: true },
+          orderBy: { createdAt: 'desc' }
+        });
+      }
+
+      // Agents and landlords get lead contacts for properties they own or matching their contact phone
       return prisma.contactLog.findMany({
+        where: {
+          OR: [
+            { property: { ownerId: dbUser.id } },
+            ...(dbUser.phone ? [{ landlordPhone: dbUser.phone }] : [])
+          ]
+        },
         include: { property: true },
         orderBy: { createdAt: 'desc' }
       });
@@ -503,7 +526,17 @@ export const resolvers = {
       });
       if (dbUser?.role !== 'admin') throw new Error('Not authorized');
 
-      return [];
+      return prisma.report.findMany({
+        include: {
+          property: {
+            select: { id: true, title: true, location: true, price: true, imageUrl: true }
+          },
+          reporter: {
+            select: { id: true, name: true, email: true, phone: true, role: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
     },
 
     verificationRequests: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
@@ -586,7 +619,14 @@ export const resolvers = {
 
       // Check if this phone number is already registered
       if (formattedPhone) {
-        const existingByPhone = await prisma.user.findFirst({ where: { phone: formattedPhone } });
+        const existingByPhone = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { phone: formattedPhone },
+              { email: `${formattedPhone}@horentals.com` },
+            ],
+          },
+        });
         if (existingByPhone) {
           throw new Error(`An account with the phone number (${formattedPhone}) already exists. Please log in instead.`);
         }
@@ -596,7 +636,12 @@ export const resolvers = {
       if (input.email) {
         const existingByEmail = await prisma.user.findUnique({ where: { email: input.email } });
         if (existingByEmail) {
-          throw new Error(`An account with the email address (${input.email}) already exists. Please log in instead.`);
+          if (input.email.endsWith('@horentals.com')) {
+            const phonePart = input.email.replace('@horentals.com', '');
+            throw new Error(`An account with the phone number (${phonePart}) already exists. Please log in instead.`);
+          } else {
+            throw new Error(`An account with the email address (${input.email}) already exists. Please log in instead.`);
+          }
         }
       }
 
@@ -624,9 +669,13 @@ export const resolvers = {
         if (err?.code === 'P2002') {
           const target = err?.meta?.target;
           if (Array.isArray(target) && target.includes('email')) {
+            if (input.email && input.email.endsWith('@horentals.com')) {
+              const phonePart = input.email.replace('@horentals.com', '');
+              throw new Error(`An account with the phone number (${phonePart}) already exists. Please log in instead.`);
+            }
             throw new Error(`An account with the email address (${input.email}) already exists. Please log in instead.`);
           }
-          throw new Error('An account with this phone number or email already exists. Please log in instead.');
+          throw new Error('An account with this phone number already exists. Please log in instead.');
         }
         throw err;
       }
@@ -634,18 +683,33 @@ export const resolvers = {
 
     login: async (_: any, { email, password }: any) => {
       const cleanInput = (email || '').trim();
+      const strippedPhone = cleanInput.replace('@horentals.com', '').replace(/[^0-9]/g, '');
+      const localPhone = strippedPhone.startsWith('233') && strippedPhone.length > 9
+        ? '0' + strippedPhone.slice(3)
+        : (strippedPhone.length === 9 && !strippedPhone.startsWith('0') ? '0' + strippedPhone : strippedPhone);
+
+      // Search across email, direct phone, normalized local phone, and synthetic email formats
+      const searchCriteria: any[] = [
+        { email: cleanInput },
+        { phone: cleanInput },
+      ];
+
+      if (localPhone) {
+        searchCriteria.push({ phone: localPhone });
+        searchCriteria.push({ email: `${localPhone}@horentals.com` });
+      }
+      if (cleanInput.includes('@')) {
+        const prefix = cleanInput.split('@')[0];
+        searchCriteria.push({ phone: prefix });
+      }
 
       // Fetch the raw record (with password hash) for bcrypt comparison only
-      let rawUser = await prisma.user.findUnique({
-        where: { email: cleanInput },
+      const rawUser = await prisma.user.findFirst({
+        where: {
+          OR: searchCriteria,
+        },
         select: { id: true, password: true },
       });
-      if (!rawUser) {
-        rawUser = await prisma.user.findFirst({
-          where: { phone: cleanInput },
-          select: { id: true, password: true },
-        });
-      }
       if (!rawUser) throw new Error('Invalid credentials');
       const valid = await bcrypt.compare(password, rawUser.password);
       if (!valid) throw new Error('Invalid credentials');
@@ -1263,7 +1327,19 @@ export const resolvers = {
       const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
       if (adminUser?.role !== 'admin') throw new Error('Not authorized');
 
-      return { id: typeof id === 'string' ? parseInt(id, 10) : id, status };
+      const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+
+      const updated = await prisma.report.update({
+        where: { id: parsedId },
+        data: { status: sanitizeInput(status) },
+        include: {
+          property: { select: { id: true, title: true, location: true, price: true, imageUrl: true } },
+          reporter: { select: { id: true, name: true, email: true, phone: true, role: true } }
+        }
+      });
+
+      createAuditLog('REPORT_STATUS_UPDATED', `Admin ${adminUser!.email} updated report #${parsedId} status to ${status}`, adminUser!.email);
+      return updated;
     },
 
     deleteReport: async (_: any, { id }: { id: any }, { user }: { user: { id: number } | null }) => {
@@ -1271,25 +1347,52 @@ export const resolvers = {
       const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
       if (adminUser?.role !== 'admin') throw new Error('Not authorized');
 
-      return { id: typeof id === 'string' ? parseInt(id, 10) : id };
+      const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+
+      const deleted = await prisma.report.delete({
+        where: { id: parsedId },
+      });
+
+      createAuditLog('REPORT_DELETED', `Admin ${adminUser!.email} deleted report #${parsedId}`, adminUser!.email);
+      return deleted;
     },
 
-    updateAgentProfile: async (_: any, { bio, profileImage, agentLocation, agentWhatsapp }: any, { user }: { user: { id: number } | null }) => {
+    updateAgentProfile: async (_: any, { bio, profileImage, agentLocation, agentWhatsapp, agencyName, experienceYears, licenseNumber, subscriptionPlan, isProfileComplete }: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
       const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
       if (dbUser?.role !== 'agent' && dbUser?.role !== 'landlord' && dbUser?.role !== 'admin') throw new Error('Only agents can update their profile.');
-      // Only validate bio if it was explicitly passed and is empty
-      if (bio !== undefined && bio !== null && !bio.trim()) throw new Error('Bio cannot be blank if provided.');
 
       const updated = await prisma.user.update({
         where: { id: user.id },
         data: {
-          bio: sanitizeInput(bio.trim()),
-          profileImage: profileImage?.trim() || null,
-          agentLocation: agentLocation ? sanitizeInput(agentLocation.trim()) : null,
-          agentWhatsapp: agentWhatsapp ? formatGhanaPhone(agentWhatsapp.trim()) : null,
+          ...(bio !== undefined ? { bio: bio ? sanitizeInput(bio.trim()) : null } : {}),
+          ...(profileImage !== undefined ? { profileImage: profileImage?.trim() || null } : {}),
+          ...(agentLocation !== undefined ? { agentLocation: agentLocation ? sanitizeInput(agentLocation.trim()) : null } : {}),
+          ...(agentWhatsapp !== undefined ? { agentWhatsapp: agentWhatsapp ? formatGhanaPhone(agentWhatsapp.trim()) : null } : {}),
+          ...(agencyName !== undefined ? { agencyName: agencyName ? sanitizeInput(agencyName.trim()) : null } : {}),
+          ...(experienceYears !== undefined ? { experienceYears: experienceYears ? sanitizeInput(experienceYears.trim()) : null } : {}),
+          ...(licenseNumber !== undefined ? { licenseNumber: licenseNumber ? sanitizeInput(licenseNumber.trim()) : null } : {}),
+          ...(subscriptionPlan !== undefined ? { subscriptionPlan: subscriptionPlan ? sanitizeInput(subscriptionPlan.trim()) : null } : {}),
+          isProfileComplete: isProfileComplete !== undefined ? Boolean(isProfileComplete) : true,
         },
-        select: { id: true, name: true, email: true, role: true, phone: true, bio: true, profileImage: true, agentLocation: true, agentWhatsapp: true, mustChangePassword: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          bio: true,
+          profileImage: true,
+          agentLocation: true,
+          agentWhatsapp: true,
+          agencyName: true,
+          experienceYears: true,
+          licenseNumber: true,
+          subscriptionPlan: true,
+          isProfileComplete: true,
+          verificationStatus: true,
+          mustChangePassword: true,
+        },
       });
 
       createAuditLog('AGENT_PROFILE_UPDATED', `Agent ${dbUser.name} (${dbUser.email}) updated their profile`, dbUser.email);
@@ -1314,6 +1417,21 @@ export const resolvers = {
 
     submitVerificationRequest: async (_: any, { idType, idNumber, documentUrls }: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
+
+      // Prevent duplicate verification requests
+      const existing = await prisma.verificationRequest.findFirst({
+        where: {
+          userId: user.id,
+          status: { in: ['pending', 'verified'] }
+        }
+      });
+      if (existing) {
+        if (existing.status === 'verified') {
+          throw new Error('Your account is already verified. No further action is needed.');
+        }
+        throw new Error('You already have a verification request pending review. Please wait for the admin to review your submission.');
+      }
+
       const req = await prisma.verificationRequest.create({
         data: {
           userId: user.id,
@@ -1476,6 +1594,33 @@ export const resolvers = {
         console.error('Error marking all notifications read:', e);
         return false;
       }
+    },
+
+    createReport: async (_: any, { propertyId, reason, details }: { propertyId: number; reason: string; details?: string }, { user }: { user: { id: number } | null }) => {
+      const pId = typeof propertyId === 'string' ? parseInt(propertyId, 10) : Number(propertyId);
+
+      // Verify property exists
+      const property = await prisma.property.findUnique({ where: { id: pId }, select: { id: true } });
+      if (!property) throw new Error('Property not found.');
+
+      if (!reason?.trim()) throw new Error('A reason for the report is required.');
+
+      const report = await prisma.report.create({
+        data: {
+          propertyId: pId,
+          reporterId: user ? user.id : null,
+          reason: sanitizeInput(reason.trim()),
+          details: details ? sanitizeInput(details.trim()) : null,
+          status: 'pending',
+        },
+        include: {
+          property: { select: { id: true, title: true, location: true, price: true, imageUrl: true } },
+          reporter: { select: { id: true, name: true, email: true, phone: true, role: true } }
+        }
+      });
+
+      createAuditLog('PROPERTY_REPORTED', `Property #${pId} was reported: "${reason}"`, user ? String(user.id) : null);
+      return report;
     },
   },
 

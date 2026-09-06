@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
 import { Eye, EyeOff, Loader, LogIn, ArrowLeft } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
+import { formatGhanaPhone, isValidGhanaPhone } from '../../lib/types';
 import styles from './login.module.css';
 
 export default function LoginForm() {
@@ -26,8 +27,10 @@ export default function LoginForm() {
     if (user) {
       if (user.role === 'admin') {
         router.push('/admin');
-      } else {
+      } else if (redirectUrl && redirectUrl !== '/login' && redirectUrl !== '/register') {
         router.push(redirectUrl);
+      } else {
+        router.push('/');
       }
     }
   }, [user, router, redirectUrl]);
@@ -39,20 +42,20 @@ export default function LoginForm() {
 
     try {
       const rawInput = phone.trim();
-      let emailOrPhone = rawInput;
+      let identifier = rawInput;
       
       if (rawInput.toLowerCase() === 'admin') {
-        emailOrPhone = 'admin@horentals.com';
+        identifier = 'admin@horentals.com';
       } else if (rawInput.includes('@')) {
-        emailOrPhone = rawInput;
+        identifier = rawInput;
       } else {
-        const cleanedPhone = rawInput.replace(/[^0-9]/g, '');
-        if (cleanedPhone.length !== 10) {
-          throw new Error('Please enter a valid 10-digit phone number (e.g. 0241234567).');
+        const formattedPhone = formatGhanaPhone(rawInput);
+        if (!isValidGhanaPhone(formattedPhone)) {
+          throw new Error('Please enter a valid Ghanaian phone number (e.g. 024 123 4567).');
         }
-        emailOrPhone = `${cleanedPhone}@horentals.com`;
+        identifier = formattedPhone;
       }
-      await login(emailOrPhone, password);
+      await login(identifier, password, redirectUrl);
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Failed to authenticate. Please check your credentials.';
       setError(errMsg);
@@ -160,11 +163,11 @@ export default function LoginForm() {
           <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
           <GoogleLogin
             onSuccess={(credentialResponse) => {
               if (credentialResponse.credential) {
-                googleLogin(credentialResponse.credential).catch((err) => {
+                googleLogin(credentialResponse.credential, redirectUrl).catch((err) => {
                   setError(err.message || 'Google login failed');
                 });
               }
@@ -176,7 +179,7 @@ export default function LoginForm() {
             shape="rectangular"
             theme="outline"
             text="continue_with"
-            width="320"
+            width="100%"
           />
         </div>
 

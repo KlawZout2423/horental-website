@@ -8,6 +8,11 @@ export interface User {
   profileImage?: string;
   agentLocation?: string;
   agentWhatsapp?: string;
+  agencyName?: string;
+  experienceYears?: string;
+  licenseNumber?: string;
+  subscriptionPlan?: string;
+  isProfileComplete?: boolean;
   verificationStatus?: string;
   mustChangePassword?: boolean;
 }
@@ -110,6 +115,9 @@ export function formatGhanaPhone(phone?: string): string {
   }
   
   const digitsOnly = cleaned.replace(/\D/g, '');
+  if (digitsOnly.length === 9 && !digitsOnly.startsWith('0')) {
+    return '0' + digitsOnly;
+  }
   return digitsOnly.slice(0, 10);
 }
 

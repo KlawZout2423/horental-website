@@ -335,14 +335,16 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
                     </div>
                   )}
 
-                  {/* Heart save button */}
-                  <button
-                    onClick={(e) => handleToggleSave(e, p.id)}
-                    className={propStyles.saveButton}
-                    aria-label="Save listing"
-                  >
-                    <Heart size={16} fill={isSaved ? 'var(--primary)' : 'none'} color={isSaved ? 'var(--primary)' : 'currentColor'} />
-                  </button>
+                  {/* Heart save button — hidden on own profile */}
+                  {!isOwnProfile && (
+                    <button
+                      onClick={(e) => handleToggleSave(e, p.id)}
+                      className={propStyles.saveButton}
+                      aria-label="Save listing"
+                    >
+                      <Heart size={16} fill={isSaved ? 'var(--primary)' : 'none'} color={isSaved ? 'var(--primary)' : 'currentColor'} />
+                    </button>
+                  )}
                 </div>
 
                 <div className={propStyles.cardContent}>

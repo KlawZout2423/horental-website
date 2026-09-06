@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Lock, ShieldAlert, Loader, CheckCircle2, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { graphqlRequest, CHANGE_PASSWORD_MUTATION } from '../lib/graphql';
 
 export default function MustChangePasswordModal() {
   const { user, updateUser } = useAuth();
+  const router = useRouter();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -39,6 +41,10 @@ export default function MustChangePasswordModal() {
       setSuccess(true);
       setTimeout(() => {
         updateUser({ ...user, mustChangePassword: false });
+        // Redirect agents without a profile to /agent/setup
+        if (user.role === 'agent' && !user.bio) {
+          router.push('/agent/setup');
+        }
       }, 1500);
     } catch (err: any) {
       setError(err.message || 'Failed to update password. Please try again.');
@@ -251,7 +257,10 @@ export default function MustChangePasswordModal() {
               Password Changed!
             </h3>
             <p style={{ fontSize: '0.88rem', color: '#64748B', margin: 0 }}>
-              Your password has been updated. Redirecting you to your account...
+              Your password has been updated.
+              {user?.role === 'agent' && !user?.bio
+                ? ' Setting up your agent profile next…'
+                : ' Redirecting you to your account…'}
             </p>
           </div>
         )}

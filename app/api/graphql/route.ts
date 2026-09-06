@@ -56,3 +56,6 @@ export async function POST(request: NextRequest) {
 }
 
 export const dynamic = 'force-dynamic';
+// Fresh Prisma client trigger
+export const revalidate = 0;
+

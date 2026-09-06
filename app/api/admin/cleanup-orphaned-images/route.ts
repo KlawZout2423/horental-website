@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
 import prisma from '../../../../lib/prisma';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../../../../lib/env';
 
 // Automatically load Cloudinary configuration from process.env (CLOUDINARY_URL)
 cloudinary.config();
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const JWT_SECRET = process.env.JWT_SECRET || 'horentals-super-secret-jwt-key-2026';
+      const JWT_SECRET = getJwtSecret();
       const decoded = jwt.verify(authCookie, JWT_SECRET) as { id: number };
       
       const dbUser = await prisma.user.findUnique({
@@ -35,18 +36,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized. Admin session required.' }, { status: 401 });
     }
 
-    // 2. Fetch all active image URLs from database (Properties, Gallery, Company Logos)
-    const properties = await prisma.property.findMany({
-      select: { imageUrl: true },
-    });
-
-    const propertyImages = await prisma.propertyImage.findMany({
-      select: { url: true },
-    });
-
-    const companies = await prisma.company.findMany({
-      select: { logoUrl: true },
-    });
+    // 2. Fetch all active image URLs from database (Properties, Gallery, Company Logos, User Avatars, Landlord Submissions, ID Docs)
+    const [properties, propertyImages, companies, users, landlordRegistrations, verificationRequests] = await Promise.all([
+      prisma.property.findMany({ select: { imageUrl: true } }),
+      prisma.propertyImage.findMany({ select: { url: true } }),
+      prisma.company.findMany({ select: { logoUrl: true } }),
+      prisma.user.findMany({ select: { profileImage: true } }),
+      prisma.landlordRegistration.findMany({ select: { photos: true } }),
+      prisma.verificationRequest.findMany({ select: { documentUrls: true } }),
+    ]);
 
     const activeUrls = new Set<string>();
 
@@ -60,6 +58,26 @@ export async function POST(req: NextRequest) {
 
     companies.forEach((c) => {
       if (c.logoUrl && c.logoUrl.trim()) activeUrls.add(c.logoUrl.trim());
+    });
+
+    users.forEach((u) => {
+      if (u.profileImage && u.profileImage.trim()) activeUrls.add(u.profileImage.trim());
+    });
+
+    landlordRegistrations.forEach((lr) => {
+      if (Array.isArray(lr.photos)) {
+        lr.photos.forEach((photo) => {
+          if (photo && photo.trim()) activeUrls.add(photo.trim());
+        });
+      }
+    });
+
+    verificationRequests.forEach((vr) => {
+      if (Array.isArray(vr.documentUrls)) {
+        vr.documentUrls.forEach((docUrl) => {
+          if (docUrl && docUrl.trim()) activeUrls.add(docUrl.trim());
+        });
+      }
     });
 
     // Helper: extract Cloudinary public_id from secure_url
