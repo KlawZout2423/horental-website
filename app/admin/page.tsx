@@ -58,7 +58,10 @@ interface ContactLogItem {
   property?: {
     id: string;
     title: string;
+    type?: string;
+    price?: number;
     location: string;
+    imageUrl?: string;
   };
 }
 
@@ -2461,7 +2464,25 @@ export default function AdminPage() {
                                 </td>
                                 <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
                                 <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                  {log.property ? log.property.title : 'N/A'}
+                                  {log.property ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        {log.property.type === 'Furnitures' && <span style={{ fontSize: '0.7rem', padding: '1px 5px', borderRadius: '4px', background: '#FEF3C7', color: '#92400E', fontWeight: 700 }}>📦 Furniture</span>}
+                                        {log.property.type === 'Lands' && <span style={{ fontSize: '0.7rem', padding: '1px 5px', borderRadius: '4px', background: '#ECFDF5', color: '#065F46', fontWeight: 700 }}>📍 Land</span>}
+                                        {log.property.type && log.property.type !== 'Furnitures' && log.property.type !== 'Lands' && (
+                                          <span style={{ fontSize: '0.7rem', padding: '1px 5px', borderRadius: '4px', background: '#EFF6FF', color: '#1E40AF', fontWeight: 700 }}>🏠 {log.property.type}</span>
+                                        )}
+                                        <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
+                                          {log.property.title}
+                                        </Link>
+                                      </div>
+                                      {log.property.price !== undefined && log.property.price !== null && (
+                                        <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700 }}>
+                                          GH₵{log.property.price.toLocaleString()} • {log.property.location}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : 'N/A'}
                                 </td>
                                 <td style={{ textAlign: 'center' }}>
                                   <button
@@ -2526,13 +2547,27 @@ export default function AdminPage() {
                             </div>
                             
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', paddingLeft: '28px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)', gap: '8px' }}>
-                                <span style={{ flexShrink: 0 }}>🏢 Property:</span>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '0.82rem', color: 'var(--text-secondary)', gap: '8px' }}>
+                                <span style={{ flexShrink: 0 }}>🏢 Item / Property:</span>
                                 <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right', wordBreak: 'break-word' }}>
                                   {log.property ? (
-                                    <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
-                                      {log.property.title}
-                                    </Link>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                        {log.property.type === 'Furnitures' && <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '4px', background: '#FEF3C7', color: '#92400E', fontWeight: 700 }}>📦 Furniture</span>}
+                                        {log.property.type === 'Lands' && <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '4px', background: '#ECFDF5', color: '#065F46', fontWeight: 700 }}>📍 Land</span>}
+                                        {log.property.type && log.property.type !== 'Furnitures' && log.property.type !== 'Lands' && (
+                                          <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '4px', background: '#EFF6FF', color: '#1E40AF', fontWeight: 700 }}>🏠 {log.property.type}</span>
+                                        )}
+                                        <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
+                                          {log.property.title}
+                                        </Link>
+                                      </div>
+                                      {log.property.price !== undefined && log.property.price !== null && (
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>
+                                          GH₵{log.property.price.toLocaleString()}
+                                        </span>
+                                      )}
+                                    </div>
                                   ) : 'N/A'}
                                 </span>
                               </div>

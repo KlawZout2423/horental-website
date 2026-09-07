@@ -1198,14 +1198,14 @@ export const resolvers = {
       utmContent?: string;
       referrer?: string;
     }, { user }: { user: { id: number } | null }) => {
-      // Server-side safety check: Never record traffic for admin accounts
+      // Server-side safety check: Never record traffic for internal accounts (admin, agent, landlord)
       if (user) {
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
           select: { role: true },
         });
-        if (dbUser?.role === 'admin') {
-          return true; // Skip recording admin visits
+        if (dbUser?.role === 'admin' || dbUser?.role === 'agent' || dbUser?.role === 'landlord') {
+          return true; // Skip recording staff/agent visits so only real customer views are counted
         }
       }
 

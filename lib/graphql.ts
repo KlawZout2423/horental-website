@@ -490,7 +490,10 @@ export const GET_CONTACT_LOGS = `
       property {
         id
         title
+        type
+        price
         location
+        imageUrl
       }
     }
   }

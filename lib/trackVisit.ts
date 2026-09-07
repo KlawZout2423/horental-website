@@ -69,7 +69,7 @@ export function buildTrackingUrl(
 export function trackVisit(path: string, storageKey: string) {
   if (typeof window === 'undefined') return;
 
-  // Skip tracking for admin users — read role from user_data cookie
+  // Skip tracking for internal accounts (admin, agent, landlord) — only track real prospective customers
   try {
     const match = document.cookie
       .split('; ')
@@ -77,7 +77,9 @@ export function trackVisit(path: string, storageKey: string) {
     if (match) {
       const raw = decodeURIComponent(match.split('=').slice(1).join('='));
       const parsed = JSON.parse(raw);
-      if (parsed?.role === 'admin') return; // admin visit — do not count
+      if (parsed?.role === 'admin' || parsed?.role === 'agent' || parsed?.role === 'landlord') {
+        return; // Internal staff/agent visit — do not inflate real customer traffic counts
+      }
     }
   } catch {
     // cookie unreadable — proceed normally
