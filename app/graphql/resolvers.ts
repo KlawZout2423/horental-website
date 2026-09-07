@@ -1196,7 +1196,18 @@ export const resolvers = {
       utmCampaign?: string;
       utmContent?: string;
       referrer?: string;
-    }) => {
+    }, { user }: { user: { id: number } | null }) => {
+      // Server-side safety check: Never record traffic for admin accounts
+      if (user) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { role: true },
+        });
+        if (dbUser?.role === 'admin') {
+          return true; // Skip recording admin visits
+        }
+      }
+
       await prisma.pageVisit.create({
         data: {
           path,
