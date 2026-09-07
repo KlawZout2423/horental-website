@@ -6,6 +6,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import SupportFAB from "../components/SupportFAB";
 import MustChangePasswordModal from "../components/MustChangePasswordModal";
+import RequirePhoneModal from "../components/RequirePhoneModal";
 import PwaInstallPrompt from "../components/PwaInstallPrompt";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import "./globals.css";
@@ -91,6 +92,7 @@ export default function RootLayout({
         <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "519451721356-ilcn2flc6ue3rqj9npgraevm8csg5uhc.apps.googleusercontent.com"}>
           <AuthProvider>
             <MustChangePasswordModal />
+            <RequirePhoneModal />
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
               <Navbar />
               <main style={{ flexGrow: 1, paddingTop: '70px' }}>

@@ -1406,6 +1406,43 @@ export const resolvers = {
       return updated;
     },
 
+    updateUserProfile: async (_: any, { phone, name, isProfileComplete }: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const formattedPhone = phone ? formatGhanaPhone(phone.trim()) : null;
+
+      if (phone && !isValidGhanaPhone(formattedPhone!)) {
+        throw new Error('Please enter a valid Ghanaian phone number (e.g. 024 123 4567).');
+      }
+
+      if (formattedPhone) {
+        const existing = await prisma.user.findFirst({
+          where: {
+            id: { not: user.id },
+            OR: [
+              { phone: formattedPhone },
+              { email: `${formattedPhone}@horentals.com` },
+            ],
+          },
+        });
+        if (existing) {
+          throw new Error(`An account with this phone number (${formattedPhone}) already exists.`);
+        }
+      }
+
+      const updated = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          ...(formattedPhone ? { phone: formattedPhone } : {}),
+          ...(name ? { name: sanitizeInput(name.trim()) } : {}),
+          isProfileComplete: isProfileComplete !== undefined ? Boolean(isProfileComplete) : true,
+        },
+        select: USER_SAFE_SELECT,
+      });
+
+      createAuditLog('USER_PROFILE_UPDATED', `User ${updated.name} (${updated.email}) updated contact info`, updated.email);
+      return updated;
+    },
+
     verifyAgent: async (_: any, { userId, status }: { userId: number; status: string }, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
       const adminUser = await prisma.user.findUnique({ where: { id: user.id } });

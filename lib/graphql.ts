@@ -398,6 +398,30 @@ export const UPDATE_USER_ROLE = `
   }
 `;
 
+export const UPDATE_USER_PROFILE_MUTATION = `
+  mutation UpdateUserProfile($phone: String, $name: String, $isProfileComplete: Boolean) {
+    updateUserProfile(phone: $phone, name: $name, isProfileComplete: $isProfileComplete) {
+      id
+      name
+      email
+      phone
+      role
+      bio
+      profileImage
+      agentLocation
+      agentWhatsapp
+      agencyName
+      experienceYears
+      licenseNumber
+      subscriptionPlan
+      isProfileComplete
+      verificationStatus
+      mustChangePassword
+    }
+  }
+`;
+
+
 export const GET_DASHBOARD_STATS = `
   query GetDashboardStats {
     dashboardStats {

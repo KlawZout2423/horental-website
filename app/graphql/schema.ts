@@ -369,6 +369,7 @@ export const typeDefs = `#graphql
         updateReportStatus(id: Int!, status: String!): Report!
         deleteReport(id: Int!): Report!
         updateAgentProfile(bio: String, profileImage: String, agentLocation: String, agentWhatsapp: String, agencyName: String, experienceYears: String, licenseNumber: String, subscriptionPlan: String, isProfileComplete: Boolean): User!
+        updateUserProfile(phone: String, name: String, isProfileComplete: Boolean): User!
         verifyAgent(userId: Int!, status: String!): User!
         submitVerificationRequest(idType: String!, idNumber: String!, documentUrls: [String!]!): VerificationRequest!
         reviewVerificationRequest(id: Int!, status: String!, reviewerNotes: String): VerificationRequest!

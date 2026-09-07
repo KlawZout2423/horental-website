@@ -1017,84 +1017,107 @@ export default function UploadPage({
         <div style={{
           backgroundColor: 'var(--bg-surface-secondary)',
           border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-md)',
-          padding: '18px 20px',
-          marginBottom: '24px',
+          borderRadius: '16px',
+          padding: '20px',
+          marginBottom: '28px',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px'
+          flexDirection: 'column',
+          gap: '16px',
+          boxShadow: 'var(--shadow-sm)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {/* Top Row: Avatar + Name/Badge + Edit Button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '220px' }}>
+              <div style={{
+                width: '52px',
+                height: '52px',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                flexShrink: 0,
+                border: '2px solid var(--primary)',
+                backgroundColor: 'var(--bg-surface)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem'
+              }}>
+                {user?.profileImage ? (
+                  <img src={user.profileImage} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  '👤'
+                )}
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    Agent: {user.name}
+                  </h3>
+                  <span
+                    onClick={() => setShowVerifyInfoModal(true)}
+                    style={{ fontSize: '0.72rem', backgroundColor: '#10B981', color: '#fff', padding: '3px 9px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    title="Click for Agent Verification Guarantee"
+                  >
+                    <ShieldCheck size={12} /> Verified Agent
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '3px 0 0 0' }}>
+                  {user.bio || 'Verified Rental Agent on HO Rentals'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAgentSetupModal(true)}
+              className="btn btn-secondary"
+              style={{ padding: '6px 14px', fontSize: '0.80rem', fontWeight: 600, borderRadius: '20px' }}
+            >
+              ✏️ Edit Agent Profile
+            </button>
+          </div>
+
+          {/* Full-width Quota & MoMo Payment Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
             <div style={{
-              width: '54px',
-              height: '54px',
-              borderRadius: '50%',
-              overflow: 'hidden',
-              flexShrink: 0,
-              border: '2px solid var(--primary)',
-              backgroundColor: 'var(--bg-surface)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.6rem'
+              gap: '6px',
+              padding: '8px 12px',
+              backgroundColor: agentPropertyCount !== null && agentPropertyCount >= 2 ? '#FEF3C7' : '#ECFDF5',
+              border: `1px solid ${agentPropertyCount !== null && agentPropertyCount >= 2 ? '#F59E0B' : '#10B981'}`,
+              borderRadius: '10px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              color: agentPropertyCount !== null && agentPropertyCount >= 2 ? '#92400E' : '#065F46',
+              lineHeight: 1.4
             }}>
-              {user?.profileImage ? (
-                <img src={user.profileImage} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <span>🏷️ Listing Quota:</span>
+              {agentPropertyCount !== null ? (
+                agentPropertyCount < 2 ? (
+                  <span>Free Tier ({agentPropertyCount} of 2 used) — This upload is 100% FREE</span>
+                ) : (
+                  <span>3rd+ Property (Free limit filled) — GH₵ 10.00 / month</span>
+                )
               ) : (
-                '👤'
+                <span>First 2 properties FREE, subsequent listings GH₵ 10.00/mo</span>
               )}
             </div>
 
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                  Agent: {user.name}
-                </h3>
-                <span
-                  onClick={() => setShowVerifyInfoModal(true)}
-                  style={{ fontSize: '0.72rem', backgroundColor: '#10B981', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
-                  title="Click for Agent Verification Guarantee"
-                >
-                  Verified Agent
-                </span>
+            {agentPropertyCount !== null && agentPropertyCount >= 2 && (
+              <div style={{
+                fontSize: '0.82rem',
+                color: '#B45309',
+                backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                lineHeight: 1.5
+              }}>
+                💡 <strong>Direct Payment:</strong> Send <strong>GH₵ 10.00</strong> via MoMo to <strong>0204940602</strong> after uploading so admin can activate this listing.
               </div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
-                {user.bio || 'Verified Rental Agent on HO Rentals'}
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: agentPropertyCount !== null && agentPropertyCount >= 2 ? '#FEF3C7' : '#ECFDF5', border: `1px solid ${agentPropertyCount !== null && agentPropertyCount >= 2 ? '#F59E0B' : '#10B981'}`, borderRadius: '12px', fontSize: '0.78rem', fontWeight: 700, color: agentPropertyCount !== null && agentPropertyCount >= 2 ? '#92400E' : '#065F46' }}>
-                  <span>🏷️ Listing Quota:</span>
-                  {agentPropertyCount !== null ? (
-                    agentPropertyCount < 2 ? (
-                      <span>Free Tier ({agentPropertyCount} of 2 used) — This upload is 100% FREE</span>
-                    ) : (
-                      <span>3rd+ Property (Free limit filled) — GH₵ 10.00 / month</span>
-                    )
-                  ) : (
-                    <span>First 2 properties FREE, subsequent listings GH₵ 10.00/mo</span>
-                  )}
-                </div>
-
-                {agentPropertyCount !== null && agentPropertyCount >= 2 && (
-                  <div style={{ fontSize: '0.78rem', color: '#B45309', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '6px 12px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-                    💡 <strong>Direct Payment:</strong> Send <strong>GH₵ 10.00</strong> via MoMo to <strong>0204940602</strong> after uploading so admin can activate this listing.
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
           </div>
-
-          <button
-            type="button"
-            onClick={() => setShowAgentSetupModal(true)}
-            className="btn btn-secondary"
-            style={{ padding: '8px 14px', fontSize: '0.82rem', fontWeight: 600 }}
-          >
-            ✏️ Edit Agent Profile
-          </button>
         </div>
       )}
 
