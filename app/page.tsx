@@ -66,7 +66,7 @@ const BANNER_SLIDES = [
     id: 'main-hero',
     bg: 'linear-gradient(135deg, #C1121F 0%, #8B0B14 100%)',
     pill: 'PROMOTION',
-    headline: 'Find Verified Rentals in Ho',
+    headline: 'Find Verified Hostels in Ghana',
     sub: 'Student hostels, single rooms, apartments & more in Volta Region.',
     cta: 'Browse Listings',
     href: '/#listings',
@@ -614,7 +614,12 @@ export default function Home() {
               <div className={styles.agentGridCards}>
                 {agents.map((agent, index) => {
                   const agentProps = properties.filter(
-                    (p) => String(p.owner?.id) === String(agent.id)
+                    (p) =>
+                      agent.id &&
+                      p.owner?.id &&
+                      String(p.owner.id) === String(agent.id) &&
+                      (p.status === 'available' || p.status === 'rented') &&
+                      (p.verificationStatus === 'verified' || !p.verificationStatus)
                   );
                   const count = agentProps.length;
 
@@ -938,32 +943,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Bottom Actions: View More Listings & View Other Agents */}
-          <div className={styles.bottomActionsWrapper}>
-            <Link href="/properties" className={styles.bottomActionBtnOutline}>
-              <Building2 size={18} />
-              <span>View All Properties →</span>
-            </Link>
-
-            <button
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  const agreed = localStorage.getItem('agreed_agent_disclaimer') === 'true' || sessionStorage.getItem('agreed_agent_disclaimer') === 'true';
-                  if (!agreed) {
-                    setVerifyModalOpen(true);
-                  } else {
-                    setActiveTypeFilter('agents');
-                    const gridEl = document.getElementById('listings');
-                    if (gridEl) gridEl.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }
-              }}
-              className={styles.bottomActionBtnPrimary}
-            >
-              <UserCheck size={18} />
-              <span>🤝 View Other Agents</span>
-            </button>
-          </div>
         </div>
       </section>
 
