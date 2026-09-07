@@ -88,7 +88,7 @@ const BANNER_SLIDES = [
     sub: 'Connect directly with top verified rental agents in Ho, HTU & UHAS.',
     cta: 'View Agents',
     href: '/#agents',
-    image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80',
+    image: '/verified_agent.jpg',
   },
   {
     id: 'furniture',
