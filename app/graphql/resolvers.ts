@@ -2,9 +2,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../../lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
-import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../lib/types';
+import { formatGhanaPhone, isValidGhanaPhone, formatGhanaCard, isValidGhanaCard, sanitizeInput } from '../../lib/types';
 import { getJwtSecret } from '../../lib/env';
 import { collectPayment } from '../../lib/momo';
+import { sendSMS, sendLeadAlertSMS, sendAgentVerifiedSMS, sendPropertyPublishedSMS } from '../../lib/sms';
 
 const COMMISSION_FEE = 5;
 
@@ -1115,127 +1116,17 @@ export const resolvers = {
       return deletedUser;
     },
 
-    updateUserRole: async (_: any, { id, role }: any, { user }: { user: { id: number } | null }) => {
-      if (!user) throw new Error('Not authenticated');
-      const targetId = typeof id === 'string' ? parseInt(id, 10) : Number(id);
-      const isSelf = Number(user.id) === targetId;
-      const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
-      if (!isSelf && fullUser?.role !== 'admin') throw new Error('Not authorized');
-
-      const updatedUser = await prisma.user.update({
-        where: { id: targetId },
-        data: { role },
-      });
-      createAuditLog('ROLE_UPDATED', `User ${updatedUser.email} role updated to ${role}`, fullUser?.email || null);
-      return updatedUser;
-    },
-
-    createContactLog: async (_: any, { customerName, customerPhone, actionType, propertyId, landlordPhone }: any) => {
-      const log = await prisma.contactLog.create({
-        data: {
-          customerName: sanitizeInput(customerName),
-          customerPhone: formatGhanaPhone(customerPhone),
-          actionType: sanitizeInput(actionType),
-          propertyId,
-          landlordPhone: formatGhanaPhone(landlordPhone),
-        },
-        include: { property: true }
-      });
-      createAuditLog('LANDLORD_CONTACTED', `Customer ${customerName} (${customerPhone}) initiated ${actionType} for property #${propertyId} (Landlord: ${landlordPhone})`, customerPhone);
-      return log;
-    },
-
-    deleteOldAuditLogs: async (_: any, { days }: { days: number }, { user }: { user: { id: number } | null }) => {
-      if (!user) throw new Error('Not authenticated');
-      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
-      if (adminUser?.role !== 'admin') throw new Error('Only admins can delete audit logs.');
-
-      let deletedCount = 0;
-      if (days === 0) {
-        const res = await prisma.auditLog.deleteMany({});
-        deletedCount = res.count;
-      } else {
-        const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-        const res = await prisma.auditLog.deleteMany({
-          where: { createdAt: { lt: cutoff } }
-        });
-        deletedCount = res.count;
-      }
-
-      createAuditLog('CLEARED_AUDIT_LOGS', `Admin ${adminUser.name} deleted audit logs older than ${days === 0 ? 'all' : days + ' days'} (${deletedCount} removed)`, adminUser.email);
-      return { success: true, message: `Successfully deleted ${deletedCount} audit log(s).` };
-    },
-
-    deleteAuditLogs: async (_: any, { ids }: { ids: number[] }, { user }: { user: { id: number } | null }) => {
-      if (!user) throw new Error('Not authenticated');
-      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
-      if (adminUser?.role !== 'admin') throw new Error('Only admins can delete audit logs.');
-
-      const res = await prisma.auditLog.deleteMany({
-        where: { id: { in: ids } }
-      });
-      createAuditLog('DELETED_AUDIT_LOGS', `Admin ${adminUser.name} deleted ${res.count} audit log(s)`, adminUser.email);
-      return { success: true, message: `Successfully deleted ${res.count} security log(s).` };
-    },
-
-    deleteContactLogs: async (_: any, { ids }: { ids: number[] }, { user }: { user: { id: number } | null }) => {
-      if (!user) throw new Error('Not authenticated');
-      const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
-      if (adminUser?.role !== 'admin') throw new Error('Only admins can delete contact logs.');
-
-      const res = await prisma.contactLog.deleteMany({
-        where: { id: { in: ids } }
-      });
-      createAuditLog('DELETED_CONTACT_LOGS', `Admin ${adminUser.name} deleted ${res.count} contact inquiry log(s)`, adminUser.email);
-      return { success: true, message: `Successfully deleted ${res.count} contact log(s).` };
-    },
-
-    recordPageVisit: async (_: any, { path, utmSource, utmMedium, utmCampaign, utmContent, referrer }: {
-      path: string;
-      utmSource?: string;
-      utmMedium?: string;
-      utmCampaign?: string;
-      utmContent?: string;
-      referrer?: string;
-    }, { user }: { user: { id: number } | null }) => {
-      // Server-side safety check: Never record traffic for internal accounts (admin, agent, landlord)
-      if (user) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { role: true },
-        });
-        if (dbUser?.role === 'admin' || dbUser?.role === 'agent' || dbUser?.role === 'landlord') {
-          return true; // Skip recording staff/agent visits so only real customer views are counted
-        }
-      }
-
-      await prisma.pageVisit.create({
-        data: {
-          path,
-          utmSource: utmSource || null,
-          utmMedium: utmMedium || null,
-          utmCampaign: utmCampaign || null,
-          utmContent: utmContent || null,
-          referrer: referrer || null,
-        }
-      });
-      return true;
-    },
-
     createLandlordRegistration: async (_: any, { input }: any) => {
+      const sanitizedPhone1 = formatGhanaPhone(input.phone1);
+      const sanitizedPhone2 = input.phone2 ? formatGhanaPhone(input.phone2) : null;
       return prisma.landlordRegistration.create({
         data: {
           name: sanitizeInput(input.name),
-          dob: input.dob ? sanitizeInput(input.dob) : null,
-          gender: input.gender ? sanitizeInput(input.gender) : null,
-          nationalId: input.nationalId ? sanitizeInput(input.nationalId) : null,
-          homeAddress: input.homeAddress ? sanitizeInput(input.homeAddress) : null,
-          city: sanitizeInput(input.city),
-          region: input.region ? sanitizeInput(input.region) : null,
-          phone1: formatGhanaPhone(input.phone1),
-          phone2: input.phone2 ? formatGhanaPhone(input.phone2) : null,
+          phone1: sanitizedPhone1,
+          phone2: sanitizedPhone2,
           email: input.email ? sanitizeInput(input.email) : null,
           occupation: input.occupation ? sanitizeInput(input.occupation) : null,
+          city: sanitizeInput(input.city || input.propCity || 'Ho'),
           propAddress: sanitizeInput(input.propAddress),
           propCity: input.propCity ? sanitizeInput(input.propCity) : null,
           propLandmark: input.propLandmark ? sanitizeInput(input.propLandmark) : null,
@@ -1375,6 +1266,15 @@ export const resolvers = {
         data: { status: 'Verified' }
       });
 
+      // Send SailUp SMS notification to landlord that listing is live
+      if (r.phone1) {
+        sendPropertyPublishedSMS({
+          ownerPhone: r.phone1,
+          propertyTitle: title,
+          propertyLocation: r.city,
+        }).catch(err => console.error('Landlord published SMS error:', err));
+      }
+
       createAuditLog('LANDLORD_PUBLISHED', `Admin ${adminUser.name} approved & published landlord registration #${parsedId} as property #${property.id}`, adminUser.email);
 
       return property;
@@ -1420,6 +1320,39 @@ export const resolvers = {
       const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
       if (dbUser?.role !== 'agent' && dbUser?.role !== 'landlord' && dbUser?.role !== 'admin') throw new Error('Only agents can update their profile.');
 
+      let formattedLicense = licenseNumber !== undefined ? (licenseNumber ? sanitizeInput(licenseNumber.trim()) : null) : undefined;
+
+      if (formattedLicense) {
+        if (formattedLicense.toUpperCase().startsWith('GHA') || formattedLicense.length > 5) {
+          formattedLicense = formatGhanaCard(formattedLicense);
+          if (!isValidGhanaCard(formattedLicense)) {
+            throw new Error('Invalid Ghana Card format. Must be GHA-XXXXXXXXX-X (15 characters).');
+          }
+        }
+
+        // Duplicate check across user license numbers
+        const duplicateUser = await prisma.user.findFirst({
+          where: {
+            id: { not: user.id },
+            licenseNumber: formattedLicense,
+          },
+        });
+        if (duplicateUser) {
+          throw new Error('This Ghana Card / ID number is already registered to another agent account.');
+        }
+
+        // Duplicate check across verification requests
+        const duplicateVerification = await prisma.verificationRequest.findFirst({
+          where: {
+            userId: { not: user.id },
+            idNumber: formattedLicense,
+          },
+        });
+        if (duplicateVerification) {
+          throw new Error('This Ghana Card / ID number is already associated with another verification request.');
+        }
+      }
+
       const updated = await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -1429,7 +1362,7 @@ export const resolvers = {
           ...(agentWhatsapp !== undefined ? { agentWhatsapp: agentWhatsapp ? formatGhanaPhone(agentWhatsapp.trim()) : null } : {}),
           ...(agencyName !== undefined ? { agencyName: agencyName ? sanitizeInput(agencyName.trim()) : null } : {}),
           ...(experienceYears !== undefined ? { experienceYears: experienceYears ? sanitizeInput(experienceYears.trim()) : null } : {}),
-          ...(licenseNumber !== undefined ? { licenseNumber: licenseNumber ? sanitizeInput(licenseNumber.trim()) : null } : {}),
+          ...(formattedLicense !== undefined ? { licenseNumber: formattedLicense } : {}),
           ...(subscriptionPlan !== undefined ? { subscriptionPlan: subscriptionPlan ? sanitizeInput(subscriptionPlan.trim()) : null } : {}),
           isProfileComplete: isProfileComplete !== undefined ? Boolean(isProfileComplete) : true,
         },
@@ -1506,6 +1439,13 @@ export const resolvers = {
         select: USER_SAFE_SELECT,
       });
 
+      if (status === 'verified' && updatedUser?.phone) {
+        sendAgentVerifiedSMS({
+          agentPhone: updatedUser.phone,
+          agentName: updatedUser.name,
+        }).catch(err => console.error('Agent verified SMS error:', err));
+      }
+
       createAuditLog('AGENT_VERIFIED', `Admin ${adminUser.name} (${adminUser.email}) set agent #${targetId} verification status to ${status}`, adminUser.email);
       return updatedUser;
     },
@@ -1513,7 +1453,40 @@ export const resolvers = {
     submitVerificationRequest: async (_: any, { idType, idNumber, documentUrls }: any, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
 
-      // Prevent duplicate verification requests
+      let sanitizedId = idNumber ? sanitizeInput(idNumber.trim()) : '';
+      const normalizedType = (idType || 'ghana_card').toLowerCase();
+
+      if (normalizedType === 'ghana_card' || sanitizedId.toUpperCase().startsWith('GHA') || sanitizedId.length > 5) {
+        sanitizedId = formatGhanaCard(sanitizedId);
+        if (!isValidGhanaCard(sanitizedId)) {
+          throw new Error('Invalid Ghana Card ID format. Must follow standard GHA-XXXXXXXXX-X format (exactly 15 characters).');
+        }
+      }
+
+      if (sanitizedId) {
+        // Prevent duplicate across other users
+        const duplicateUser = await prisma.user.findFirst({
+          where: {
+            id: { not: user.id },
+            licenseNumber: sanitizedId,
+          },
+        });
+        if (duplicateUser) {
+          throw new Error('This Ghana Card / ID number is already registered to another agent account.');
+        }
+
+        const duplicateReq = await prisma.verificationRequest.findFirst({
+          where: {
+            userId: { not: user.id },
+            idNumber: sanitizedId,
+          },
+        });
+        if (duplicateReq) {
+          throw new Error('This Ghana Card / ID number has already been submitted for verification by another account.');
+        }
+      }
+
+      // Prevent duplicate verification requests by the same user
       const existing = await prisma.verificationRequest.findFirst({
         where: {
           userId: user.id,
@@ -1531,17 +1504,21 @@ export const resolvers = {
         data: {
           userId: user.id,
           idType: idType || 'ghana_card',
-          idNumber,
+          idNumber: sanitizedId || 'PENDING',
           documentUrls: documentUrls || [],
           status: 'pending'
         },
         include: { user: { select: { id: true, name: true, email: true, role: true, phone: true } } }
       });
+
       await prisma.user.update({
         where: { id: user.id },
-        data: { verificationStatus: 'pending' }
+        data: {
+          verificationStatus: 'pending',
+          ...(sanitizedId ? { licenseNumber: sanitizedId } : {}),
+        }
       });
-      createAuditLog('VERIFICATION_REQUEST_SUBMITTED', `User ${user.id} submitted verification request for ${idType}`, null);
+      createAuditLog('VERIFICATION_REQUEST_SUBMITTED', `User ${user.id} submitted verification request for ${idType} (${sanitizedId})`, null);
       return req;
     },
 
@@ -1557,10 +1534,16 @@ export const resolvers = {
       });
 
       if (status === 'verified') {
-        await prisma.user.update({
+        const verifiedUser = await prisma.user.update({
           where: { id: updatedReq.userId },
           data: { verificationStatus: 'verified' }
         });
+        if (verifiedUser?.phone) {
+          sendAgentVerifiedSMS({
+            agentPhone: verifiedUser.phone,
+            agentName: verifiedUser.name,
+          }).catch(err => console.error('Agent verified SMS error:', err));
+        }
       }
 
       createAuditLog('VERIFICATION_REVIEWED', `Admin reviewed request ${reqId} with status ${status}`, adminUser.email);
@@ -1606,6 +1589,53 @@ export const resolvers = {
         },
         include: { property: true }
       });
+    },
+
+    createContactLog: async (_: any, { customerName, customerPhone, actionType, propertyId, landlordPhone }: any) => {
+      const pId = typeof propertyId === 'string' ? parseInt(propertyId, 10) : Number(propertyId);
+      const cleanPhone = formatGhanaPhone(customerPhone);
+      const cleanLandlordPhone = formatGhanaPhone(landlordPhone);
+
+      const log = await prisma.contactLog.create({
+        data: {
+          customerName: sanitizeInput(customerName),
+          customerPhone: cleanPhone,
+          actionType: sanitizeInput(actionType),
+          propertyId: pId,
+          landlordPhone: cleanLandlordPhone,
+        },
+        include: {
+          property: {
+            select: { id: true, title: true, location: true, price: true }
+          }
+        }
+      });
+
+      // Send SailUp SMS Alert to Landlord/Agent asynchronously (with 15min deduplication)
+      if (cleanLandlordPhone && log.property?.title) {
+        sendLeadAlertSMS({
+          landlordPhone: cleanLandlordPhone,
+          customerName: customerName || 'A tenant',
+          customerPhone: cleanPhone,
+          propertyTitle: log.property.title,
+          propertyId: pId,
+          actionType: actionType === 'whatsapp' ? 'WhatsApp inquiry' : 'Phone call inquiry',
+        }).catch(err => console.error('SMS lead alert error:', err));
+      }
+
+      return log;
+    },
+
+    deleteContactLogs: async (_: any, { ids }: { ids: number[] }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true } });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
+      const numericIds = (ids || []).map(id => typeof id === 'string' ? parseInt(id, 10) : Number(id));
+      await prisma.contactLog.deleteMany({
+        where: { id: { in: numericIds } }
+      });
+      return { success: true, message: `${numericIds.length} contact log(s) deleted successfully.` };
     },
 
     flagFraudAlert: async (_: any, { propertyId, userId, reason, severity }: any, { user }: { user: { id: number } | null }) => {
@@ -1716,6 +1746,90 @@ export const resolvers = {
 
       createAuditLog('PROPERTY_REPORTED', `Property #${pId} was reported: "${reason}"`, user ? String(user.id) : null);
       return report;
+    },
+
+    sendAdminSms: async (_: any, { targetType, customPhone, targetRole, message, senderId }: { targetType: string; customPhone?: string; targetRole?: string; message: string; senderId?: string }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const adminUser = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true, email: true, name: true } });
+      if (adminUser?.role !== 'admin') throw new Error('Admin authorization required to broadcast SMS.');
+
+      if (!message || !message.trim()) {
+        throw new Error('Message content cannot be empty.');
+      }
+
+      let recipients: string[] = [];
+
+      if (targetType === 'single') {
+        if (!customPhone || !customPhone.trim()) {
+          throw new Error('Please specify a recipient phone number.');
+        }
+        const formatted = formatGhanaPhone(customPhone.trim());
+        if (!isValidGhanaPhone(formatted)) {
+          throw new Error('Invalid Ghanaian phone number. Must be a valid 10-digit number (e.g. 0241234567).');
+        }
+        recipients = [formatted];
+      } else if (targetType === 'role' || targetType === 'all') {
+        const whereClause: any = {};
+        if (targetRole && targetRole !== 'all') {
+          if (targetRole === 'agents') {
+            whereClause.role = { in: ['agent', 'landlord'] };
+          } else if (targetRole === 'verified_agents') {
+            whereClause.role = { in: ['agent', 'landlord'] };
+            whereClause.verificationStatus = 'verified';
+          } else if (targetRole === 'users') {
+            whereClause.role = 'user';
+          } else {
+            whereClause.role = targetRole;
+          }
+        }
+
+        const usersWithPhones = await prisma.user.findMany({
+          where: {
+            ...whereClause,
+            phone: { not: null },
+          },
+          select: { phone: true },
+        });
+
+        const uniquePhones = new Set<string>();
+        for (const u of usersWithPhones) {
+          if (u.phone) {
+            const formatted = formatGhanaPhone(u.phone);
+            if (isValidGhanaPhone(formatted)) {
+              uniquePhones.add(formatted);
+            }
+          }
+        }
+
+        recipients = Array.from(uniquePhones);
+      }
+
+      if (recipients.length === 0) {
+        throw new Error('No registered users with valid phone numbers found for the selected audience.');
+      }
+
+      const res = await sendSMS({
+        to: recipients,
+        message: sanitizeInput(message.trim()),
+        senderId: senderId?.trim() || undefined,
+      });
+
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to dispatch SMS via SailUp.');
+      }
+
+      createAuditLog(
+        'SMS_BROADCAST',
+        `Admin ${adminUser.name} broadcasted SMS to ${recipients.length} recipient(s) [Target: ${targetType} / ${targetRole || customPhone}]. Preview: "${message.slice(0, 50)}..."`,
+        adminUser.email
+      );
+
+      return {
+        success: true,
+        sentCount: recipients.length,
+        recipientCount: recipients.length,
+        message: `SMS successfully delivered to ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}.`,
+      };
     },
   },
 

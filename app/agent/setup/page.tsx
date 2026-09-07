@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth';
 import { graphqlRequest, UPDATE_AGENT_PROFILE, SUBMIT_VERIFICATION_REQUEST } from '../../../lib/graphql';
-import { formatGhanaPhone } from '../../../lib/types';
+import { formatGhanaPhone, formatGhanaCard, isValidGhanaCard } from '../../../lib/types';
 import { 
   ShieldCheck, 
   User, 
@@ -203,6 +203,18 @@ export default function AgentSetupPage() {
       setStep(2);
       return;
     }
+    let formattedIdNumber = idNumber.trim();
+    if (formattedIdNumber) {
+      if (idType === 'Ghana Card' || formattedIdNumber.toUpperCase().startsWith('GHA')) {
+        formattedIdNumber = formatGhanaCard(formattedIdNumber);
+        if (!isValidGhanaCard(formattedIdNumber)) {
+          setError('Please enter a valid 15-character Ghana Card ID in format GHA-XXXXXXXXX-X.');
+          setStep(2);
+          return;
+        }
+      }
+    }
+
     if (!isEditingExisting && !agreements.every(Boolean)) {
       setError('Please agree to all agent terms and conditions to activate your profile.');
       setStep(4);
@@ -249,16 +261,16 @@ export default function AgentSetupPage() {
         agentWhatsapp: whatsapp.trim() ? formatGhanaPhone(whatsapp.trim()) : null,
         agencyName: agencyName.trim() || null,
         experienceYears: experience || '1-2 Years',
-        licenseNumber: idNumber.trim() || null,
+        licenseNumber: formattedIdNumber || null,
         subscriptionPlan: selectedPlan,
         isProfileComplete: true,
       });
 
-      if (idDocUrl || idNumber.trim()) {
+      if (idDocUrl || formattedIdNumber) {
         try {
           await graphqlRequest(SUBMIT_VERIFICATION_REQUEST, {
             idType: idType || 'Ghana Card',
-            idNumber: idNumber.trim() || 'N/A',
+            idNumber: formattedIdNumber || 'N/A',
             documentUrls: idDocUrl ? [idDocUrl] : [],
           });
         } catch (verr) {
@@ -519,8 +531,12 @@ export default function AgentSetupPage() {
                   <input
                     type="text"
                     value={idNumber}
-                    onChange={e => setIdNumber(e.target.value)}
-                    placeholder="e.g. GHA-123456789-0"
+                    maxLength={idType === 'Ghana Card' ? 15 : 30}
+                    onChange={e => {
+                      const raw = e.target.value;
+                      setIdNumber(idType === 'Ghana Card' ? formatGhanaCard(raw) : raw.toUpperCase());
+                    }}
+                    placeholder={idType === 'Ghana Card' ? 'GHA-123456789-1' : 'e.g. ID Number'}
                     style={{ width: '100%', backgroundColor: 'var(--bg-surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '0.5rem', padding: '0.75rem', fontSize: '0.9rem', boxSizing: 'border-box', outline: 'none' }}
                   />
                 </div>

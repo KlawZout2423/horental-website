@@ -30,10 +30,11 @@ import {
   DELETE_LANDLORD_REGISTRATION,
   PUBLISH_LANDLORD_REGISTRATION,
   GET_PAGE_ANALYTICS,
-  VERIFY_AGENT
+  VERIFY_AGENT,
+  SEND_ADMIN_SMS
 } from '../../lib/graphql';
 import { buildTrackingUrl } from '../../lib/trackVisit';
-import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp, Send, MessageSquare, Radio, CheckCheck } from 'lucide-react';
 import styles from './admin.module.css';
 import { getFriendlyErrorMessage, LandlordRegistration, getStatusLabel, getToggleStatusLabel } from '../../lib/types';
 
@@ -113,10 +114,20 @@ export default function AdminPage() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   
   // Navigation & loaders
-  const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'agents' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'agents' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic' | 'sms'>('analytics');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+
+  // SMS Broadcast State
+  const [smsTargetType, setSmsTargetType] = useState<'single' | 'role' | 'all'>('single');
+  const [smsCustomPhone, setSmsCustomPhone] = useState('');
+  const [smsTargetRole, setSmsTargetRole] = useState<'all' | 'verified_agents' | 'agents' | 'users'>('all');
+  const [smsSenderId, setSmsSenderId] = useState('HORENTALS');
+  const [smsMessage, setSmsMessage] = useState('');
+  const [smsTemplate, setSmsTemplate] = useState('custom');
+  const [smsSending, setSmsSending] = useState(false);
+  const [smsResult, setSmsResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Analytics state
   interface VisitSource { source: string; count: number; percentage: number; }
@@ -178,17 +189,82 @@ export default function AdminPage() {
       if (!res.ok) throw new Error(data.error || 'Cleanup failed');
       
       setMessage({
-        text: `🧹 ${data.message} (${data.stats?.reclaimedSpaceMB || '0 MB'} reclaimed)`,
+        text: `Cleaned up ${data.cleanedCount || 0} orphaned image(s) successfully!`,
         isError: false,
       });
-      loadAdminDashboardData();
     } catch (err: any) {
       setMessage({
-        text: err.message || 'Storage cleanup failed.',
+        text: err.message || 'Media storage cleanup failed.',
         isError: true,
       });
     } finally {
       setIsCleaningMedia(false);
+    }
+  };
+
+  const handleSendAdminSms = async () => {
+    if (!smsMessage.trim()) {
+      setMessage({ text: 'Please enter an SMS message body.', isError: true });
+      return;
+    }
+    if (smsTargetType === 'single') {
+      if (!smsCustomPhone.trim()) {
+        setMessage({ text: 'Please enter a recipient phone number.', isError: true });
+        return;
+      }
+    }
+
+    const recipientCount = smsTargetType === 'single'
+      ? 1
+      : (smsTargetRole === 'all'
+          ? users.filter(u => u.phone).length
+          : smsTargetRole === 'verified_agents'
+            ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
+            : smsTargetRole === 'agents'
+              ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
+              : users.filter(u => u.role === 'user' && u.phone).length);
+
+    if (recipientCount === 0) {
+      setMessage({ text: 'No registered users with valid phone numbers found for the selected audience.', isError: true });
+      return;
+    }
+
+    const confirmMsg = smsTargetType === 'single'
+      ? `Send direct SMS to ${smsCustomPhone}?`
+      : `Broadcast SMS to ${recipientCount} user(s) in "${smsTargetRole === 'all' ? 'All Users' : smsTargetRole}"?`;
+
+    if (!confirm(confirmMsg)) return;
+
+    setSmsSending(true);
+    setSmsResult(null);
+    setMessage(null);
+
+    try {
+      const res = await graphqlRequest<{ sendAdminSms: { success: boolean; sentCount: number; recipientCount: number; message: string } }>(SEND_ADMIN_SMS, {
+        targetType: smsTargetType,
+        customPhone: smsTargetType === 'single' ? smsCustomPhone.trim() : null,
+        targetRole: smsTargetType !== 'single' ? smsTargetRole : null,
+        message: smsMessage.trim(),
+        senderId: smsSenderId.trim() || undefined,
+      });
+
+      if (res?.sendAdminSms?.success) {
+        setSmsResult({ success: true, message: res.sendAdminSms.message });
+        setMessage({ text: res.sendAdminSms.message, isError: false });
+        if (smsTargetType === 'single') {
+          setSmsCustomPhone('');
+        }
+        setSmsMessage('');
+        setSmsTemplate('custom');
+      } else {
+        throw new Error(res?.sendAdminSms?.message || 'Failed to dispatch SMS');
+      }
+    } catch (err: any) {
+      const errText = err.message || 'Failed to dispatch SMS via SailUp';
+      setSmsResult({ success: false, message: errText });
+      setMessage({ text: errText, isError: true });
+    } finally {
+      setSmsSending(false);
     }
   };
 
@@ -935,6 +1011,14 @@ export default function AdminPage() {
             </button>
 
             <button
+              onClick={() => setActiveTab('sms')}
+              className={`${styles.navItem} ${activeTab === 'sms' ? styles.activeNavItem : ''}`}
+            >
+              <Send size={16} />
+              <span>SMS Broadcast</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('upload')}
               className={styles.sidebarUploadBtn}
               style={{ marginTop: '16px' }}
@@ -988,6 +1072,7 @@ export default function AdminPage() {
               {activeTab === 'traffic' && 'Traffic Analytics'}
               {activeTab === 'reports' && 'Flagged Reports'}
               {activeTab === 'landlords' && 'Landlord Submissions'}
+              {activeTab === 'sms' && 'SMS Broadcast'}
               {activeTab === 'upload' && 'Upload Property'}
             </span>
           </div>
@@ -1098,6 +1183,12 @@ export default function AdminPage() {
                     className={`${styles.navItem} ${activeTab === 'landlords' ? styles.activeNavItem : ''}`}
                   >
                     <FileText size={16} /> Landlord Submissions ({landlordRegistrations.length})
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('sms'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'sms' ? styles.activeNavItem : ''}`}
+                  >
+                    <Send size={16} /> SMS Broadcast
                   </button>
                   <button
                     onClick={() => { setActiveTab('upload'); setIsMobileDrawerOpen(false); }}
@@ -2463,26 +2554,41 @@ export default function AdminPage() {
                                   </span>
                                 </td>
                                 <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
-                                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                <td style={{ color: 'var(--text-primary)' }}>
                                   {log.property ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        {log.property.type === 'Furnitures' && <span style={{ fontSize: '0.7rem', padding: '1px 5px', borderRadius: '4px', background: '#FEF3C7', color: '#92400E', fontWeight: 700 }}>📦 Furniture</span>}
-                                        {log.property.type === 'Lands' && <span style={{ fontSize: '0.7rem', padding: '1px 5px', borderRadius: '4px', background: '#ECFDF5', color: '#065F46', fontWeight: 700 }}>📍 Land</span>}
-                                        {log.property.type && log.property.type !== 'Furnitures' && log.property.type !== 'Lands' && (
-                                          <span style={{ fontSize: '0.7rem', padding: '1px 5px', borderRadius: '4px', background: '#EFF6FF', color: '#1E40AF', fontWeight: 700 }}>🏠 {log.property.type}</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                      <Link
+                                        href={`/properties/${log.property.id}`}
+                                        target="_blank"
+                                        style={{
+                                          color: 'var(--text-primary)',
+                                          fontWeight: 700,
+                                          fontSize: '0.86rem',
+                                          textDecoration: 'none',
+                                          lineHeight: 1.35
+                                        }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--primary)')}
+                                        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+                                      >
+                                        {log.property.title}
+                                      </Link>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
+                                        {log.property.price !== undefined && log.property.price !== null && (
+                                          <span style={{ fontWeight: 800, color: 'var(--primary)' }}>
+                                            GH₵{log.property.price.toLocaleString()}
+                                          </span>
                                         )}
-                                        <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
-                                          {log.property.title}
-                                        </Link>
+                                        {log.property.location && (
+                                          <>
+                                            <span style={{ opacity: 0.4 }}>•</span>
+                                            <span style={{ color: 'var(--text-muted)' }}>{log.property.location}</span>
+                                          </>
+                                        )}
                                       </div>
-                                      {log.property.price !== undefined && log.property.price !== null && (
-                                        <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700 }}>
-                                          GH₵{log.property.price.toLocaleString()} • {log.property.location}
-                                        </span>
-                                      )}
                                     </div>
-                                  ) : 'N/A'}
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>N/A</span>
+                                  )}
                                 </td>
                                 <td style={{ textAlign: 'center' }}>
                                   <button
@@ -2548,22 +2654,15 @@ export default function AdminPage() {
                             
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', paddingLeft: '28px' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '0.82rem', color: 'var(--text-secondary)', gap: '8px' }}>
-                                <span style={{ flexShrink: 0 }}>🏢 Item / Property:</span>
+                                <span style={{ flexShrink: 0 }}>🏢 Property:</span>
                                 <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right', wordBreak: 'break-word' }}>
                                   {log.property ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                        {log.property.type === 'Furnitures' && <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '4px', background: '#FEF3C7', color: '#92400E', fontWeight: 700 }}>📦 Furniture</span>}
-                                        {log.property.type === 'Lands' && <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '4px', background: '#ECFDF5', color: '#065F46', fontWeight: 700 }}>📍 Land</span>}
-                                        {log.property.type && log.property.type !== 'Furnitures' && log.property.type !== 'Lands' && (
-                                          <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '4px', background: '#EFF6FF', color: '#1E40AF', fontWeight: 700 }}>🏠 {log.property.type}</span>
-                                        )}
-                                        <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
-                                          {log.property.title}
-                                        </Link>
-                                      </div>
+                                      <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--text-primary)', fontWeight: 700, textDecoration: 'none' }}>
+                                        {log.property.title}
+                                      </Link>
                                       {log.property.price !== undefined && log.property.price !== null && (
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>
+                                        <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 800 }}>
                                           GH₵{log.property.price.toLocaleString()}
                                         </span>
                                       )}
@@ -3832,6 +3931,398 @@ export default function AdminPage() {
             </div>
           </div>
           ) : null}
+
+          {/* SMS BROADCAST & DIRECT MESSAGING PANEL */}
+          {activeTab === 'sms' && (
+            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              
+              {/* Header Banner */}
+              <div className="card glass" style={{ padding: '24px 28px', borderRadius: 'var(--radius-lg)', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.98) 100%)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                <div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.15)', color: '#34D399', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }}></span>
+                    SailUp Gateway Connected
+                  </div>
+                  <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '0 0 6px', color: '#F8FAFC' }}>
+                    SMS Broadcast &amp; Direct Messaging
+                  </h1>
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: '#94A3B8', maxWidth: '600px' }}>
+                    Send direct alerts to a single tenant/landlord, or broadcast targeted announcements to verified agents and registered users across Ghana.
+                  </p>
+                </div>
+
+                <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-md)', padding: '12px 18px', textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 700 }}>Sender ID</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#38BDF8', letterSpacing: '0.04em' }}>HORentals</div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Standard 160 chars / unit</div>
+                </div>
+              </div>
+
+              {/* Status Notice */}
+              {smsResult && (
+                <div style={{
+                  padding: '14px 18px',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: smsResult.success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  border: `1px solid ${smsResult.success ? '#10B981' : '#EF4444'}`,
+                  color: smsResult.success ? '#047857' : '#B91C1C',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}>
+                  {smsResult.success ? <CheckCheck size={18} /> : <AlertTriangle size={18} />}
+                  <span>{smsResult.message}</span>
+                </div>
+              )}
+
+              {/* Main 2-Column Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
+                
+                {/* Column 1: Audience & Mode Selection */}
+                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)' }}>
+                  <h2 style={{ fontSize: '1.05rem', fontWeight: 800, marginBottom: '16px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Users size={18} color="var(--primary)" /> 1. Select Target Audience
+                  </h2>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    
+                    {/* Option 1: Single Number */}
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '12px',
+                      padding: '14px 16px',
+                      borderRadius: 'var(--radius-md)',
+                      border: `1.5px solid ${smsTargetType === 'single' ? 'var(--primary)' : 'var(--border)'}`,
+                      backgroundColor: smsTargetType === 'single' ? 'var(--primary-light)' : 'var(--bg-surface-secondary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}>
+                      <input
+                        type="radio"
+                        name="smsTargetType"
+                        checked={smsTargetType === 'single'}
+                        onChange={() => setSmsTargetType('single')}
+                        style={{ marginTop: '3px' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+                          📱 Direct Phone Number (Single Recipient)
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          Type in any Ghanaian phone number or pick from registered user directory.
+                        </div>
+                      </div>
+                    </label>
+
+                    {/* Single Phone Input Container (When active) */}
+                    {smsTargetType === 'single' && (
+                      <div style={{ marginLeft: '28px', display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px 14px', background: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px', display: 'block' }}>
+                            Recipient Phone Number *
+                          </label>
+                          <input
+                            type="tel"
+                            placeholder="e.g. 0241234567 or 0204940602"
+                            value={smsCustomPhone}
+                            onChange={(e) => setSmsCustomPhone(e.target.value.replace(/[^0-9+]/g, '').slice(0, 13))}
+                            className="form-control"
+                            style={{ fontSize: '0.92rem', fontWeight: 600 }}
+                          />
+                        </div>
+
+                        {/* Quick pick from existing users */}
+                        <div>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>
+                            Or Pick From Registered Users:
+                          </label>
+                          <select
+                            onChange={(e) => {
+                              if (e.target.value) setSmsCustomPhone(e.target.value);
+                            }}
+                            className="form-control"
+                            style={{ fontSize: '0.82rem', cursor: 'pointer' }}
+                            defaultValue=""
+                          >
+                            <option value="" disabled>-- Select a registered user ({users.filter(u => u.phone).length} available) --</option>
+                            {users.filter(u => u.phone).map(u => (
+                              <option key={u.id} value={u.phone}>
+                                {u.name} ({u.phone}) • {u.role.toUpperCase()}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Option 2: Broadcast by Role / Group */}
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '12px',
+                      padding: '14px 16px',
+                      borderRadius: 'var(--radius-md)',
+                      border: `1.5px solid ${smsTargetType === 'role' ? 'var(--primary)' : 'var(--border)'}`,
+                      backgroundColor: smsTargetType === 'role' ? 'var(--primary-light)' : 'var(--bg-surface-secondary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}>
+                      <input
+                        type="radio"
+                        name="smsTargetType"
+                        checked={smsTargetType === 'role'}
+                        onChange={() => setSmsTargetType('role')}
+                        style={{ marginTop: '3px' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+                          📢 Broadcast to User Group
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          Send targeted bulk SMS to all users, verified agents, or tenants with valid phone numbers.
+                        </div>
+                      </div>
+                    </label>
+
+                    {/* Role Filter Options (When active) */}
+                    {smsTargetType === 'role' && (
+                      <div style={{ marginLeft: '28px', display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 14px', background: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px', display: 'block' }}>
+                          Choose Target Group:
+                        </label>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setSmsTargetRole('all')}
+                            style={{
+                              textAlign: 'left',
+                              padding: '8px 12px',
+                              borderRadius: 'var(--radius-sm)',
+                              border: `1px solid ${smsTargetRole === 'all' ? 'var(--primary)' : 'var(--border)'}`,
+                              backgroundColor: smsTargetRole === 'all' ? 'var(--primary-light)' : 'var(--bg-surface)',
+                              color: smsTargetRole === 'all' ? 'var(--primary)' : 'var(--text-primary)',
+                              fontWeight: smsTargetRole === 'all' ? 700 : 500,
+                              fontSize: '0.84rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            🌐 All Registered Users ({users.filter(u => u.phone).length} recipients)
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setSmsTargetRole('verified_agents')}
+                            style={{
+                              textAlign: 'left',
+                              padding: '8px 12px',
+                              borderRadius: 'var(--radius-sm)',
+                              border: `1px solid ${smsTargetRole === 'verified_agents' ? 'var(--primary)' : 'var(--border)'}`,
+                              backgroundColor: smsTargetRole === 'verified_agents' ? 'var(--primary-light)' : 'var(--bg-surface)',
+                              color: smsTargetRole === 'verified_agents' ? 'var(--primary)' : 'var(--text-primary)',
+                              fontWeight: smsTargetRole === 'verified_agents' ? 700 : 500,
+                              fontSize: '0.84rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            🛡️ Verified Agents Only ({users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length} recipients)
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setSmsTargetRole('agents')}
+                            style={{
+                              textAlign: 'left',
+                              padding: '8px 12px',
+                              borderRadius: 'var(--radius-sm)',
+                              border: `1px solid ${smsTargetRole === 'agents' ? 'var(--primary)' : 'var(--border)'}`,
+                              backgroundColor: smsTargetRole === 'agents' ? 'var(--primary-light)' : 'var(--bg-surface)',
+                              color: smsTargetRole === 'agents' ? 'var(--primary)' : 'var(--text-primary)',
+                              fontWeight: smsTargetRole === 'agents' ? 700 : 500,
+                              fontSize: '0.84rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            👔 All Agents &amp; Landlords ({users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length} recipients)
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setSmsTargetRole('users')}
+                            style={{
+                              textAlign: 'left',
+                              padding: '8px 12px',
+                              borderRadius: 'var(--radius-sm)',
+                              border: `1px solid ${smsTargetRole === 'users' ? 'var(--primary)' : 'var(--border)'}`,
+                              backgroundColor: smsTargetRole === 'users' ? 'var(--primary-light)' : 'var(--bg-surface)',
+                              color: smsTargetRole === 'users' ? 'var(--primary)' : 'var(--text-primary)',
+                              fontWeight: smsTargetRole === 'users' ? 700 : 500,
+                              fontSize: '0.84rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            👤 Regular Tenants / Customers ({users.filter(u => u.role === 'user' && u.phone).length} recipients)
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Column 2: Message Composer */}
+                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)' }}>
+                  <h2 style={{ fontSize: '1.05rem', fontWeight: 800, marginBottom: '16px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MessageSquare size={18} color="var(--primary)" /> 2. Compose SMS Message
+                  </h2>
+
+                  {/* Sender ID Configuration */}
+                  <div className="form-group" style={{ marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                        Sender ID (From Name) *
+                      </label>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        Max 11 alphanumeric chars
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      maxLength={11}
+                      placeholder="e.g. HORentals or approved SailUp Sender ID"
+                      value={smsSenderId}
+                      onChange={(e) => setSmsSenderId(e.target.value.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 11))}
+                      className="form-control"
+                      style={{ fontSize: '0.88rem', fontWeight: 700, letterSpacing: '0.5px' }}
+                    />
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      ℹ️ Must match an approved Sender ID on your SailUp project dashboard.
+                    </div>
+                  </div>
+
+                  {/* Pre-set Templates */}
+                  <div className="form-group" style={{ marginBottom: '14px' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px', display: 'block' }}>
+                      Pre-set Message Template:
+                    </label>
+                    <select
+                      value={smsTemplate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSmsTemplate(val);
+                        if (val === 'announcement') {
+                          setSmsMessage('HO Rentals: Browse verified single rooms, self-contains, & apartments across Ho at horentals.com. Contact landlords directly!');
+                        } else if (val === 'agent_reminder') {
+                          setSmsMessage('HO Rentals Agent Notice: Please update your listings and contact info on horentals.com so tenants can reach you directly.');
+                        } else if (val === 'listing_promo') {
+                          setSmsMessage('HO Rentals: List your rental property for FREE today! Visit horentals.com/upload or WhatsApp 0204940602 for assistance.');
+                        } else if (val === 'security_notice') {
+                          setSmsMessage('HO Rentals: Never make advance payments before inspecting rooms in person. Report suspicious activity to 0204940602.');
+                        } else if (val === 'custom') {
+                          setSmsMessage('');
+                        }
+                      }}
+                      className="form-control"
+                      style={{ fontSize: '0.85rem', cursor: 'pointer' }}
+                    >
+                      <option value="custom">✏️ Custom Message</option>
+                      <option value="announcement">📢 General Platform Announcement (Rooms in Ho)</option>
+                      <option value="agent_reminder">👔 Agent Profile &amp; Listing Update Reminder</option>
+                      <option value="listing_promo">⚡ Free Property Listing Promotion</option>
+                      <option value="security_notice">🛡️ Security &amp; Tenant Safety Warning</option>
+                    </select>
+                  </div>
+
+                  {/* Message Textarea */}
+                  <div className="form-group" style={{ marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                        Message Text *
+                      </label>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: smsMessage.length > 160 ? '#D97706' : 'var(--text-muted)',
+                      }}>
+                        {smsMessage.length} / 160 chars ({Math.max(1, Math.ceil(smsMessage.length / 160))} SMS unit{Math.ceil(smsMessage.length / 160) > 1 ? 's' : ''})
+                      </span>
+                    </div>
+
+                    <textarea
+                      rows={5}
+                      value={smsMessage}
+                      onChange={(e) => setSmsMessage(e.target.value)}
+                      placeholder="Type your message here... (e.g. HO Rentals: Hello, we have an important announcement...)"
+                      className="form-control"
+                      style={{ fontSize: '0.9rem', lineHeight: 1.5, resize: 'vertical' }}
+                    />
+                  </div>
+
+                  {/* Length Alert */}
+                  {smsMessage.length > 160 && (
+                    <div style={{ fontSize: '0.75rem', color: '#D97706', backgroundColor: '#FEF3C7', padding: '6px 10px', borderRadius: 'var(--radius-sm)', marginBottom: '14px', border: '1px solid #FCD34D' }}>
+                      ⚠️ Message exceeds 160 characters and will be billed as <strong>{Math.ceil(smsMessage.length / 160)} SMS units</strong> per recipient.
+                    </div>
+                  )}
+
+                  {/* Summary & Send Button */}
+                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', fontSize: '0.84rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Target Recipients:</span>
+                      <strong style={{ color: 'var(--text-primary)' }}>
+                        {smsTargetType === 'single'
+                          ? (smsCustomPhone.trim() || '1 direct recipient')
+                          : `${smsTargetRole === 'all'
+                              ? users.filter(u => u.phone).length
+                              : smsTargetRole === 'verified_agents'
+                                ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
+                                : smsTargetRole === 'agents'
+                                  ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
+                                  : users.filter(u => u.role === 'user' && u.phone).length} recipients`}
+                      </strong>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSendAdminSms}
+                      disabled={smsSending || !smsMessage.trim() || (smsTargetType === 'single' && !smsCustomPhone.trim())}
+                      className="btn btn-primary"
+                      style={{
+                        width: '100%',
+                        padding: '12px 18px',
+                        fontSize: '0.95rem',
+                        fontWeight: 800,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        borderRadius: 'var(--radius-md)',
+                      }}
+                    >
+                      {smsSending ? (
+                        <>
+                          <Loader size={18} className="animate-spin" />
+                          <span>Dispatching via SailUp...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send size={18} />
+                          <span>
+                            {smsTargetType === 'single' ? 'Send Direct SMS' : 'Broadcast Bulk SMS'}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+          )}
         </div>
       </main>
 

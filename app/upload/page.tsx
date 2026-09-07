@@ -745,7 +745,7 @@ export default function UploadPage({
               </button>
             ) : (
               <a
-                href="https://wa.me/233571542612?text=Hello%2C%20I%20registered%20as%20an%20agent%20on%20HO%20Rentals%20and%20am%20awaiting%20verification."
+                href="https://wa.me/233204940602?text=Hello%2C%20I%20registered%20as%20an%20agent%20on%20HO%20Rentals%20and%20am%20awaiting%20verification."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary"

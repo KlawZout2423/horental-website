@@ -208,6 +208,13 @@ export const typeDefs = `#graphql
         property: Property!
     }
 
+    type AdminSmsPayload {
+        success: Boolean!
+        sentCount: Int!
+        recipientCount: Int!
+        message: String!
+    }
+
     type Report {
         id: Int!
         propertyId: Int!
@@ -381,5 +388,6 @@ export const typeDefs = `#graphql
         markNotificationRead(propertyId: Int!): Boolean!
         markAllNotificationsRead(propertyIds: [Int!]!): Boolean!
         createReport(propertyId: Int!, reason: String!, details: String): Report!
+        sendAdminSms(targetType: String!, customPhone: String, targetRole: String, message: String!, senderId: String): AdminSmsPayload!
     }
 `;

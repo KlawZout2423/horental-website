@@ -130,6 +130,43 @@ export function isValidGhanaPhone(phone?: string): boolean {
   return /^0[0-9]{9}$/.test(formatted);
 }
 
+/**
+ * Formats a Ghana Card PIN into standard NIA format: GHA-XXXXXXXXX-X (15 characters max)
+ * Example input: "GHA-123456789-1", "GHA1234567891", "1234567891" -> "GHA-123456789-1"
+ */
+export function formatGhanaCard(card?: string): string {
+  if (!card) return '';
+  const trimmed = card.trim().toUpperCase();
+  // Remove non-alphanumeric characters
+  const clean = trimmed.replace(/[^A-Z0-9]/g, '');
+  
+  let digits = '';
+  if (clean.startsWith('GHA')) {
+    digits = clean.slice(3).replace(/[^0-9]/g, '');
+  } else {
+    digits = clean.replace(/[^0-9]/g, '');
+  }
+
+  // Max 10 digits total (9 body digits + 1 check digit)
+  digits = digits.slice(0, 10);
+
+  if (digits.length === 0) return 'GHA-';
+  if (digits.length <= 9) {
+    return `GHA-${digits}`;
+  }
+  return `GHA-${digits.slice(0, 9)}-${digits.slice(9, 10)}`;
+}
+
+/**
+ * Validates Ghana Card format: exactly GHA-XXXXXXXXX-X (9 digits body, 1 check digit)
+ * Total length is exactly 15 characters.
+ */
+export function isValidGhanaCard(card?: string): boolean {
+  if (!card) return false;
+  const formatted = card.trim().toUpperCase();
+  return /^GHA-\d{9}-\d$/.test(formatted);
+}
+
 export function getPricePeriodLabel(desc?: string, short: boolean = true): string {
   if (!desc) return short ? '/sem' : '/ semester';
   const lower = desc.toLowerCase();

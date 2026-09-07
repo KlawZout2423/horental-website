@@ -902,3 +902,15 @@ export const SUBMIT_VERIFICATION_REQUEST = `
   }
 `;
 
+export const SEND_ADMIN_SMS = `
+  mutation SendAdminSms($targetType: String!, $customPhone: String, $targetRole: String, $message: String!, $senderId: String) {
+    sendAdminSms(targetType: $targetType, customPhone: $customPhone, targetRole: $targetRole, message: $message, senderId: $senderId) {
+      success
+      sentCount
+      recipientCount
+      message
+    }
+  }
+`;
+
+

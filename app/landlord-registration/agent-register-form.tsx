@@ -21,7 +21,7 @@ import {
   Phone,
   UploadCloud
 } from 'lucide-react';
-import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput } from '../../lib/types';
+import { formatGhanaPhone, isValidGhanaPhone, formatGhanaCard, isValidGhanaCard, sanitizeInput } from '../../lib/types';
 import { graphqlRequest, UPDATE_AGENT_PROFILE, UPDATE_USER_ROLE } from '../../lib/graphql';
 import styles from '../login/login.module.css';
 
@@ -196,10 +196,17 @@ export default function AgentRegisterForm() {
 
   const validateStep2 = () => {
     setError(null);
-    const sanitizedId = sanitizeInput(idNumber).toUpperCase().trim();
+    let sanitizedId = sanitizeInput(idNumber).toUpperCase().trim();
     const sanitizedCity = sanitizeInput(city).trim();
     const sanitizedDigitalAddr = sanitizeInput(digitalAddress).toUpperCase().trim();
     const sanitizedHomeAddr = sanitizeInput(homeAddress).trim();
+
+    if (idType === 'Ghana Card' || sanitizedId.startsWith('GHA')) {
+      sanitizedId = formatGhanaCard(sanitizedId);
+      if (!isValidGhanaCard(sanitizedId)) {
+        return setError('Please enter a valid 15-character Ghana Card ID in format GHA-XXXXXXXXX-X.');
+      }
+    }
 
     setIdNumber(sanitizedId);
     setCity(sanitizedCity);
@@ -233,7 +240,7 @@ export default function AgentRegisterForm() {
 
     const sanitizedName = sanitizeInput(name);
     const sanitizedEmail = sanitizeInput(emailInput).toLowerCase().trim();
-    const sanitizedIdNumber = sanitizeInput(idNumber).toUpperCase().trim();
+    let sanitizedIdNumber = sanitizeInput(idNumber).toUpperCase().trim();
     const sanitizedCity = sanitizeInput(city).trim();
     const sanitizedAgency = sanitizeInput(agencyName).trim();
     const sanitizedOps = sanitizeInput(operatingLocations).trim();
@@ -247,6 +254,14 @@ export default function AgentRegisterForm() {
     if (!sanitizedName) return setError('Please enter your full name.');
     if (!isValidGhanaPhone(formattedPhone)) return setError('Please enter a valid 10-digit primary phone number.');
     if (!sanitizedIdNumber) return setError('Please enter your National ID / Ghana Card Number.');
+
+    if (idType === 'Ghana Card' || sanitizedIdNumber.startsWith('GHA')) {
+      sanitizedIdNumber = formatGhanaCard(sanitizedIdNumber);
+      if (!isValidGhanaCard(sanitizedIdNumber)) {
+        return setError('Please enter a valid 15-character Ghana Card ID in format GHA-XXXXXXXXX-X.');
+      }
+    }
+
     if (!sanitizedCity) return setError('Please enter your city or town.');
 
     if (strength.score < 2) {
@@ -296,10 +311,14 @@ export default function AgentRegisterForm() {
           bio: fullBio,
           profileImage: profileImage,
           agentLocation: `${sanitizedCity}, ${region} Region`,
-          agentWhatsapp: formattedWhatsapp
+          agentWhatsapp: formattedWhatsapp,
+          licenseNumber: sanitizedIdNumber,
+          agencyName: sanitizedAgency || null,
         });
-      } catch {
-        // Fallback for metadata profile update
+      } catch (profileErr: any) {
+        if (profileErr?.message) {
+          throw profileErr;
+        }
       }
 
       setSuccess(true);
@@ -611,9 +630,13 @@ export default function AgentRegisterForm() {
                 <input
                   id="idNumber"
                   type="text"
-                  placeholder="e.g. GHA-000000000-0"
+                  placeholder={idType === 'Ghana Card' ? 'GHA-123456789-1' : 'e.g. ID Number'}
                   value={idNumber}
-                  onChange={(e) => setIdNumber(e.target.value.toUpperCase())}
+                  maxLength={idType === 'Ghana Card' ? 15 : 30}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setIdNumber(idType === 'Ghana Card' ? formatGhanaCard(raw) : raw.toUpperCase());
+                  }}
                   required
                   className="form-control"
                 />

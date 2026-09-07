@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node scripts/test-api-health.mjs",
+    "test:health": "node scripts/test-api-health.mjs"
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",
