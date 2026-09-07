@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../lib/auth';
 import UploadPage from '../upload/page';
@@ -34,9 +34,9 @@ import {
   SEND_ADMIN_SMS
 } from '../../lib/graphql';
 import { buildTrackingUrl } from '../../lib/trackVisit';
-import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp, Send, MessageSquare, Radio, CheckCheck } from 'lucide-react';
+import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp, Send, MessageSquare, Radio, CheckCheck, Smartphone, Sparkles, Zap, PhoneCall } from 'lucide-react';
 import styles from './admin.module.css';
-import { getFriendlyErrorMessage, LandlordRegistration, getStatusLabel, getToggleStatusLabel } from '../../lib/types';
+import { getFriendlyErrorMessage, LandlordRegistration, getStatusLabel, getToggleStatusLabel, formatGhanaPhone, isValidGhanaPhone } from '../../lib/types';
 
 interface DashboardStats {
   totalProperties: number;
@@ -103,18 +103,52 @@ interface EditGalleryItem {
   previewUrl: string;
 }
 
-export default function AdminPage() {
+type AdminTab = 'analytics' | 'properties' | 'users' | 'agents' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic' | 'sms';
+const VALID_ADMIN_TABS: AdminTab[] = ['analytics', 'properties', 'users', 'agents', 'moderation', 'audits', 'reports', 'upload', 'landlords', 'traffic', 'sms'];
+
+function AdminPageContent() {
   const { user, loading: authLoading, logout } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlTab = searchParams ? (searchParams.get('tab') as AdminTab | null) : null;
+
+  // Initialize activeTab directly from search params or localStorage
+  const [activeTab, setActiveTabState] = useState<AdminTab>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const p = new URLSearchParams(window.location.search).get('tab') as AdminTab | null;
+        if (p && VALID_ADMIN_TABS.includes(p)) return p;
+        const stored = localStorage.getItem('ho_admin_active_tab') as AdminTab | null;
+        if (stored && VALID_ADMIN_TABS.includes(stored)) return stored;
+      } catch (e) {}
+    }
+    return 'analytics';
+  });
+
+  // Keep state synchronized whenever URL search param changes
+  useEffect(() => {
+    if (urlTab && VALID_ADMIN_TABS.includes(urlTab)) {
+      setActiveTabState(urlTab);
+      try {
+        localStorage.setItem('ho_admin_active_tab', urlTab);
+      } catch (e) {}
+    }
+  }, [urlTab]);
+
+  const setActiveTab = (tab: AdminTab) => {
+    setActiveTabState(tab);
+    try {
+      localStorage.setItem('ho_admin_active_tab', tab);
+    } catch (e) {}
+    router.replace(`/admin?tab=${tab}`, { scroll: false });
+  };
 
   // Data states
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [reports, setReports] = useState<ReportItem[]>([]);
-  
-  // Navigation & loaders
-  const [activeTab, setActiveTab] = useState<'analytics' | 'properties' | 'users' | 'agents' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic' | 'sms'>('analytics');
+
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
@@ -1236,7 +1270,7 @@ export default function AdminPage() {
         {/* Content Body Container */}
         <div className={styles.contentBody}>
 
-          {activeTab !== 'upload' && (
+          {activeTab !== 'upload' && activeTab !== 'sms' && (
             <>
               <h1 className={styles.pageTitle}>
                 {activeTab === 'analytics' && 'Overview Analytics'}
@@ -3114,31 +3148,6 @@ export default function AdminPage() {
             </>
           ) : activeTab === 'agents' ? (
             <>
-              {/* Registered Agents Stats */}
-              <div className={styles.statsGrid} style={{ marginBottom: '20px' }}>
-                <div className={styles.statCard} style={{ borderLeft: '4px solid var(--primary)' }}>
-                  <span className={styles.statLabel}>Registered Agents</span>
-                  <span className={styles.statValue} style={{ color: 'var(--primary)' }}>
-                    {agentUsers.length}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Active platform accounts</span>
-                </div>
-                <div className={styles.statCard} style={{ borderLeft: '4px solid #10B981' }}>
-                  <span className={styles.statLabel}>Verified Agents</span>
-                  <span className={styles.statValue} style={{ color: '#10B981' }}>
-                    {agentUsers.filter((u) => u.verificationStatus === 'verified').length}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Verified badges active</span>
-                </div>
-                <div className={styles.statCard} style={{ borderLeft: '4px solid #F59E0B' }}>
-                  <span className={styles.statLabel}>Unverified Agents</span>
-                  <span className={styles.statValue} style={{ color: '#F59E0B' }}>
-                    {agentUsers.filter((u) => u.verificationStatus !== 'verified').length}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Pending ID verification</span>
-                </div>
-              </div>
-
               {/* Shareable Links */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
                 <a 
@@ -3932,280 +3941,566 @@ export default function AdminPage() {
           </div>
           ) : null}
 
-          {/* SMS BROADCAST & DIRECT MESSAGING PANEL */}
+          {/* SMS BROADCAST & DIRECT MESSAGING STUDIO */}
           {activeTab === 'sms' && (
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               
-              {/* Header Banner */}
-              <div className="card glass" style={{ padding: '24px 28px', borderRadius: 'var(--radius-lg)', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.98) 100%)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                <div>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.15)', color: '#34D399', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }}></span>
-                    SailUp Gateway Connected
+              {/* Premium Brand Header Banner (Solid Vibrant HO Rentals Red) */}
+              <div style={{
+                padding: '28px 32px',
+                borderRadius: 'var(--radius-lg)',
+                background: 'linear-gradient(135deg, #C1121F 0%, #DC2626 50%, #9E0E18 100%)',
+                color: '#ffffff',
+                boxShadow: '0 14px 36px -4px rgba(193, 18, 31, 0.45)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                position: 'relative',
+                overflow: 'hidden',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '20px'
+              }}>
+                {/* Decorative background glow circles */}
+                <div style={{
+                  position: 'absolute',
+                  top: '-40px',
+                  right: '15%',
+                  width: '180px',
+                  height: '180px',
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%)',
+                  pointerEvents: 'none'
+                }} />
+                
+                <div style={{ position: 'relative', zIndex: 1, maxWidth: '640px' }}>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'rgba(0, 0, 0, 0.25)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    padding: '5px 14px',
+                    borderRadius: '24px',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    marginBottom: '12px'
+                  }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', boxShadow: '0 0 8px #10B981', display: 'inline-block' }}></span>
+                    <span>SailUp Gateway Active</span>
+                    <span style={{ opacity: 0.5 }}>•</span>
+                    <span style={{ color: '#FEF08A' }}>Sender ID: {smsSenderId || 'HORENTALS'}</span>
                   </div>
-                  <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '0 0 6px', color: '#F8FAFC' }}>
-                    SMS Broadcast &amp; Direct Messaging
+
+                  <h1 style={{ fontSize: '1.8rem', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+                    SMS Broadcast &amp; Engagement Studio
                   </h1>
-                  <p style={{ margin: 0, fontSize: '0.88rem', color: '#94A3B8', maxWidth: '600px' }}>
-                    Send direct alerts to a single tenant/landlord, or broadcast targeted announcements to verified agents and registered users across Ghana.
+                  <p style={{ margin: 0, fontSize: '0.92rem', color: 'rgba(255, 255, 255, 0.88)', lineHeight: 1.5 }}>
+                    Reach tenants, verified agents, and property owners instantly with branded SMS notifications, rental updates, and bulk announcements across Ho and Volta Region.
                   </p>
                 </div>
 
-                <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-md)', padding: '12px 18px', textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.72rem', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 700 }}>Sender ID</div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#38BDF8', letterSpacing: '0.04em' }}>HORentals</div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Standard 160 chars / unit</div>
+                {/* Right Quick Info Card */}
+                <div style={{
+                  position: 'relative',
+                  zIndex: 1,
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '16px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                  minWidth: '220px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', fontWeight: 700 }}>Approved Sender</span>
+                    <span style={{ fontSize: '0.72rem', background: '#10B981', color: '#fff', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>LIVE</span>
+                  </div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FEF08A', letterSpacing: '0.05em' }}>
+                    {smsSenderId || 'HORENTALS'}
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.75)' }}>
+                    ⚡ 160 Chars / Single Segment
+                  </div>
                 </div>
               </div>
 
-              {/* Status Notice */}
+              {/* Status Alert Notification */}
               {smsResult && (
-                <div style={{
-                  padding: '14px 18px',
+                <div className="animate-fade-in" style={{
+                  padding: '16px 20px',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: smsResult.success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                  border: `1px solid ${smsResult.success ? '#10B981' : '#EF4444'}`,
-                  color: smsResult.success ? '#047857' : '#B91C1C',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
+                  backgroundColor: smsResult.success ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                  border: `1.5px solid ${smsResult.success ? '#10B981' : '#EF4444'}`,
+                  color: smsResult.success ? '#065F46' : '#991B1B',
+                  fontSize: '0.92rem',
+                  fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
+                  gap: '12px',
+                  boxShadow: 'var(--shadow-sm)'
                 }}>
-                  {smsResult.success ? <CheckCheck size={18} /> : <AlertTriangle size={18} />}
-                  <span>{smsResult.message}</span>
+                  {smsResult.success ? (
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+                      <CheckCheck size={18} />
+                    </div>
+                  ) : (
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+                      <AlertTriangle size={18} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.95rem' }}>{smsResult.message}</div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 500, opacity: 0.85, marginTop: '2px' }}>
+                      {smsResult.success ? 'Delivered via SailUp SMS gateway.' : 'Please check the error details or verify your Sender ID on sailup.io.'}
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Main 2-Column Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
+              {/* Top Row: Metric Stats Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
                 
-                {/* Column 1: Audience & Mode Selection */}
-                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)' }}>
-                  <h2 style={{ fontSize: '1.05rem', fontWeight: 800, marginBottom: '16px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Users size={18} color="var(--primary)" /> 1. Select Target Audience
-                  </h2>
+                {/* Stat 1: Total Phone Numbers */}
+                <div className="card glass" style={{ padding: '18px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Users size={22} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>All Contactable Users</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: '2px' }}>
+                      {users.filter(u => u.phone).length}
+                    </div>
+                  </div>
+                </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    
-                    {/* Option 1: Single Number */}
-                    <label style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '12px',
-                      padding: '14px 16px',
-                      borderRadius: 'var(--radius-md)',
-                      border: `1.5px solid ${smsTargetType === 'single' ? 'var(--primary)' : 'var(--border)'}`,
-                      backgroundColor: smsTargetType === 'single' ? 'var(--primary-light)' : 'var(--bg-surface-secondary)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}>
-                      <input
-                        type="radio"
-                        name="smsTargetType"
-                        checked={smsTargetType === 'single'}
-                        onChange={() => setSmsTargetType('single')}
-                        style={{ marginTop: '3px' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                          📱 Direct Phone Number (Single Recipient)
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          Type in any Ghanaian phone number or pick from registered user directory.
-                        </div>
-                      </div>
-                    </label>
+                {/* Stat 2: Verified Agents */}
+                <div className="card glass" style={{ padding: '18px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.12)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <ShieldCheck size={22} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Verified Agents</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#10B981', marginTop: '2px' }}>
+                      {users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length}
+                    </div>
+                  </div>
+                </div>
 
-                    {/* Single Phone Input Container (When active) */}
-                    {smsTargetType === 'single' && (
-                      <div style={{ marginLeft: '28px', display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px 14px', background: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px', display: 'block' }}>
+                {/* Stat 3: All Agents & Landlords */}
+                <div className="card glass" style={{ padding: '18px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.12)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Building size={22} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Landlords &amp; Agents</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: '2px' }}>
+                      {users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stat 4: Regular Tenants */}
+                <div className="card glass" style={{ padding: '18px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.12)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <MessageSquare size={22} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Tenants &amp; Seekers</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: '2px' }}>
+                      {users.filter(u => u.role === 'user' && u.phone).length}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Studio Workspace: 3-Column Layout (Audience / Composer / Live Phone Simulator) */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', alignItems: 'start' }}>
+                
+                {/* Column 1: Audience & Targeting */}
+                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
+                    <h2 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Users size={19} color="var(--primary)" /> 1. Select Audience
+                    </h2>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-light)', padding: '2px 8px', borderRadius: '10px' }}>
+                      Step 1
+                    </span>
+                  </div>
+
+                  {/* Mode Selector Segmented Switch */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'var(--bg-surface-secondary)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                    <button
+                      type="button"
+                      onClick={() => setSmsTargetType('single')}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: 'none',
+                        background: smsTargetType === 'single' ? 'var(--bg-surface)' : 'transparent',
+                        color: smsTargetType === 'single' ? 'var(--primary)' : 'var(--text-secondary)',
+                        fontWeight: smsTargetType === 'single' ? 800 : 600,
+                        fontSize: '0.84rem',
+                        boxShadow: smsTargetType === 'single' ? 'var(--shadow-sm)' : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <Smartphone size={15} /> Direct Single Number
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSmsTargetType('role')}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: 'none',
+                        background: smsTargetType === 'role' ? 'var(--bg-surface)' : 'transparent',
+                        color: smsTargetType === 'role' ? 'var(--primary)' : 'var(--text-secondary)',
+                        fontWeight: smsTargetType === 'role' ? 800 : 600,
+                        fontSize: '0.84rem',
+                        boxShadow: smsTargetType === 'role' ? 'var(--shadow-sm)' : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <Radio size={15} /> Group Broadcast
+                    </button>
+                  </div>
+
+                  {/* Single Mode Input */}
+                  {smsTargetType === 'single' && (
+                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                             Recipient Phone Number *
                           </label>
+                          {smsCustomPhone && (
+                            <span style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              color: isValidGhanaPhone(formatGhanaPhone(smsCustomPhone)) ? '#10B981' : '#F59E0B'
+                            }}>
+                              {isValidGhanaPhone(formatGhanaPhone(smsCustomPhone)) ? '✓ Valid Ghana Phone' : 'Enter 10-digit number'}
+                            </span>
+                          )}
+                        </div>
+
+                        <div style={{ position: 'relative' }}>
+                          <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.86rem', fontWeight: 800, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>🇬🇭</span>
+                          </div>
                           <input
                             type="tel"
                             placeholder="e.g. 0241234567 or 0204940602"
                             value={smsCustomPhone}
                             onChange={(e) => setSmsCustomPhone(e.target.value.replace(/[^0-9+]/g, '').slice(0, 13))}
                             className="form-control"
-                            style={{ fontSize: '0.92rem', fontWeight: 600 }}
+                            style={{ paddingLeft: '44px', fontSize: '0.94rem', fontWeight: 700, letterSpacing: '0.04em' }}
                           />
                         </div>
-
-                        {/* Quick pick from existing users */}
-                        <div>
-                          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>
-                            Or Pick From Registered Users:
-                          </label>
-                          <select
-                            onChange={(e) => {
-                              if (e.target.value) setSmsCustomPhone(e.target.value);
-                            }}
-                            className="form-control"
-                            style={{ fontSize: '0.82rem', cursor: 'pointer' }}
-                            defaultValue=""
-                          >
-                            <option value="" disabled>-- Select a registered user ({users.filter(u => u.phone).length} available) --</option>
-                            {users.filter(u => u.phone).map(u => (
-                              <option key={u.id} value={u.phone}>
-                                {u.name} ({u.phone}) • {u.role.toUpperCase()}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
                       </div>
-                    )}
 
-                    {/* Option 2: Broadcast by Role / Group */}
-                    <label style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '12px',
-                      padding: '14px 16px',
-                      borderRadius: 'var(--radius-md)',
-                      border: `1.5px solid ${smsTargetType === 'role' ? 'var(--primary)' : 'var(--border)'}`,
-                      backgroundColor: smsTargetType === 'role' ? 'var(--primary-light)' : 'var(--bg-surface-secondary)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}>
-                      <input
-                        type="radio"
-                        name="smsTargetType"
-                        checked={smsTargetType === 'role'}
-                        onChange={() => setSmsTargetType('role')}
-                        style={{ marginTop: '3px' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                          📢 Broadcast to User Group
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          Send targeted bulk SMS to all users, verified agents, or tenants with valid phone numbers.
-                        </div>
-                      </div>
-                    </label>
-
-                    {/* Role Filter Options (When active) */}
-                    {smsTargetType === 'role' && (
-                      <div style={{ marginLeft: '28px', display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 14px', background: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px', display: 'block' }}>
-                          Choose Target Group:
+                      {/* Quick Fill Dropdown */}
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>
+                          Or Pick from Contact Directory ({users.filter(u => u.phone).length}):
                         </label>
-                        
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px' }}>
-                          <button
-                            type="button"
-                            onClick={() => setSmsTargetRole('all')}
-                            style={{
-                              textAlign: 'left',
-                              padding: '8px 12px',
-                              borderRadius: 'var(--radius-sm)',
-                              border: `1px solid ${smsTargetRole === 'all' ? 'var(--primary)' : 'var(--border)'}`,
-                              backgroundColor: smsTargetRole === 'all' ? 'var(--primary-light)' : 'var(--bg-surface)',
-                              color: smsTargetRole === 'all' ? 'var(--primary)' : 'var(--text-primary)',
-                              fontWeight: smsTargetRole === 'all' ? 700 : 500,
-                              fontSize: '0.84rem',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            🌐 All Registered Users ({users.filter(u => u.phone).length} recipients)
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setSmsTargetRole('verified_agents')}
-                            style={{
-                              textAlign: 'left',
-                              padding: '8px 12px',
-                              borderRadius: 'var(--radius-sm)',
-                              border: `1px solid ${smsTargetRole === 'verified_agents' ? 'var(--primary)' : 'var(--border)'}`,
-                              backgroundColor: smsTargetRole === 'verified_agents' ? 'var(--primary-light)' : 'var(--bg-surface)',
-                              color: smsTargetRole === 'verified_agents' ? 'var(--primary)' : 'var(--text-primary)',
-                              fontWeight: smsTargetRole === 'verified_agents' ? 700 : 500,
-                              fontSize: '0.84rem',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            🛡️ Verified Agents Only ({users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length} recipients)
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setSmsTargetRole('agents')}
-                            style={{
-                              textAlign: 'left',
-                              padding: '8px 12px',
-                              borderRadius: 'var(--radius-sm)',
-                              border: `1px solid ${smsTargetRole === 'agents' ? 'var(--primary)' : 'var(--border)'}`,
-                              backgroundColor: smsTargetRole === 'agents' ? 'var(--primary-light)' : 'var(--bg-surface)',
-                              color: smsTargetRole === 'agents' ? 'var(--primary)' : 'var(--text-primary)',
-                              fontWeight: smsTargetRole === 'agents' ? 700 : 500,
-                              fontSize: '0.84rem',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            👔 All Agents &amp; Landlords ({users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length} recipients)
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setSmsTargetRole('users')}
-                            style={{
-                              textAlign: 'left',
-                              padding: '8px 12px',
-                              borderRadius: 'var(--radius-sm)',
-                              border: `1px solid ${smsTargetRole === 'users' ? 'var(--primary)' : 'var(--border)'}`,
-                              backgroundColor: smsTargetRole === 'users' ? 'var(--primary-light)' : 'var(--bg-surface)',
-                              color: smsTargetRole === 'users' ? 'var(--primary)' : 'var(--text-primary)',
-                              fontWeight: smsTargetRole === 'users' ? 700 : 500,
-                              fontSize: '0.84rem',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            👤 Regular Tenants / Customers ({users.filter(u => u.role === 'user' && u.phone).length} recipients)
-                          </button>
-                        </div>
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) setSmsCustomPhone(e.target.value);
+                          }}
+                          className="form-control"
+                          style={{ fontSize: '0.84rem', cursor: 'pointer', fontWeight: 600 }}
+                          value=""
+                        >
+                          <option value="" disabled>-- Select a registered contact --</option>
+                          {users.filter(u => u.phone).map(u => (
+                            <option key={u.id} value={u.phone}>
+                              {u.name} ({u.phone}) • {u.role.toUpperCase()}{u.verificationStatus === 'verified' ? ' [VERIFIED]' : ''}
+                            </option>
+                          ))}
+                        </select>
                       </div>
-                    )}
+
+                      {/* Quick Telecel / Admin Quick Test Pill */}
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => setSmsCustomPhone('0204940602')}
+                          style={{
+                            background: 'var(--bg-surface-secondary)',
+                            border: '1px solid var(--border)',
+                            color: 'var(--text-secondary)',
+                            borderRadius: '16px',
+                            padding: '4px 10px',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ⚡ Quick Fill Admin Telecel (0204940602)
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Broadcast Group Selection */}
+                  {smsTargetType === 'role' && (
+                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px', display: 'block' }}>
+                        Choose Target Audience Group:
+                      </label>
+
+                      {/* Option A: All Users */}
+                      <div
+                        onClick={() => setSmsTargetRole('all')}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: 'var(--radius-md)',
+                          border: `1.5px solid ${smsTargetRole === 'all' ? 'var(--primary)' : 'var(--border)'}`,
+                          backgroundColor: smsTargetRole === 'all' ? 'var(--primary-light)' : 'var(--bg-surface-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '1.2rem' }}>🌐</span>
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: '0.88rem', color: smsTargetRole === 'all' ? 'var(--primary)' : 'var(--text-primary)' }}>
+                              All Registered Users
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              Every registered customer &amp; manager
+                            </div>
+                          </div>
+                        </div>
+                        <span style={{
+                          background: smsTargetRole === 'all' ? 'var(--primary)' : 'var(--border)',
+                          color: smsTargetRole === 'all' ? '#fff' : 'var(--text-secondary)',
+                          padding: '3px 10px',
+                          borderRadius: '12px',
+                          fontSize: '0.78rem',
+                          fontWeight: 800
+                        }}>
+                          {users.filter(u => u.phone).length}
+                        </span>
+                      </div>
+
+                      {/* Option B: Verified Agents */}
+                      <div
+                        onClick={() => setSmsTargetRole('verified_agents')}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: 'var(--radius-md)',
+                          border: `1.5px solid ${smsTargetRole === 'verified_agents' ? 'var(--primary)' : 'var(--border)'}`,
+                          backgroundColor: smsTargetRole === 'verified_agents' ? 'var(--primary-light)' : 'var(--bg-surface-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '1.2rem' }}>🛡️</span>
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: '0.88rem', color: smsTargetRole === 'verified_agents' ? 'var(--primary)' : 'var(--text-primary)' }}>
+                              Verified Agents Only
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              ID &amp; License verified managers
+                            </div>
+                          </div>
+                        </div>
+                        <span style={{
+                          background: smsTargetRole === 'verified_agents' ? 'var(--primary)' : 'var(--border)',
+                          color: smsTargetRole === 'verified_agents' ? '#fff' : 'var(--text-secondary)',
+                          padding: '3px 10px',
+                          borderRadius: '12px',
+                          fontSize: '0.78rem',
+                          fontWeight: 800
+                        }}>
+                          {users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length}
+                        </span>
+                      </div>
+
+                      {/* Option C: All Agents & Landlords */}
+                      <div
+                        onClick={() => setSmsTargetRole('agents')}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: 'var(--radius-md)',
+                          border: `1.5px solid ${smsTargetRole === 'agents' ? 'var(--primary)' : 'var(--border)'}`,
+                          backgroundColor: smsTargetRole === 'agents' ? 'var(--primary-light)' : 'var(--bg-surface-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '1.2rem' }}>👔</span>
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: '0.88rem', color: smsTargetRole === 'agents' ? 'var(--primary)' : 'var(--text-primary)' }}>
+                              All Agents &amp; Landlords
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              All property owners and agents
+                            </div>
+                          </div>
+                        </div>
+                        <span style={{
+                          background: smsTargetRole === 'agents' ? 'var(--primary)' : 'var(--border)',
+                          color: smsTargetRole === 'agents' ? '#fff' : 'var(--text-secondary)',
+                          padding: '3px 10px',
+                          borderRadius: '12px',
+                          fontSize: '0.78rem',
+                          fontWeight: 800
+                        }}>
+                          {users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length}
+                        </span>
+                      </div>
+
+                      {/* Option D: Regular Tenants */}
+                      <div
+                        onClick={() => setSmsTargetRole('users')}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: 'var(--radius-md)',
+                          border: `1.5px solid ${smsTargetRole === 'users' ? 'var(--primary)' : 'var(--border)'}`,
+                          backgroundColor: smsTargetRole === 'users' ? 'var(--primary-light)' : 'var(--bg-surface-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '1.2rem' }}>👤</span>
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: '0.88rem', color: smsTargetRole === 'users' ? 'var(--primary)' : 'var(--text-primary)' }}>
+                              Tenants &amp; Room Seekers
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              End users and active renters
+                            </div>
+                          </div>
+                        </div>
+                        <span style={{
+                          background: smsTargetRole === 'users' ? 'var(--primary)' : 'var(--border)',
+                          color: smsTargetRole === 'users' ? '#fff' : 'var(--text-secondary)',
+                          padding: '3px 10px',
+                          borderRadius: '12px',
+                          fontSize: '0.78rem',
+                          fontWeight: 800
+                        }}>
+                          {users.filter(u => u.role === 'user' && u.phone).length}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Variable Shortcuts Insert Bar */}
+                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+                    <div style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                      Quick Text Snippets (Click to insert):
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {['horentals.com', '0204940602', 'HO Rentals:', 'Ho, Volta Region'].map(tag => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setSmsMessage(prev => prev ? `${prev} ${tag}` : tag)}
+                          style={{
+                            background: 'var(--bg-surface-secondary)',
+                            border: '1px solid var(--border)',
+                            color: 'var(--text-primary)',
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
                 </div>
 
                 {/* Column 2: Message Composer */}
-                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)' }}>
-                  <h2 style={{ fontSize: '1.05rem', fontWeight: 800, marginBottom: '16px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <MessageSquare size={18} color="var(--primary)" /> 2. Compose SMS Message
-                  </h2>
-
-                  {/* Sender ID Configuration */}
-                  <div className="form-group" style={{ marginBottom: '14px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                        Sender ID (From Name) *
-                      </label>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        Max 11 alphanumeric chars
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={11}
-                      placeholder="e.g. HORentals or approved SailUp Sender ID"
-                      value={smsSenderId}
-                      onChange={(e) => setSmsSenderId(e.target.value.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 11))}
-                      className="form-control"
-                      style={{ fontSize: '0.88rem', fontWeight: 700, letterSpacing: '0.5px' }}
-                    />
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      ℹ️ Must match an approved Sender ID on your SailUp project dashboard.
-                    </div>
+                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
+                    <h2 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MessageSquare size={19} color="var(--primary)" /> 2. Compose Message
+                    </h2>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-light)', padding: '2px 8px', borderRadius: '10px' }}>
+                      Step 2
+                    </span>
                   </div>
 
-                  {/* Pre-set Templates */}
-                  <div className="form-group" style={{ marginBottom: '14px' }}>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px', display: 'block' }}>
-                      Pre-set Message Template:
+                  {/* Sender ID Non-Editable Verified Display */}
+                  <div style={{
+                    padding: '12px 16px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--bg-surface-secondary)',
+                    border: '1px solid var(--border)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Outgoing Sender ID
+                      </div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '0.05em', marginTop: '2px' }}>
+                        HORENTALS
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      color: '#065F46',
+                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      ✓ Verified &amp; Active
+                    </span>
+                  </div>
+
+                  {/* Quick Preset Templates */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', display: 'block' }}>
+                      Message Template:
                     </label>
                     <select
                       value={smsTemplate}
@@ -4225,7 +4520,7 @@ export default function AdminPage() {
                         }
                       }}
                       className="form-control"
-                      style={{ fontSize: '0.85rem', cursor: 'pointer' }}
+                      style={{ fontSize: '0.86rem', cursor: 'pointer', fontWeight: 600 }}
                     >
                       <option value="custom">✏️ Custom Message</option>
                       <option value="announcement">📢 General Platform Announcement (Rooms in Ho)</option>
@@ -4235,19 +4530,24 @@ export default function AdminPage() {
                     </select>
                   </div>
 
-                  {/* Message Textarea */}
-                  <div className="form-group" style={{ marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                        Message Text *
+                  {/* Textarea Composer */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                        SMS Content *
                       </label>
-                      <span style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        color: smsMessage.length > 160 ? '#D97706' : 'var(--text-muted)',
-                      }}>
-                        {smsMessage.length} / 160 chars ({Math.max(1, Math.ceil(smsMessage.length / 160))} SMS unit{Math.ceil(smsMessage.length / 160) > 1 ? 's' : ''})
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          color: smsMessage.length > 160 ? '#D97706' : 'var(--primary)',
+                          background: smsMessage.length > 160 ? 'rgba(217, 119, 6, 0.1)' : 'var(--primary-light)',
+                          padding: '2px 8px',
+                          borderRadius: '8px'
+                        }}>
+                          {smsMessage.length} / 160 chars ({Math.max(1, Math.ceil(smsMessage.length / 160))} SMS unit{Math.ceil(smsMessage.length / 160) > 1 ? 's' : ''})
+                        </span>
+                      </div>
                     </div>
 
                     <textarea
@@ -4256,21 +4556,31 @@ export default function AdminPage() {
                       onChange={(e) => setSmsMessage(e.target.value)}
                       placeholder="Type your message here... (e.g. HO Rentals: Hello, we have an important announcement...)"
                       className="form-control"
-                      style={{ fontSize: '0.9rem', lineHeight: 1.5, resize: 'vertical' }}
+                      style={{ fontSize: '0.92rem', lineHeight: 1.5, resize: 'vertical', minHeight: '120px' }}
                     />
                   </div>
 
-                  {/* Length Alert */}
+                  {/* Character progress bar */}
+                  <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${Math.min(100, (smsMessage.length / 160) * 100)}%`,
+                      height: '100%',
+                      backgroundColor: smsMessage.length > 160 ? '#D97706' : 'var(--primary)',
+                      transition: 'width 0.2s ease'
+                    }} />
+                  </div>
+
+                  {/* Length Alert Notice */}
                   {smsMessage.length > 160 && (
-                    <div style={{ fontSize: '0.75rem', color: '#D97706', backgroundColor: '#FEF3C7', padding: '6px 10px', borderRadius: 'var(--radius-sm)', marginBottom: '14px', border: '1px solid #FCD34D' }}>
-                      ⚠️ Message exceeds 160 characters and will be billed as <strong>{Math.ceil(smsMessage.length / 160)} SMS units</strong> per recipient.
+                    <div style={{ fontSize: '0.76rem', color: '#92400E', backgroundColor: '#FEF3C7', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid #FCD34D' }}>
+                      ⚠️ Message exceeds 160 chars and will be billed as <strong>{Math.ceil(smsMessage.length / 160)} SMS units</strong> per recipient.
                     </div>
                   )}
 
-                  {/* Summary & Send Button */}
-                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', fontSize: '0.84rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Target Recipients:</span>
+                  {/* Summary Details & Dispatch Button */}
+                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.86rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Target Audience:</span>
                       <strong style={{ color: 'var(--text-primary)' }}>
                         {smsTargetType === 'single'
                           ? (smsCustomPhone.trim() || '1 direct recipient')
@@ -4288,29 +4598,44 @@ export default function AdminPage() {
                       type="button"
                       onClick={handleSendAdminSms}
                       disabled={smsSending || !smsMessage.trim() || (smsTargetType === 'single' && !smsCustomPhone.trim())}
-                      className="btn btn-primary"
+                      className="btn"
                       style={{
                         width: '100%',
-                        padding: '12px 18px',
-                        fontSize: '0.95rem',
-                        fontWeight: 800,
+                        padding: '14px 20px',
+                        fontSize: '0.98rem',
+                        fontWeight: 900,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '8px',
+                        gap: '10px',
                         borderRadius: 'var(--radius-md)',
+                        background: 'linear-gradient(135deg, #C1121F 0%, #780B13 100%)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        boxShadow: '0 6px 20px -2px rgba(193, 18, 31, 0.4)',
+                        cursor: (smsSending || !smsMessage.trim() || (smsTargetType === 'single' && !smsCustomPhone.trim())) ? 'not-allowed' : 'pointer',
+                        opacity: (smsSending || !smsMessage.trim() || (smsTargetType === 'single' && !smsCustomPhone.trim())) ? 0.6 : 1,
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       {smsSending ? (
                         <>
-                          <Loader size={18} className="animate-spin" />
+                          <Loader size={20} className="animate-spin" />
                           <span>Dispatching via SailUp...</span>
                         </>
                       ) : (
                         <>
-                          <Send size={18} />
+                          <Send size={19} />
                           <span>
-                            {smsTargetType === 'single' ? 'Send Direct SMS' : 'Broadcast Bulk SMS'}
+                            {smsTargetType === 'single' ? '🚀 Send Direct SMS' : `🚀 Broadcast Bulk SMS (${
+                              smsTargetRole === 'all'
+                                ? users.filter(u => u.phone).length
+                                : smsTargetRole === 'verified_agents'
+                                  ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
+                                  : smsTargetRole === 'agents'
+                                    ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
+                                    : users.filter(u => u.role === 'user' && u.phone).length
+                            } Recipients)`}
                           </span>
                         </>
                       )}
@@ -4744,5 +5069,18 @@ export default function AdminPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', flexDirection: 'column', gap: '16px' }}>
+        <Loader size={40} className="animate-spin" style={{ color: 'var(--primary)' }} />
+        <p style={{ color: 'var(--text-secondary)' }}>Loading admin workspace...</p>
+      </div>
+    }>
+      <AdminPageContent />
+    </Suspense>
   );
 }
