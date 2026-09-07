@@ -1,38 +1,20 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
-import jwt from 'jsonwebtoken';
-import { getJwtSecret } from '../../../lib/env';
 
 // Cloudinary config automatically loads CLOUDINARY_URL from process.env
 cloudinary.config();
 
-function isAuthenticated(req: NextRequest): boolean {
-  const authHeader = req.headers.get('authorization');
-  let token = authHeader ? authHeader.replace('Bearer ', '') : req.cookies.get('auth_token')?.value;
-
-  if (token) {
-    try {
-      jwt.verify(token, getJwtSecret());
-      return true;
-    } catch {
-      // Token verification failed
-    }
-  }
-
-  return false;
-}
-
 export async function POST(req: NextRequest) {
   try {
-    if (!isAuthenticated(req)) {
-      return NextResponse.json({ error: 'Unauthorized. Please log in to upload images.' }, { status: 401 });
-    }
-
     const formData = await req.formData();
     const file = formData.get('image') as File | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No image file uploaded' }, { status: 400 });
+    }
+
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json({ error: 'Uploaded file must be an image' }, { status: 400 });
     }
 
     const arrayBuffer = await file.arrayBuffer();

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Bell, Sparkles, CheckCheck, Building2, ChevronRight } from 'lucide-react';
+import { Bell, Sparkles, CheckCheck } from 'lucide-react';
 import {
   graphqlRequest,
   GET_PROPERTIES,
@@ -17,6 +17,25 @@ interface NotificationBellProps {
   userId?: string | number;
 }
 
+function formatRelativeTime(dateString?: string): string {
+  if (!dateString) return 'Just now';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Just now';
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.max(0, Math.floor(diffMs / 1000));
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSecs < 60) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 export default function NotificationBell({ userId }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [newListings, setNewListings] = useState<Property[]>([]);
@@ -24,76 +43,96 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Stable user ID string for consistent hook dependency sizing
+  // User-isolated storage key
   const currentUserId = userId ? String(userId) : '';
   const storageKey = currentUserId ? `read_notifications_user_${currentUserId}` : 'read_notifications_guest';
 
-  // Load from localStorage (both user-specific key and global fallback key)
-  const loadLocalReadIds = (): string[] => {
+  // Load from localStorage isolated by user
+  const loadLocalReadIds = useCallback((): string[] => {
     if (typeof window === 'undefined') return [];
     try {
-      const globalStored = localStorage.getItem('read_notifications_global');
       const userStored = localStorage.getItem(storageKey);
-      const gIds = globalStored ? JSON.parse(globalStored) : [];
       const uIds = userStored ? JSON.parse(userStored) : [];
-      return Array.from(new Set([...gIds, ...uIds].map(String)));
+      return Array.isArray(uIds) ? uIds.map(String) : [];
     } catch {
       return [];
     }
-  };
+  }, [storageKey]);
 
-  const saveLocalReadIds = (ids: string[]) => {
+  const saveLocalReadIds = useCallback((ids: string[]) => {
     if (typeof window === 'undefined') return;
     try {
       const existing = loadLocalReadIds();
       const merged = Array.from(new Set([...existing, ...ids].map(String)));
-      localStorage.setItem('read_notifications_global', JSON.stringify(merged));
       localStorage.setItem(storageKey, JSON.stringify(merged));
       setReadIds(merged);
     } catch (err) {
       console.error('Error saving read notifications:', err);
     }
-  };
+  }, [loadLocalReadIds, storageKey]);
 
-  useEffect(() => {
-    setReadIds(loadLocalReadIds());
-  }, [storageKey]);
+  // Fetch recent listings and merge DB read states
+  const fetchRecentListings = useCallback(async (isBackground = false) => {
+    try {
+      if (!isBackground) setLoading(true);
+      const localRead = loadLocalReadIds();
+      setReadIds(localRead);
 
-  // Fetch recent properties and DB read notifications on mount or user login
-  useEffect(() => {
-    async function fetchRecentListings() {
-      try {
-        setLoading(true);
-        const localRead = loadLocalReadIds();
-        setReadIds(localRead);
+      const [data, dbReads] = await Promise.all([
+        graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES).catch(() => ({ properties: [] })),
+        currentUserId
+          ? graphqlRequest<{ readNotificationIds: number[] }>(READ_NOTIFICATION_IDS_QUERY).catch(() => ({ readNotificationIds: [] }))
+          : Promise.resolve({ readNotificationIds: [] }),
+      ]);
 
-        const [data, dbReads] = await Promise.all([
-          graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES, { limit: 10 }),
-          currentUserId
-            ? graphqlRequest<{ readNotificationIds: number[] }>(READ_NOTIFICATION_IDS_QUERY).catch(() => ({ readNotificationIds: [] }))
-            : Promise.resolve({ readNotificationIds: [] }),
-        ]);
-
-        if (data && data.properties) {
-          // Only notify about fully available & verified properties — never pending or rejected ones
-          const verifiedAvailable = data.properties.filter(
-            (p) => p.status === 'available' && p.verificationStatus === 'verified'
-          );
-          setNewListings(verifiedAvailable.slice(0, 8));
-        }
-
-        const dbReadStrings = (dbReads?.readNotificationIds || []).map(String);
-        const combined = Array.from(new Set([...localRead, ...dbReadStrings]));
-        saveLocalReadIds(combined);
-      } catch (err) {
-        console.error('Error fetching new listing notifications:', err);
-      } finally {
-        setLoading(false);
+      if (data && data.properties) {
+        // Show all active & available properties (excluding rejected / pending approval)
+        const availableListings = data.properties.filter(
+          (p) => p.status === 'available' && p.verificationStatus !== 'rejected'
+        );
+        setNewListings(availableListings.slice(0, 8));
       }
-    }
 
+      const dbReadStrings = (dbReads?.readNotificationIds || []).map(String);
+      const combined = Array.from(new Set([...localRead, ...dbReadStrings]));
+      saveLocalReadIds(combined);
+    } catch (err) {
+      console.error('Error fetching new listing notifications:', err);
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  }, [currentUserId, loadLocalReadIds, saveLocalReadIds]);
+
+  // Initial load on mount or user change
+  useEffect(() => {
     fetchRecentListings();
-  }, [currentUserId, storageKey]);
+  }, [fetchRecentListings]);
+
+  // Sync on upload / admin update events, window focus, and background polling
+  useEffect(() => {
+    const handleListingsUpdate = () => {
+      fetchRecentListings(true);
+    };
+
+    const handleWindowFocus = () => {
+      fetchRecentListings(true);
+    };
+
+    // Custom event dispatched whenever listings are uploaded or updated
+    window.addEventListener('ho_rental_listings_updated', handleListingsUpdate);
+    window.addEventListener('focus', handleWindowFocus);
+
+    // Background poll every 45 seconds for active users
+    const pollInterval = setInterval(() => {
+      fetchRecentListings(true);
+    }, 45000);
+
+    return () => {
+      window.removeEventListener('ho_rental_listings_updated', handleListingsUpdate);
+      window.removeEventListener('focus', handleWindowFocus);
+      clearInterval(pollInterval);
+    };
+  }, [fetchRecentListings]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -176,6 +215,13 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
               newListings.map((property) => {
                 const isUnread = !readIds.includes(String(property.id));
                 const isFurniture = property.type?.toLowerCase().includes('furniture');
+                const isLand = property.type?.toLowerCase().includes('land');
+                const timeAgo = formatRelativeTime(property.createdAt);
+
+                let badgeLabel = '🏠 New Rental Listing';
+                if (isFurniture) badgeLabel = '📦 New Furniture';
+                else if (isLand) badgeLabel = '📍 New Land';
+
                 return (
                   <Link
                     key={property.id}
@@ -199,7 +245,9 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                         <span>{property.location}</span>
                       </div>
                       <div className={styles.itemTime}>
-                        {isFurniture ? '📦 New Furniture' : '🏠 New Rental Listing'}
+                        <span>{badgeLabel}</span>
+                        <span style={{ margin: '0 4px', opacity: 0.5 }}>•</span>
+                        <span>{timeAgo}</span>
                       </div>
                     </div>
                   </Link>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, MapPin, Phone, Search, Users, ChevronRight } from 'lucide-react';
+import { ShieldCheck, MapPin, Phone, MessageCircle, Search, Users, ChevronRight } from 'lucide-react';
 import { graphqlRequest, GET_AGENTS } from '../../lib/graphql';
 import { getOptimizedImageUrl } from '../../lib/types';
 
@@ -229,8 +229,63 @@ export default function AgentsClient() {
                       <ShieldCheck size={12} />
                       <span>Verified Agent</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--primary)', fontSize: '0.82rem', fontWeight: 700 }}>
-                      View Profile <ChevronRight size={14} />
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {(agent.phone || agent.agentWhatsapp) && (
+                        <div
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                          onClick={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                        >
+                          <a
+                            href={`https://wa.me/${((agent.agentWhatsapp || agent.phone || '').replace(/[^0-9+]/g, '').startsWith('0') ? `233${(agent.agentWhatsapp || agent.phone || '').replace(/[^0-9+]/g, '').slice(1)}` : (agent.agentWhatsapp || agent.phone || '').replace(/[^0-9+]/g, '').replace('+', ''))}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals.`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '30px',
+                              height: '30px',
+                              borderRadius: '50%',
+                              background: '#25D366',
+                              color: '#fff',
+                              textDecoration: 'none',
+                              boxShadow: '0 2px 5px rgba(37,211,102,0.3)',
+                            }}
+                            title="Chat on WhatsApp"
+                            aria-label="WhatsApp Agent"
+                          >
+                            <MessageCircle size={15} />
+                          </a>
+                          {agent.phone && (
+                            <a
+                              href={`tel:${agent.phone}`}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '30px',
+                                height: '30px',
+                                borderRadius: '50%',
+                                background: 'var(--primary)',
+                                color: '#fff',
+                                textDecoration: 'none',
+                                boxShadow: '0 2px 5px rgba(193,18,31,0.3)',
+                              }}
+                              title="Call Agent"
+                              aria-label="Call Agent"
+                            >
+                              <Phone size={14} />
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--primary)', fontSize: '0.82rem', fontWeight: 700 }}>
+                        <ChevronRight size={14} />
+                      </div>
                     </div>
                   </div>
                 </div>

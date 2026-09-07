@@ -1002,8 +1002,9 @@ export const resolvers = {
         throw new Error('Not authorized');
       }
 
-      // Delete all gallery images first
+      // Delete all related records first
       await prisma.propertyImage.deleteMany({ where: { propertyId: id } });
+      await prisma.notificationRead.deleteMany({ where: { propertyId: id } }).catch(() => {});
 
       // Then delete the property
       return prisma.property.delete({
@@ -1275,9 +1276,48 @@ export const resolvers = {
 
       const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
 
-      return prisma.landlordRegistration.delete({
+      const landlord = await prisma.landlordRegistration.findUnique({ where: { id: parsedId } });
+      if (!landlord) throw new Error('Landlord record not found');
+
+      // Find all related properties belonging to this landlord by phone or name
+      const cleanPhone = (landlord.phone1 || '').replace(/[^0-9]/g, '');
+      const last9 = cleanPhone ? cleanPhone.slice(-9) : '';
+
+      const whereConditions: any[] = [
+        { landlordName: { equals: landlord.name, mode: 'insensitive' } }
+      ];
+      if (last9) {
+        whereConditions.push({ contact: { contains: last9 } });
+      }
+
+      const relatedProperties = await prisma.property.findMany({
+        where: { OR: whereConditions },
+        select: { id: true }
+      });
+
+      const propertyIds = relatedProperties.map(p => p.id);
+
+      if (propertyIds.length > 0) {
+        await prisma.propertyImage.deleteMany({ where: { propertyId: { in: propertyIds } } });
+        await prisma.notificationRead.deleteMany({ where: { propertyId: { in: propertyIds } } });
+        await prisma.report.deleteMany({ where: { propertyId: { in: propertyIds } } });
+        await prisma.leadInquiry.deleteMany({ where: { propertyId: { in: propertyIds } } });
+        await prisma.contactLog.deleteMany({ where: { propertyId: { in: propertyIds } } });
+        await prisma.fraudAlert.deleteMany({ where: { propertyId: { in: propertyIds } } });
+        await prisma.property.deleteMany({ where: { id: { in: propertyIds } } });
+      }
+
+      const deleted = await prisma.landlordRegistration.delete({
         where: { id: parsedId },
       });
+
+      createAuditLog(
+        'LANDLORD_DELETED',
+        `Admin ${adminUser.name} deleted landlord record #${parsedId} (${landlord.name}) along with ${propertyIds.length} related properties.`,
+        adminUser.email
+      );
+
+      return deleted;
     },
 
     publishLandlordRegistration: async (_: any, { id }: { id: any }, { user }: { user: { id: number } | null }) => {

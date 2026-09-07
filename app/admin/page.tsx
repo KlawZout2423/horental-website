@@ -145,6 +145,7 @@ export default function AdminPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [landlordRegistrations, setLandlordRegistrations] = useState<LandlordRegistration[]>([]);
   const [selectedLandlord, setSelectedLandlord] = useState<LandlordRegistration | null>(null);
+  const [expandedLandlordId, setExpandedLandlordId] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<User | null>(null);
   const [landlordSearch, setLandlordSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
@@ -405,14 +406,29 @@ export default function AdminPage() {
   };
 
   const handleDeleteLandlord = async (id: number | string) => {
-    if (!confirm('Are you sure you want to remove this landlord registration? This cannot be undone.')) return;
+    if (!confirm('Are you sure you want to remove this landlord? This will permanently delete the landlord profile and all related properties.')) return;
     setActionLoading(true);
     setMessage(null);
     try {
       const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+      const targetLandlord = landlordRegistrations.find(r => String(r.id) === String(id));
       await graphqlRequest(DELETE_LANDLORD_REGISTRATION, { id: parsedId });
+      
       setLandlordRegistrations(prev => prev.filter(r => r.id !== id));
-      setMessage({ text: 'Landlord registration deleted.', isError: false });
+      if (selectedLandlord?.id === id) setSelectedLandlord(null);
+
+      // Clean up matching properties from local state
+      if (targetLandlord) {
+        const cleanRPhone = (targetLandlord.phone1 || '').replace(/[^0-9]/g, '');
+        setProperties(prev => prev.filter(p => {
+          const cleanPPhone = (p.contact || '').replace(/[^0-9]/g, '');
+          const phoneMatch = cleanPPhone && cleanRPhone && cleanPPhone.endsWith(cleanRPhone.slice(-9));
+          const nameMatch = p.landlordName && p.landlordName.toLowerCase().trim() === targetLandlord.name.toLowerCase().trim();
+          return !phoneMatch && !nameMatch;
+        }));
+      }
+
+      setMessage({ text: 'Landlord record and all related properties deleted.', isError: false });
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to delete landlord.', isError: true });
     } finally {
@@ -434,6 +450,10 @@ export default function AdminPage() {
 
       // Reload admin dashboard data to update Listings tab and stats counts
       await loadAdminDashboardData(false);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ho_rental_listings_updated'));
+      }
 
       setMessage({ text: '🎉 Landlord details published to property listings successfully!', isError: false });
     } catch (err: any) {
@@ -491,6 +511,11 @@ export default function AdminPage() {
       );
       const statsData = await graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS);
       if (statsData) setStats(statsData.dashboardStats);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ho_rental_listings_updated'));
+      }
+
       setMessage({ text: `Property status updated to ${newStatus}.`, isError: false });
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to update property status.', isError: true });
@@ -514,6 +539,10 @@ export default function AdminPage() {
 
       const statsData = await graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS);
       if (statsData) setStats(statsData.dashboardStats);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ho_rental_listings_updated'));
+      }
 
       setMessage({ text: '🎉 Listing approved and published successfully!', isError: false });
     } catch (err: any) {
@@ -539,6 +568,11 @@ export default function AdminPage() {
       );
       const statsData = await graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS);
       if (statsData) setStats(statsData.dashboardStats);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ho_rental_listings_updated'));
+      }
+
       setMessage({ text: `🎉 All ${ids.length} listings for ${submitterName} approved and published!`, isError: false });
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to approve properties.', isError: true });
@@ -552,6 +586,8 @@ export default function AdminPage() {
     setMessage(null);
     try {
       const parsedId = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+      if (isNaN(parsedId)) throw new Error('Invalid user ID');
+
       await graphqlRequest(VERIFY_AGENT, { userId: parsedId, status });
       setUsers((prev) =>
         prev.map((u) => (Number(u.id) === parsedId ? { ...u, verificationStatus: status } : u))
@@ -577,6 +613,11 @@ export default function AdminPage() {
       }
       const statsData = await graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS);
       if (statsData) setStats(statsData.dashboardStats);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ho_rental_listings_updated'));
+      }
+
       setMessage({ text: 'Listing deleted successfully.', isError: false });
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to delete property.', isError: true });
@@ -2019,9 +2060,8 @@ export default function AdminPage() {
                               disabled={actionLoading || u.id === user.id}
                               className={styles.selectRole}
                             >
-                              <option value="user">User (Tenant/Buyer)</option>
+                              <option value="user">User</option>
                               <option value="agent">Agent</option>
-                              <option value="landlord">Landlord</option>
                               <option value="admin">Admin</option>
                             </select>
                           </td>
@@ -2078,9 +2118,8 @@ export default function AdminPage() {
                           className={styles.selectRole}
                           style={{ flex: 1 }}
                         >
-                          <option value="user">User (Tenant/Buyer)</option>
+                          <option value="user">User</option>
                           <option value="agent">Agent</option>
-                          <option value="landlord">Landlord</option>
                           <option value="admin">Admin</option>
                         </select>
                         <button
@@ -3236,156 +3275,219 @@ export default function AdminPage() {
                     .filter((r) =>
                       (r.name + r.city + r.phone1 + (r.propAddress || '') + (r.plan || '')).toLowerCase().includes(landlordSearch.toLowerCase())
                     )
-                    .map((r) => (
-                      <div key={r.id} className={styles.landlordCard}>
-                        {/* Profile side */}
-                        <div className={styles.landlordProfileSide}>
-                          <div className={styles.landlordAvatarRow}>
-                            <div className={styles.landlordAvatarCircle}>
-                              {r.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
-                            </div>
-                            <div>
-                              <h3 className={styles.landlordNameText}>{r.name}</h3>
-                              <div className={styles.landlordMetaText}>
-                                Ref: {r.id}
+                    .map((r) => {
+                      const cleanRPhone = (r.phone1 || '').replace(/[^0-9]/g, '');
+                      const matchingProps = properties.filter((p) => {
+                        const cleanPPhone = (p.contact || '').replace(/[^0-9]/g, '');
+                        return (
+                          (cleanPPhone && cleanRPhone && cleanPPhone.endsWith(cleanRPhone.slice(-9))) ||
+                          (p.landlordName && p.landlordName.toLowerCase().trim() === r.name.toLowerCase().trim()) ||
+                          (r.propGps && p.digitalAddress && p.digitalAddress.toLowerCase().trim() === r.propGps.toLowerCase().trim())
+                        );
+                      });
+                      const isExpanded = expandedLandlordId === r.id;
+
+                      return (
+                        <div key={r.id} className={styles.landlordCard} style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: 0, overflow: 'hidden' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr 1.2fr', gap: '16px', padding: '20px' }}>
+                            {/* Profile side */}
+                            <div className={styles.landlordProfileSide}>
+                              <div className={styles.landlordAvatarRow}>
+                                <div className={styles.landlordAvatarCircle}>
+                                  {r.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                                </div>
+                                <div>
+                                  <h3 className={styles.landlordNameText}>{r.name}</h3>
+                                  <div className={styles.landlordMetaText}>
+                                    Ref ID: #{r.id}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className={styles.landlordMetaText} style={{ marginTop: '4px', fontWeight: 600 }}>
+                                Registered: {r.createdAt ? (isNaN(Number(r.createdAt)) ? new Date(r.createdAt) : new Date(Number(r.createdAt))).toLocaleDateString() : 'Unknown'}
+                              </div>
+
+                              <div className={styles.landlordBadgesRow} style={{ marginTop: '8px' }}>
+                                <span 
+                                  className={`${styles.landlordBadge} ${
+                                    r.status === 'Verified' ? styles.landlordBadgeVerified : styles.landlordBadgePending
+                                  }`}
+                                >
+                                  {r.status}
+                                </span>
+                                {r.agreementSigned && (
+                                  <span className={`${styles.landlordBadge} ${styles.landlordBadgeAgreement}`}>
+                                    Agreement Signed
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          </div>
 
-                          <div className={styles.landlordMetaText} style={{ marginTop: '2px', fontWeight: 600 }}>
-                            Registered: {r.createdAt ? (isNaN(Number(r.createdAt)) ? new Date(r.createdAt) : new Date(Number(r.createdAt))).toLocaleDateString() : 'Unknown'}
-                          </div>
-
-                          <div className={styles.landlordBadgesRow}>
-                            {r.plan && (
-                              <span 
-                                className={`${styles.landlordBadge} ${
-                                  r.plan === 'Premium' ? styles.landlordBadgePremium : styles.landlordBadgeBasic
-                                }`}
-                              >
-                                {r.plan} Plan
-                              </span>
-                            )}
-                            <span 
-                              className={`${styles.landlordBadge} ${
-                                r.status === 'Verified' ? styles.landlordBadgeVerified : styles.landlordBadgePending
-                              }`}
-                            >
-                              {r.status}
-                            </span>
-                            {r.agreementSigned && (
-                              <span className={`${styles.landlordBadge} ${styles.landlordBadgeAgreement}`}>
-                                Agreement
-                              </span>
-                            )}
-                            {r.socialMediaBoost && (
-                              <span 
-                                className={styles.landlordBadge} 
-                                style={{ backgroundColor: '#FEF3C7', color: '#D97706', borderColor: '#F59E0B' }}
-                              >
-                                ✨ Boost Agreed
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Info details grid */}
-                        <div className={styles.landlordInfoGrid}>
-                          <div className={styles.infoBlock}>
-                            <span className={styles.infoLabel}>Primary Phone</span>
-                            <span className={styles.infoValue}>{r.phone1}</span>
-                          </div>
-                          <div className={styles.infoBlock}>
-                            <span className={styles.infoLabel}>City / Town</span>
-                            <span className={styles.infoValue}>{r.city}</span>
-                          </div>
-                          <div className={styles.infoBlock}>
-                            <span className={styles.infoLabel}>Property Address</span>
-                            <span className={styles.infoValue} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '240px' }}>
-                              {r.propAddress}
-                            </span>
-                          </div>
-                          <div className={styles.infoBlock}>
-                            <span className={styles.infoLabel}>Monthly Rent</span>
-                            <span className={styles.infoValue} style={{ color: 'var(--primary)', fontWeight: 700 }}>
-                              GHS {r.rent.toLocaleString()}
-                            </span>
-                          </div>
-                          <div className={styles.infoBlock}>
-                            <span className={styles.infoLabel}>Property Type</span>
-                            <span className={styles.infoValue}>{r.propType || '—'}</span>
-                          </div>
-                          <div className={styles.infoBlock}>
-                            <span className={styles.infoLabel}>Rooms Available</span>
-                            <span className={styles.infoValue}>{r.rooms || '—'}</span>
-                          </div>
-                        </div>
-
-                        {/* Actions & Thumbnails strip side */}
-                        <div className={styles.landlordActionsSide}>
-                          {r.photos && r.photos.length > 0 && (
-                            <div className={styles.landlordThumbStrip}>
-                              {r.photos.map((src, idx) => (
-                                <img 
-                                  key={idx} 
-                                  src={src} 
-                                  alt={`Prop ${idx}`} 
-                                  className={styles.landlordThumb}
-                                  onClick={() => setSelectedLandlord(r)}
-                                />
-                              ))}
+                            {/* Info details grid */}
+                            <div className={styles.landlordInfoGrid}>
+                              <div className={styles.infoBlock}>
+                                <span className={styles.infoLabel}>Primary Phone</span>
+                                <span className={styles.infoValue}>{r.phone1}</span>
+                              </div>
+                              <div className={styles.infoBlock}>
+                                <span className={styles.infoLabel}>City / Town</span>
+                                <span className={styles.infoValue}>{r.city}</span>
+                              </div>
+                              <div className={styles.infoBlock}>
+                                <span className={styles.infoLabel}>Property Address</span>
+                                <span className={styles.infoValue} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '240px' }}>
+                                  {r.propAddress}
+                                </span>
+                              </div>
+                              <div className={styles.infoBlock}>
+                                <span className={styles.infoLabel}>Monthly Rent</span>
+                                <span className={styles.infoValue} style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                                  GHS {r.rent.toLocaleString()}
+                                </span>
+                              </div>
+                              <div className={styles.infoBlock}>
+                                <span className={styles.infoLabel}>Property Type(s)</span>
+                                <span className={styles.infoValue}>{r.propType || '—'}</span>
+                              </div>
+                              <div className={styles.infoBlock}>
+                                <span className={styles.infoLabel}>Rooms Available</span>
+                                <span className={styles.infoValue}>{r.rooms || '—'}</span>
+                              </div>
                             </div>
-                          )}
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: 'auto' }}>
-                            <button 
-                              className="btn btn-outline" 
-                              style={{ width: '100%', padding: '6px 12px', fontSize: '0.78rem' }}
-                              onClick={() => setSelectedLandlord(r)}
-                            >
-                              Review Details
-                            </button>
-                            {r.status !== 'Verified' ? (
+                            {/* Actions side */}
+                            <div className={styles.landlordActionsSide} style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', justifyContent: 'center' }}>
+                              <a
+                                href={`/upload?landlordName=${encodeURIComponent(r.name)}&contact=${encodeURIComponent(r.phone1)}&city=${encodeURIComponent(r.city || '')}&gps=${encodeURIComponent(r.propGps || '')}&landmark=${encodeURIComponent(r.propLandmark || '')}`}
+                                className="btn btn-primary"
+                                style={{ width: '100%', padding: '7px 12px', fontSize: '0.8rem', textAlign: 'center', textDecoration: 'none', backgroundColor: '#3B82F6', borderColor: '#3B82F6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 700 }}
+                              >
+                                <Plus size={14} /> Add New Listing
+                              </a>
+
+                              {r.status !== 'Verified' ? (
+                                <button 
+                                  className="btn btn-primary" 
+                                  style={{ width: '100%', padding: '7px 12px', fontSize: '0.8rem', backgroundColor: '#10B981', borderColor: '#10B981', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 700 }}
+                                  onClick={() => handlePublishLandlord(r.id)}
+                                  disabled={actionLoading}
+                                >
+                                  <UploadCloud size={14} /> Publish Listing
+                                </button>
+                              ) : (
+                                <button 
+                                  className="btn btn-outline" 
+                                  style={{ width: '100%', padding: '7px 12px', fontSize: '0.8rem', color: '#10B981', borderColor: '#10B981', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 700 }}
+                                  onClick={() => handlePublishLandlord(r.id)}
+                                  disabled={actionLoading}
+                                  title="Republish this listing to make it active"
+                                >
+                                  <RefreshCw size={14} /> Republish Listing
+                                </button>
+                              )}
+
                               <button 
-                                className="btn btn-primary" 
-                                style={{ width: '100%', padding: '6px 12px', fontSize: '0.78rem', backgroundColor: '#10B981', borderColor: '#10B981' }}
-                                onClick={() => handlePublishLandlord(r.id)}
+                                className="btn btn-outline" 
+                                style={{ width: '100%', padding: '7px 12px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', borderColor: isExpanded ? 'var(--primary)' : 'var(--border)' }}
+                                onClick={() => setExpandedLandlordId(isExpanded ? null : r.id)}
+                              >
+                                <Building size={14} /> {isExpanded ? 'Hide Properties' : `Properties (${matchingProps.length})`} {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              </button>
+
+                              <button 
+                                className="btn btn-outline" 
+                                style={{ width: '100%', padding: '7px 12px', fontSize: '0.78rem' }}
+                                onClick={() => setSelectedLandlord(r)}
+                              >
+                                Review Details
+                              </button>
+
+                              <button 
+                                className="btn btn-outline" 
+                                style={{ width: '100%', padding: '6px 12px', fontSize: '0.75rem', color: 'var(--primary)', borderColor: 'var(--primary-light)' }}
+                                onClick={() => handleDeleteLandlord(r.id)}
                                 disabled={actionLoading}
                               >
-                                Publish Listing
+                                Delete Record
                               </button>
-                            ) : (
-                              <span 
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '4px',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 700,
-                                  color: '#10B981',
-                                  padding: '6px 12px',
-                                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                  borderRadius: 'var(--radius-sm)',
-                                  width: '100%',
-                                  boxSizing: 'border-box'
-                                }}
-                              >
-                                <Check size={14} /> Published
-                              </span>
-                            )}
-                            <button 
-                              className="btn btn-outline" 
-                              style={{ width: '100%', padding: '6px 12px', fontSize: '0.78rem', color: 'var(--primary)', borderColor: 'var(--primary-light)' }}
-                              onClick={() => handleDeleteLandlord(r.id)}
-                              disabled={actionLoading}
-                            >
-                              Delete Record
-                            </button>
+                            </div>
                           </div>
+
+                          {/* Collapsible Dropdown: Landlord's Properties List */}
+                          {isExpanded && (
+                            <div style={{ backgroundColor: 'var(--bg-surface-secondary)', borderTop: '1px solid var(--border)', padding: '16px 20px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <Building size={16} color="var(--primary)" />
+                                  Live Properties for {r.name} ({matchingProps.length})
+                                </div>
+                                <a
+                                  href={`/upload?landlordName=${encodeURIComponent(r.name)}&contact=${encodeURIComponent(r.phone1)}&city=${encodeURIComponent(r.city || '')}&gps=${encodeURIComponent(r.propGps || '')}&landmark=${encodeURIComponent(r.propLandmark || '')}`}
+                                  className="btn btn-outline"
+                                  style={{ padding: '4px 10px', fontSize: '0.75rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', borderColor: 'var(--border)' }}
+                                >
+                                  <Plus size={12} /> Add Another Listing
+                                </a>
+                              </div>
+
+                              {matchingProps.length === 0 ? (
+                                <div style={{ padding: '16px', textAlign: 'center', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border)' }}>
+                                  <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                                    No live properties currently found for this landlord.
+                                  </p>
+                                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '10px' }}>
+                                    <button
+                                      className="btn btn-primary"
+                                      style={{ padding: '6px 12px', fontSize: '0.78rem', backgroundColor: '#10B981', borderColor: '#10B981' }}
+                                      onClick={() => handlePublishLandlord(r.id)}
+                                      disabled={actionLoading}
+                                    >
+                                      <RefreshCw size={13} /> Republish Original Submission
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
+                                  {matchingProps.map((prop) => (
+                                    <div key={prop.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                      {prop.imageUrl ? (
+                                        <img src={prop.imageUrl} alt={prop.title} style={{ width: '50px', height: '50px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+                                      ) : (
+                                        <div style={{ width: '50px', height: '50px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                          <Building size={20} color="var(--text-muted)" />
+                                        </div>
+                                      )}
+                                      <div style={{ minWidth: 0, flex: 1 }}>
+                                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {prop.title}
+                                        </div>
+                                        <div style={{ fontSize: '0.76rem', color: 'var(--primary)', fontWeight: 700, margin: '2px 0' }}>
+                                          GHS {prop.price.toLocaleString()}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                          <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: prop.status === 'available' ? '#ECFDF5' : '#FEE2E2', color: prop.status === 'available' ? '#047857' : '#B91C1C', fontWeight: 600, textTransform: 'capitalize' }}>
+                                            {prop.status}
+                                          </span>
+                                          <a
+                                            href={`/properties/${prop.id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ fontSize: '0.74rem', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}
+                                          >
+                                            View ↗
+                                          </a>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                 )}
               </div>
             </>
@@ -3742,7 +3844,6 @@ export default function AdminPage() {
                   <div><strong>Rooms Available:</strong> {selectedLandlord.rooms || '—'}</div>
                   <div><strong>Available From:</strong> {selectedLandlord.availableFrom || '—'}</div>
                   <div><strong>Property Type:</strong> {selectedLandlord.propType || '—'}</div>
-                  <div><strong>Subscription:</strong> {selectedLandlord.plan} Plan</div>
                   <div><strong>Social Media Boost:</strong> {selectedLandlord.socialMediaBoost ? 'Yes (GHS 30 agreed)' : 'No'}</div>
                   <div style={{ gridColumn: '1 / -1' }}>
                     <strong>Amenities:</strong> {selectedLandlord.amenities && selectedLandlord.amenities.length > 0 ? selectedLandlord.amenities.join(', ') : '—'}
@@ -3767,16 +3868,33 @@ export default function AdminPage() {
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-              {selectedLandlord.status !== 'Verified' && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+              <a 
+                href={`/upload?landlordName=${encodeURIComponent(selectedLandlord.name)}&contact=${encodeURIComponent(selectedLandlord.phone1)}&city=${encodeURIComponent(selectedLandlord.city || '')}&gps=${encodeURIComponent(selectedLandlord.propGps || '')}&landmark=${encodeURIComponent(selectedLandlord.propLandmark || '')}`}
+                className="btn btn-primary"
+                style={{ backgroundColor: '#3B82F6', borderColor: '#3B82F6', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Plus size={15} /> Add Another Listing
+              </a>
+              {selectedLandlord.status !== 'Verified' ? (
                 <button 
                   type="button" 
                   onClick={() => { handlePublishLandlord(selectedLandlord.id); setSelectedLandlord(null); }} 
                   className="btn btn-primary"
-                  style={{ backgroundColor: '#10B981', borderColor: '#10B981' }}
+                  style={{ backgroundColor: '#10B981', borderColor: '#10B981', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   disabled={actionLoading}
                 >
-                  Approve & Publish Listing
+                  <UploadCloud size={15} /> Approve & Publish Listing
+                </button>
+              ) : (
+                <button 
+                  type="button" 
+                  onClick={() => { handlePublishLandlord(selectedLandlord.id); }} 
+                  className="btn btn-outline"
+                  style={{ color: '#10B981', borderColor: '#10B981', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  disabled={actionLoading}
+                >
+                  <RefreshCw size={14} /> Republish Listing
                 </button>
               )}
               <button 

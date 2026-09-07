@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
 import { graphqlRequest, CREATE_PROPERTY, UPDATE_PROPERTY, UPDATE_AGENT_PROFILE, GET_AGENT_PROPERTIES, GET_VERIFICATION_REQUESTS } from '../../lib/graphql';
-import { UploadCloud, Image as ImageIcon, Sparkles, Loader, AlertTriangle } from 'lucide-react';
+import { UploadCloud, Image as ImageIcon, Sparkles, Loader, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, parsePropertyDescription, Property, User } from '../../lib/types';
 import VerifiedAgentModal from '../../components/VerifiedAgentModal';
 import styles from './upload.module.css';
@@ -266,6 +266,19 @@ export default function UploadPage({
       }
 
       setDescription(desc.trim());
+    } else if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      const lName = sp.get('landlordName');
+      const lContact = sp.get('contact');
+      const lLoc = sp.get('location') || sp.get('city');
+      const lGps = sp.get('gps') || sp.get('digitalAddress');
+      const lLandmark = sp.get('landmark') || sp.get('landmarks');
+      
+      if (lName) setLandlordName(lName);
+      if (lContact) setContact(formatGhanaPhone(lContact));
+      if (lLoc) setLocation(lLoc);
+      if (lGps) setDigitalAddress(lGps);
+      if (lLandmark) setLandmarks(lLandmark);
     }
   }, [initialData]);
 
@@ -452,6 +465,10 @@ export default function UploadPage({
         await graphqlRequest(UPDATE_PROPERTY, { id: idInt, input });
       } else {
         await graphqlRequest(CREATE_PROPERTY, { input });
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ho_rental_listings_updated'));
       }
       
       if (user?.role === 'agent' || user?.role === 'landlord') {
@@ -1395,7 +1412,7 @@ export default function UploadPage({
 
             {/* Rooms, Advance, Available From — only for room/accommodation types */}
             {type !== 'Lands' && type !== 'Furnitures' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+              <div className={styles.fullWidth} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '14px' }}>
                 <div className="form-group">
                   <label htmlFor="rooms">Rooms Available</label>
                   <input

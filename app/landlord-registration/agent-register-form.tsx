@@ -289,7 +289,7 @@ export default function AgentRegisterForm() {
 
       // Update Agent Profile with detailed credentials
       try {
-        const defaultBio = `${sanitizedAgency ? `Agent at ${sanitizedAgency}.` : 'Registered Agent.'} Experience: ${experience}. Operating Area: ${sanitizedOps || sanitizedCity}. ID: ${idType} (${sanitizedIdNumber}). Address: ${sanitizedDigitalAddr || sanitizedHomeAddr || sanitizedCity}.`;
+        const defaultBio = `${sanitizedAgency ? `Agent at ${sanitizedAgency}.` : 'Registered Agent.'} Experience: ${experience}. Target Market: ${sanitizedOps || 'Students & Workers'}. ID: ${idType} (${sanitizedIdNumber}). Address: ${sanitizedDigitalAddr || sanitizedHomeAddr || sanitizedCity}.`;
         const fullBio = sanitizedBio || defaultBio;
         
         await graphqlRequest(UPDATE_AGENT_PROFILE, {
@@ -731,11 +731,11 @@ export default function AgentRegisterForm() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="operatingLocations">Primary Markets</label>
+                  <label htmlFor="operatingLocations">Target Market</label>
                   <input
                     id="operatingLocations"
                     type="text"
-                    placeholder="e.g. Ho Central, UHAS"
+                    placeholder="e.g. Students, Workers, Families"
                     value={operatingLocations}
                     onChange={(e) => setOperatingLocations(e.target.value)}
                     className="form-control"

@@ -61,7 +61,7 @@ export default function LandlordRegistrationPage() {
   const [advance, setAdvance] = useState('');
   const [rooms, setRooms] = useState('');
   const [availableFrom, setAvailableFrom] = useState('');
-  const [propType, setPropType] = useState('Single Room Self Contain');
+  const [propTypes, setPropTypes] = useState<string[]>(['Single Room Self Contain']);
   const [plan, setPlan] = useState('Basic');
 
   // Amenities
@@ -110,11 +110,17 @@ export default function LandlordRegistrationPage() {
     'I agree to the agent-free commitment — I will not involve any third-party agents in transactions made through Ho Rentals.',
     'I consent to Ho Rentals conducting a physical verification visit of my property before it goes live.',
     'I agree to the fee structure above and understand that a 5% success fee applies on confirmed tenancies.',
-    'I agree to hand over the commission on the rent amount to Ho Rentals after payment is made.',
+    'I agree that the HO Rentals commission will be added to the rent and deducted by Ho Rentals before handing over the main amount to the landlord.',
     'I enter into this agreement voluntarily, without any pressure or misrepresentation.'
   ];
 
   // --- Helper Functions ---
+  const togglePropType = (type: string) => {
+    setPropTypes(prev => 
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
   const toggleAmenity = (amenity: string) => {
     setAmenities(prev => 
       prev.includes(amenity) ? prev.filter(a => a !== amenity) : [...prev, amenity]
@@ -224,6 +230,7 @@ export default function LandlordRegistrationPage() {
 
     if (!city.trim()) return setError("Please enter the landlord's city / town.");
     if (!propAddress.trim()) return setError("Please enter the property address.");
+    if (propTypes.length === 0) return setError("Please select at least one property type.");
     if (!rent.trim() || isNaN(parseFloat(rent)) || parseFloat(rent) <= 0) {
       return setError("Please enter a valid monthly rent amount.");
     }
@@ -292,7 +299,7 @@ export default function LandlordRegistrationPage() {
         advance: advance || undefined,
         rooms: rooms ? parseInt(rooms, 10) : undefined,
         availableFrom: availableFrom || undefined,
-        propType,
+        propType: propTypes.join(', '),
         amenities,
         plan,
         photos: urls,
@@ -321,6 +328,7 @@ export default function LandlordRegistrationPage() {
       setAdvance('');
       setRooms('');
       setAvailableFrom('');
+      setPropTypes(['Single Room Self Contain']);
       setAmenities([]);
       setPhotos([]);
       setSocialMediaBoost(false);
@@ -654,14 +662,25 @@ export default function LandlordRegistrationPage() {
           </div>
 
           <div className={styles.card}>
-            <div className={styles.sectionTitle}>Property type</div>
-            <div className={styles.radioRow}>
-              {propertyTypes.map(t => (
-                <label key={t} className={`${styles.radio} ${propType === t ? styles.selectedRadio : ''}`}>
-                  <input type="radio" name="ptype" value={t} checked={propType === t} onChange={() => setPropType(t)} style={{ display: 'none' }} />
-                  <span>{t}</span>
-                </label>
-              ))}
+            <div className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <span>Property Type (Select all that apply)</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }}>Select one or more</span>
+            </div>
+            <div className={styles.checkboxGrid}>
+              {propertyTypes.map(t => {
+                const checked = propTypes.includes(t);
+                return (
+                  <label key={t} className={`${styles.chk} ${checked ? styles.checkedChk : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => togglePropType(t)}
+                      style={{ display: 'none' }}
+                    />
+                    <span>{t}</span>
+                  </label>
+                );
+              })}
             </div>
 
             <div className={styles.sectionTitle}>Amenities</div>
@@ -675,24 +694,6 @@ export default function LandlordRegistrationPage() {
                   </label>
                 );
               })}
-            </div>
-
-            <div className={styles.sectionTitle}>Subscription Plan</div>
-            <div className={styles.planRow}>
-              <label className={`${styles.planCard} ${plan === 'Basic' ? styles.planSelected : ''}`}>
-                <input type="radio" name="plan" value="Basic" checked={plan === 'Basic'} onChange={() => setPlan('Basic')} style={{ display: 'none' }} />
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Free Starter Plan</div>
-                  <div style={{ fontSize: '0.78rem', opacity: 0.8, marginTop: '2px' }}>First 2 Listings Free (GH₵ 0)</div>
-                </div>
-              </label>
-              <label className={`${styles.planCard} ${plan === 'Premium' ? styles.planSelected : ''}`}>
-                <input type="radio" name="plan" value="Premium" checked={plan === 'Premium'} onChange={() => setPlan('Premium')} style={{ display: 'none' }} />
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Pay-Per-Property</div>
-                  <div style={{ fontSize: '0.78rem', opacity: 0.8, marginTop: '2px' }}>GH₵ 10.00 / property (after 2 free)</div>
-                </div>
-              </label>
             </div>
           </div>
 
@@ -765,7 +766,7 @@ export default function LandlordRegistrationPage() {
               <ul className={styles.ruleList}>
                 <li>You agree to deal honestly and fairly with all prospective tenants who contact you through Ho Rentals.</li>
                 <li>You must not collect any fee, deposit, or advance payment from a tenant before showing them the physical property in person.</li>
-                <li>You must receive the Ho Rentals commission on the rent amount from the tenant and hand it over to Ho Rentals once the property has been rented out successfully.</li>
+                <li>HO Rentals Commission will be added to Rent before listed and rented to tenants and that commission will be taken out by Ho Rentals before handing over the main amount to landlord.</li>
               </ul>
             </div>
 
@@ -885,12 +886,8 @@ export default function LandlordRegistrationPage() {
                 <span className={styles.reviewValue}>GHS {parseFloat(rent).toLocaleString()} / month</span>
               </div>
               <div className={styles.reviewRow}>
-                <span className={styles.reviewKey}>Property Type</span>
-                <span className={styles.reviewValue}>{propType}</span>
-              </div>
-              <div className={styles.reviewRow}>
-                <span className={styles.reviewKey}>Subscription Plan</span>
-                <span className={styles.reviewValue}>{plan} Plan</span>
+                <span className={styles.reviewKey}>Property Type(s)</span>
+                <span className={styles.reviewValue}>{propTypes.join(', ') || 'None selected'}</span>
               </div>
               <div className={styles.reviewRow}>
                 <span className={styles.reviewKey}>Social Media Boost</span>

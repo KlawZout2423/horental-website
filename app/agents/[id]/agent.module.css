@@ -11,7 +11,23 @@
 }
 
 .coverBanner {
-  display: none;
+  display: block;
+  height: 6px;
+  background: linear-gradient(90deg, var(--primary) 0%, #8B0000 100%);
+  width: 100%;
+}
+
+.profileHeaderMain {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.profileActionsStats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
 }
 
 /* Collapsed strip — always visible, acts as toggle on mobile */
@@ -21,12 +37,61 @@
   justify-content: space-between;
   padding: 14px 16px;
   cursor: pointer;
-  gap: 12px;
+  gap: 10px;
   user-select: none;
 }
 
 .collapsedStrip:hover {
   background: var(--bg-surface-secondary);
+}
+
+.quickContactActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.quickWaBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #25D366;
+  color: #FFFFFF;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(37, 211, 102, 0.35);
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+
+.quickWaBtn:hover, .quickWaBtn:active {
+  background: #20BA5A;
+  transform: scale(1.06);
+  box-shadow: 0 4px 10px rgba(37, 211, 102, 0.45);
+}
+
+.quickCallBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #FFFFFF;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(193, 18, 31, 0.3);
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+
+.quickCallBtn:hover, .quickCallBtn:active {
+  background: var(--primary-hover);
+  transform: scale(1.06);
+  box-shadow: 0 4px 10px rgba(193, 18, 31, 0.45);
 }
 
 /* The expandable body */
@@ -39,6 +104,18 @@
 
 .expandableOpen {
   max-height: 600px;
+  padding: 0 20px 16px;
+}
+
+.bioRow {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, padding 0.25s ease;
+  padding: 0 20px;
+}
+
+.bioRowOpen {
+  max-height: 400px;
   padding: 0 20px 20px;
 }
 
@@ -52,21 +129,21 @@
 
 /* ── Desktop: always expanded, no toggle ── */
 @media (min-width: 768px) {
-  .coverBanner {
-    display: block;
-    height: 6px;
-    background: linear-gradient(90deg, var(--primary) 0%, #8B0000 100%);
-    width: 100%;
-    border-top-left-radius: var(--radius-lg);
-    border-top-right-radius: var(--radius-lg);
+  .quickContactActions {
+    display: none;
+  }
+  .profileCard {
+    flex-direction: column;
+    padding: 24px 32px;
+    gap: 0;
   }
 
-  .profileCard {
+  .profileHeaderMain {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 24px 32px;
-    gap: 32px;
+    gap: 24px;
+    width: 100%;
   }
 
   .collapsedStrip {
@@ -93,26 +170,21 @@
     max-height: none !important;
     overflow: visible;
     padding: 0 !important;
-    flex: 1;
     display: flex;
-    flex-direction: row;
     align-items: center;
   }
 
-  .profileInfo {
-    display: flex;
+  .profileActionsStats {
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .bioRow {
+    max-height: none !important;
+    overflow: visible;
+    padding: 16px 0 0 0 !important;
     width: 100%;
-    gap: 32px;
-  }
-
-  .agentBio {
-    margin: 0;
-    text-align: left;
-    max-width: 380px;
-    flex: 1;
   }
 
   .avatarContainer {
@@ -219,13 +291,14 @@
 }
 
 .agentBio {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   color: var(--text-secondary);
   line-height: 1.6;
-  margin-bottom: 18px;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #eaeaea);
+  width: 100%;
+  text-align: left;
 }
 
 .contactRow {

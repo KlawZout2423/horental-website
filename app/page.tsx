@@ -59,15 +59,13 @@ const POPULAR_AREAS = [
   { name: 'Tamale', icon: '🌅', label: 'Tamale' }
 ];
 
-// Testimonials data removed
-
 const BANNER_SLIDES = [
   {
     id: 'main-hero',
     bg: 'linear-gradient(135deg, #C1121F 0%, #8B0B14 100%)',
     pill: 'PROMOTION',
-    headline: 'Find Verified Hostels in Ghana',
-    sub: 'Student hostels, single rooms, apartments & more in Volta Region.',
+    headline: 'Find Verified Properties in Ghana',
+    sub: 'Student hostels, apartments, single rooms, commercial spaces & more.',
     cta: 'Browse Listings',
     href: '/#listings',
     image: '/student_campus_vibe.png',
@@ -93,14 +91,14 @@ const BANNER_SLIDES = [
     image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80',
   },
   {
-    id: 'students',
+    id: 'furniture',
     bg: 'linear-gradient(135deg, #92400E 0%, #B45309 100%)',
-    pill: 'STUDENT HOUSING',
-    headline: 'HTU & UHAS Hostels',
-    sub: 'Affordable hostels near campus — book fast without hassle.',
-    cta: 'Browse Hostels',
-    href: '/?type=Student+Hostel',
-    image: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80',
+    pill: '🪑 FURNITURE & FITTINGS',
+    headline: 'Furnitures & Home Fittings',
+    sub: 'Quality beds, study desks, wardrobes & home essentials in Ghana.',
+    cta: 'Browse Furnitures',
+    href: '/?type=Furnitures',
+    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=400&q=80',
   },
 ];
 

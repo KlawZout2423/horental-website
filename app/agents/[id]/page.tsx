@@ -20,6 +20,7 @@ interface AgentData {
   bio?: string;
   profileImage?: string;
   agentLocation?: string;
+  agentWhatsapp?: string;
   verificationStatus?: string;
 }
 
@@ -152,7 +153,9 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
   }
 
   const cleanPhone = agent.phone ? agent.phone.replace(/[^0-9+]/g, '') : '';
-  const waPhone = cleanPhone.startsWith('0') ? `233${cleanPhone.slice(1)}` : cleanPhone.replace('+', '');
+  const rawWa = agent.agentWhatsapp || agent.phone || '';
+  const cleanWa = rawWa ? rawWa.replace(/[^0-9+]/g, '') : cleanPhone;
+  const waPhone = cleanWa.startsWith('0') ? `233${cleanWa.slice(1)}` : cleanWa.replace('+', '');
 
   return (
     <div className={styles.container}>
@@ -165,112 +168,147 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
         <aside className={styles.sidebar}>
           {/* Agent Info Banner — collapse/expand on mobile */}
           <div className={styles.profileCard}>
-            {/* High-fidelity abstract gradient cover banner (desktop only) */}
+            {/* High-fidelity abstract gradient cover banner */}
             <div className={styles.coverBanner} />
 
-            {/* ── Always-visible collapsed strip ── */}
-            <div
-              className={styles.collapsedStrip}
-              onClick={() => setProfileExpanded(v => !v)}
-              role="button"
-              aria-expanded={profileExpanded}
-              aria-label="Toggle agent profile"
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-                <div className={styles.avatarContainer}>
-                  {agent.profileImage ? (
-                    <img src={agent.profileImage} alt={agent.name} className={styles.avatarImage} />
-                  ) : (
-                    agent.name.charAt(0).toUpperCase()
-                  )}
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <h1 className={styles.agentName}>{agent.name}</h1>
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowVerifyModal(true);
-                    }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10B981', fontSize: '0.74rem', fontWeight: 700, marginTop: '3px', cursor: 'pointer' }}
-                    title="Click for Agent Verification Guarantee"
-                  >
-                    <ShieldCheck size={12} /> Verified Agent
+            {/* Main Header Area (Avatar/Name on left, Stats/Actions on right) */}
+            <div className={styles.profileHeaderMain}>
+              <div
+                className={styles.collapsedStrip}
+                onClick={() => setProfileExpanded(v => !v)}
+                role="button"
+                aria-expanded={profileExpanded}
+                aria-label="Toggle agent profile"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                  <div className={styles.avatarContainer}>
+                    {agent.profileImage ? (
+                      <img src={agent.profileImage} alt={agent.name} className={styles.avatarImage} />
+                    ) : (
+                      agent.name.charAt(0).toUpperCase()
+                    )}
                   </div>
-                  {agent.agentLocation && (
-                    <div className={styles.desktopLocationRow}>
-                      <MapPin size={13} style={{ color: 'var(--primary)', marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }} />
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', verticalAlign: 'middle' }}>{agent.agentLocation}</span>
+                  <div style={{ textAlign: 'left', minWidth: 0, flex: 1 }}>
+                    <h1 className={styles.agentName}>{agent.name}</h1>
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowVerifyModal(true);
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10B981', fontSize: '0.74rem', fontWeight: 700, marginTop: '2px', cursor: 'pointer' }}
+                      title="Click for Agent Verification Guarantee"
+                    >
+                      <ShieldCheck size={12} /> Verified Agent
                     </div>
-                  )}
+                    {agent.agentLocation && (
+                      <div className={styles.desktopLocationRow}>
+                        <MapPin size={13} style={{ color: 'var(--primary)', marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }} />
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', verticalAlign: 'middle' }}>{agent.agentLocation}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-              {/* Toggle icon — only visible on mobile */}
-              <span className={styles.toggleIcon}>
-                {profileExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-              </span>
-            </div>
 
-            {/* ── Expandable detail section ── */}
-            <div className={`${styles.expandableSection} ${profileExpanded ? styles.expandableOpen : ''}`}>
-              <div className={styles.profileInfo}>
-                {agent.bio && (
-                  <p className={styles.agentBio}>
-                    {agent.bio}
-                  </p>
+                {/* Quick Action Contact Buttons on Mobile Card Before Dropdown */}
+                {!isOwnProfile && (agent.phone || agent.agentWhatsapp) && (
+                  <div
+                    className={styles.quickContactActions}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <a
+                      href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals to arrange a viewing.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.quickWaBtn}
+                      title="Chat on WhatsApp"
+                      aria-label="WhatsApp Agent"
+                    >
+                      <MessageCircle size={18} />
+                    </a>
+                    {agent.phone && (
+                      <a
+                        href={`tel:${agent.phone}`}
+                        className={styles.quickCallBtn}
+                        title="Call Agent"
+                        aria-label="Call Agent"
+                      >
+                        <Phone size={16} />
+                      </a>
+                    )}
+                  </div>
                 )}
 
-                {/* Stats Row */}
-                <div className={styles.statsRow}>
-                  <div className={styles.statBox}>
-                    <span className={styles.statLabel}>Active</span>
-                    <strong className={styles.statVal}>{properties.length}</strong>
-                  </div>
-                  <div className={styles.statBox}>
-                    <span className={styles.statLabel}>Available</span>
-                    <strong className={styles.statVal} style={{ color: '#10B981' }}>
-                      {properties.filter((p) => p.status === 'available').length}
-                    </strong>
-                  </div>
-                  <div className={styles.statBox}>
-                    <span className={styles.statLabel}>Rented</span>
-                    <strong className={styles.statVal}>
-                      {properties.filter((p) => p.status === 'rented' || p.status === 'occupied').length}
-                    </strong>
-                  </div>
-                </div>
+                {/* Toggle icon — only visible on mobile */}
+                <span className={styles.toggleIcon}>
+                  {profileExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </span>
+              </div>
 
-                <div className={styles.contactRow}>
-                  {isOwnProfile ? (
-                    <Link
-                      href="/upload"
-                      className="btn btn-primary"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', borderRadius: '30px', fontWeight: 700, textDecoration: 'none' }}
-                    >
-                      <PlusCircle size={18} /> Add New Listing
-                    </Link>
-                  ) : (
-                    agent.phone && (
-                      <>
-                        <a
-                          href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals to arrange a viewing.`)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`${styles.contactBtn} ${styles.whatsappBtn}`}
-                        >
-                          <MessageCircle size={16} /> WhatsApp Agent
-                        </a>
-                        <a
-                          href={`tel:${agent.phone}`}
-                          className={`${styles.contactBtn} ${styles.callBtn}`}
-                        >
-                          <Phone size={16} /> Call Agent
-                        </a>
-                      </>
-                    )
-                  )}
+              {/* ── Desktop & Mobile Stats & Actions ── */}
+              <div className={`${styles.expandableSection} ${profileExpanded ? styles.expandableOpen : ''}`}>
+                <div className={styles.profileActionsStats}>
+                  {/* Stats Row */}
+                  <div className={styles.statsRow}>
+                    <div className={styles.statBox}>
+                      <span className={styles.statLabel}>Active</span>
+                      <strong className={styles.statVal}>{properties.length}</strong>
+                    </div>
+                    <div className={styles.statBox}>
+                      <span className={styles.statLabel}>Available</span>
+                      <strong className={styles.statVal} style={{ color: '#10B981' }}>
+                        {properties.filter((p) => p.status === 'available').length}
+                      </strong>
+                    </div>
+                    <div className={styles.statBox}>
+                      <span className={styles.statLabel}>Rented</span>
+                      <strong className={styles.statVal}>
+                        {properties.filter((p) => p.status === 'rented' || p.status === 'occupied').length}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className={styles.contactRow}>
+                    {isOwnProfile ? (
+                      <Link
+                        href="/upload"
+                        className="btn btn-primary"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', borderRadius: '30px', fontWeight: 700, textDecoration: 'none' }}
+                      >
+                        <PlusCircle size={18} /> Add New Listing
+                      </Link>
+                    ) : (
+                      agent.phone && (
+                        <>
+                          <a
+                            href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${agent.name}, I am contacting you regarding your property listings on HO Rentals to arrange a viewing.`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`${styles.contactBtn} ${styles.whatsappBtn}`}
+                          >
+                            <MessageCircle size={16} /> WhatsApp Agent
+                          </a>
+                          <a
+                            href={`tel:${agent.phone}`}
+                            className={`${styles.contactBtn} ${styles.callBtn}`}
+                          >
+                            <Phone size={16} /> Call Agent
+                          </a>
+                        </>
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* ── Bio section coming down below profile header ── */}
+            {agent.bio && (
+              <div className={`${styles.bioRow} ${profileExpanded ? styles.bioRowOpen : ''}`}>
+                <p className={styles.agentBio}>
+                  {agent.bio}
+                </p>
+              </div>
+            )}
           </div>
         </aside>
 
