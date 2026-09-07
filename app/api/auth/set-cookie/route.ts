@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../../../../lib/env';
 
 /**
  * POST /api/auth/set-cookie
@@ -23,8 +25,9 @@ export async function POST(req: NextRequest) {
     const SESSION_MAX_AGE = 60 * 60 * 12; // 12 hours session timeout
 
     if (token && token !== 'keep') {
-      const parts = token.split('.');
-      if (parts.length === 3) {
+      try {
+        const JWT_SECRET = getJwtSecret();
+        jwt.verify(token, JWT_SECRET);
         response.cookies.set('auth_token', token, {
           httpOnly: true,
           secure: isProduction,
@@ -32,6 +35,11 @@ export async function POST(req: NextRequest) {
           path: '/',
           maxAge: SESSION_MAX_AGE,
         });
+      } catch (jwtErr) {
+        return NextResponse.json(
+          { error: 'Invalid authentication token.' },
+          { status: 400 }
+        );
       }
     }
 

@@ -222,7 +222,7 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
                 {/* Stats Row */}
                 <div className={styles.statsRow}>
                   <div className={styles.statBox}>
-                    <span className={styles.statLabel}>Listed</span>
+                    <span className={styles.statLabel}>Active</span>
                     <strong className={styles.statVal}>{properties.length}</strong>
                   </div>
                   <div className={styles.statBox}>
@@ -232,7 +232,7 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
                     </strong>
                   </div>
                   <div className={styles.statBox}>
-                    <span className={styles.statLabel}>Occupied</span>
+                    <span className={styles.statLabel}>Rented</span>
                     <strong className={styles.statVal}>
                       {properties.filter((p) => p.status === 'rented' || p.status === 'occupied').length}
                     </strong>
@@ -281,10 +281,14 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
       <div className={styles.sectionHeader} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 className={styles.sectionTitle}>
-            {isOwnProfile ? `Welcome ${user?.name || 'Agent'}! Your Listed Properties` : `Properties Listed by ${agent.name}`} ({properties.length})
+            {isOwnProfile
+              ? `Welcome ${user?.name || 'Agent'}! Your Listed Properties`
+              : `Verified Listings by ${agent.name}`} ({properties.length})
           </h2>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
-            {isOwnProfile ? 'Manage your active listings and track inquiries.' : `Explore verified rentals managed by ${agent.name}.`}
+            {isOwnProfile
+              ? 'Manage your active listings and track inquiries.'
+              : `${properties.length} verified ${properties.length === 1 ? 'rental' : 'rentals'} managed by ${agent.name}. Updated in real-time.`}
           </p>
         </div>
         {isOwnProfile && (

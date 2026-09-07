@@ -210,6 +210,7 @@ export const GET_PROPERTIES = `
       title
       type
       status
+      verificationStatus
       price
       location
       digitalAddress
@@ -728,8 +729,10 @@ export const GET_AGENT_PROPERTIES = `
       title
       type
       status
+      verificationStatus
       price
       location
+      digitalAddress
       imageUrl
       isFeatured
       createdAt

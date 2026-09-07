@@ -86,6 +86,8 @@ export default function Footer() {
             </p>
             <form className={styles.form} onSubmit={handleSubmit}>
               <input 
+                id="newsletter-email-input"
+                name="newsletterEmail"
                 type="email" 
                 placeholder="Email Address" 
                 required 

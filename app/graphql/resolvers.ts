@@ -44,6 +44,7 @@ const PROPERTY_SAFE_SELECT = {
   latitude: true,
   longitude: true,
   isFeatured: true,
+  verificationStatus: true,
   createdAt: true,
   ownerId: true,
   companyId: true,
@@ -247,8 +248,14 @@ export const resolvers = {
         ? { in: ['available', 'rented', 'pending_approval'] as string[] }
         : { in: ['available', 'rented'] as string[] };
 
+      // Public view only shows verified properties; owner/admin see all matching statuses
+      const where: any = { ownerId: userId, status: statusFilter };
+      if (!isOwnerOrAdmin) {
+        where.verificationStatus = 'verified';
+      }
+
       return prisma.property.findMany({
-        where: { ownerId: userId, status: statusFilter },
+        where,
         select: PROPERTY_SAFE_SELECT,
         orderBy: { createdAt: 'desc' },
       });

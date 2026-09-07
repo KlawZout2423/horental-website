@@ -33,6 +33,7 @@ export interface Property {
   landlordName?: string;
   imageUrl: string;
   isFeatured?: boolean;
+  verificationStatus?: string;
   createdAt?: string;
   gallery?: Array<{
     id: string;

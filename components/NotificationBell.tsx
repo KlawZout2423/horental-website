@@ -75,7 +75,11 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
         ]);
 
         if (data && data.properties) {
-          setNewListings(data.properties.slice(0, 8));
+          // Only notify about fully available & verified properties — never pending or rejected ones
+          const verifiedAvailable = data.properties.filter(
+            (p) => p.status === 'available' && p.verificationStatus === 'verified'
+          );
+          setNewListings(verifiedAvailable.slice(0, 8));
         }
 
         const dbReadStrings = (dbReads?.readNotificationIds || []).map(String);

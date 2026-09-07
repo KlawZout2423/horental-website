@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -262,7 +262,7 @@ export default function DashboardPage() {
           {([
             { key: 'overview', label: '📊 Overview', icon: null },
             { key: 'properties', label: `🏡 My Listings (${totalProperties})`, icon: null },
-            { key: 'leads', label: '🔒 Contact Leads', icon: null },
+            { key: 'leads', label: '⭐ Premium Features', icon: null },
             { key: 'profile', label: '👤 My Profile', icon: null },
           ] as const).map(tab => (
             <button
@@ -339,13 +339,21 @@ export default function DashboardPage() {
                 <div className={styles.metricSubtext}>Awaiting admin review</div>
               </div>
 
-              <div className={styles.metricCard} style={{ opacity: 0.85, borderStyle: 'dashed' }}>
+              <div className={styles.metricCard} style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(234,88,12,0.08) 100%)', border: '1px solid rgba(245,158,11,0.35)' }}>
                 <div className={styles.metricHeader}>
-                  <span className={styles.metricLabel}>Tenant Leads</span>
+                  <span className={styles.metricLabel} style={{ color: '#f59e0b' }}>Premium Package</span>
                   <Lock size={18} style={{ color: '#f59e0b' }} />
                 </div>
-                <div className={styles.metricValue} style={{ color: '#f59e0b', fontSize: '1.1rem', fontWeight: 700 }}>🔒 Premium</div>
-                <div className={styles.metricSubtext}>Upgrade to unlock direct leads</div>
+                <div style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 800, margin: '6px 0 4px' }}>🔒 Locked</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                  Leads · Analytics · Priority · Badge
+                </div>
+                <button
+                  onClick={() => setActiveTab('leads')}
+                  style={{ marginTop: '10px', fontSize: '0.76rem', fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '20px', padding: '4px 12px', cursor: 'pointer' }}
+                >
+                  View Package →
+                </button>
               </div>
             </div>
 
@@ -585,22 +593,96 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ─── TAB 3: CONTACT LEADS (LOCKED TEASER) ─── */}
+        {/* ─── TAB 3: PREMIUM FEATURES ─── */}
         {activeTab === 'leads' && (
-          <div style={{ padding: '3.5rem 1.5rem', textAlign: 'center', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: '1rem', border: '1px solid var(--border)', margin: '1rem 0' }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
-              <Lock size={32} />
+          <div>
+            {/* Hero Banner */}
+            <div style={{
+              background: 'linear-gradient(135deg, #0f172a 0%, #1c1133 50%, #0f172a 100%)',
+              border: '1px solid rgba(245,158,11,0.3)',
+              borderRadius: '1rem',
+              padding: '2rem 2rem 1.5rem',
+              marginBottom: '1.5rem',
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+              <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '200px', height: '200px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(245,158,11,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '0.75rem' }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '12px', background: 'linear-gradient(135deg, #f59e0b, #ea580c)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>&#11088;</div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '1.3rem', color: '#fde68a', lineHeight: 1.2 }}>HO Rentals Premium</div>
+                    <div style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '2px' }}>Everything you need to grow your rental business</div>
+                  </div>
+                </div>
+                <p style={{ color: '#cbd5e1', fontSize: '0.88rem', lineHeight: 1.65, margin: '0 0 1.25rem', maxWidth: '620px' }}>
+                  Upgrade to the <strong style={{ color: '#fbbf24' }}>Premium Package</strong> to unlock a complete suite of tools &mdash; from direct tenant leads to per-property analytics &mdash; designed to help you close more rentals, faster.
+                </p>
+                <a
+                  href={`https://wa.me/233204940602?text=${encodeURIComponent(`Hello HO Rentals, I am agent ${user?.name || ''} and I'd like to learn about upgrading to the Premium Package.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #f59e0b, #ea580c)', color: '#fff', fontWeight: 800, padding: '0.7rem 1.5rem', borderRadius: '0.6rem', textDecoration: 'none', fontSize: '0.9rem', boxShadow: '0 4px 20px rgba(245,158,11,0.35)' }}
+                >
+                  &#128172; Contact Us to Upgrade
+                </a>
+              </div>
             </div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-              Tenant Inquiry Leads & Direct Contact
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', maxWidth: '520px', margin: '0 auto 1.5rem', fontSize: '0.9rem', lineHeight: 1.6 }}>
-              Direct tenant contact inquiries, phone numbers, and WhatsApp messages are a <strong>Premium Subscription Feature</strong>. Upgrade your subscription plan to unlock verified tenant lead contacts.
-            </p>
-            <div style={{ display: 'inline-flex', gap: '12px', alignItems: 'center' }}>
-              <Link href="/agent/setup" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', fontWeight: 700 }}>
-                ⭐ Upgrade Subscription to Unlock Leads →
-              </Link>
+
+            {/* Feature Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ background: 'var(--bg-surface-secondary)', border: '1px solid var(--border)', borderRadius: '0.85rem', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>&#128203;</div>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Direct Tenant Leads</div>
+                <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>See every tenant who clicked Call or WhatsApp on your listings &mdash; with their name and phone number. Never miss a serious inquiry.</div>
+                <div style={{ marginTop: 'auto', paddingTop: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#6366f1', display: 'flex', alignItems: 'center', gap: '4px' }}><Lock size={12} /> Premium Feature</div>
+              </div>
+              <div style={{ background: 'var(--bg-surface-secondary)', border: '1px solid var(--border)', borderRadius: '0.85rem', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'rgba(34,197,94,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>&#128202;</div>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Property Analytics</div>
+                <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>Track views, WhatsApp clicks, and call conversions per property. Understand which listings perform best and optimise your portfolio.</div>
+                <div style={{ marginTop: 'auto', paddingTop: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#22c55e', display: 'flex', alignItems: 'center', gap: '4px' }}><Lock size={12} /> Premium Feature</div>
+              </div>
+              <div style={{ background: 'var(--bg-surface-secondary)', border: '1px solid var(--border)', borderRadius: '0.85rem', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>&#11088;</div>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Priority Listing</div>
+                <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>Your properties appear at the top of search results and get a Featured badge, giving you significantly more visibility over free-tier listings.</div>
+                <div style={{ marginTop: 'auto', paddingTop: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}><Lock size={12} /> Premium Feature</div>
+              </div>
+              <div style={{ background: 'var(--bg-surface-secondary)', border: '1px solid var(--border)', borderRadius: '0.85rem', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>&#128737;</div>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Verified Agent Badge</div>
+                <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>A green Verified badge on your profile and all your listings builds trust with tenants and increases the likelihood they contact you directly.</div>
+                <div style={{ marginTop: 'auto', paddingTop: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}><Lock size={12} /> Premium Feature</div>
+              </div>
+              <div style={{ background: 'var(--bg-surface-secondary)', border: '1px solid var(--border)', borderRadius: '0.85rem', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'rgba(139,92,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>&#128276;</div>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Instant Lead Alerts</div>
+                <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>Get notified immediately via WhatsApp or SMS whenever a tenant makes an inquiry on any of your properties &mdash; respond first, close faster.</div>
+                <div style={{ marginTop: 'auto', paddingTop: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '4px' }}><Lock size={12} /> Premium Feature</div>
+              </div>
+              <div style={{ background: 'var(--bg-surface-secondary)', border: '1px solid var(--border)', borderRadius: '0.85rem', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'rgba(193,18,31,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>&#127960;</div>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Unlimited Listings</div>
+                <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>List as many properties as you manage, with no per-listing monthly fees. One flat Premium rate covers your entire portfolio.</div>
+                <div style={{ marginTop: 'auto', paddingTop: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px' }}><Lock size={12} /> Premium Feature</div>
+              </div>
+            </div>
+
+            {/* Upgrade CTA Footer */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(234,88,12,0.06))', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '0.85rem', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontWeight: 700, color: '#fde68a', fontSize: '0.95rem', marginBottom: '4px' }}>Ready to grow your business?</div>
+                <div style={{ color: '#94a3b8', fontSize: '0.83rem' }}>Contact us on WhatsApp to activate your Premium Package today.</div>
+              </div>
+              <a
+                href={`https://wa.me/233204940602?text=${encodeURIComponent(`Hello HO Rentals, I am agent ${user?.name || ''} and I'd like to activate the Premium Package.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#25D366', color: '#fff', fontWeight: 700, padding: '0.65rem 1.25rem', borderRadius: '0.55rem', textDecoration: 'none', fontSize: '0.88rem', whiteSpace: 'nowrap' }}
+              >
+                &#128172; WhatsApp Us Now
+              </a>
             </div>
           </div>
         )}

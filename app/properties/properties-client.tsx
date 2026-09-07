@@ -408,6 +408,8 @@ export default function PropertiesClient() {
               </div>
               <div className={styles.priceRangeInputs}>
                 <input
+                  id="min-price-input"
+                  name="minPrice"
                   type="number"
                   placeholder="Min"
                   value={minPrice}
@@ -417,6 +419,8 @@ export default function PropertiesClient() {
                 />
                 <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>–</span>
                 <input
+                  id="max-price-input"
+                  name="maxPrice"
                   type="number"
                   placeholder="Max"
                   value={maxPrice}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../lib/auth';
@@ -61,6 +61,49 @@ const POPULAR_AREAS = [
 
 // Testimonials data removed
 
+const BANNER_SLIDES = [
+  {
+    id: 'main-hero',
+    bg: 'linear-gradient(135deg, #C1121F 0%, #8B0B14 100%)',
+    pill: 'PROMOTION',
+    headline: 'Find Verified Rentals in Ho',
+    sub: 'Student hostels, single rooms, apartments & more in Volta Region.',
+    cta: 'Browse Listings',
+    href: '/#listings',
+    image: '/student_campus_vibe.png',
+  },
+  {
+    id: 'verified',
+    bg: 'linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%)',
+    pill: '100% VERIFIED',
+    headline: 'Zero Scams. Real Hostels.',
+    sub: 'Every listing is physically inspected by our team in Ho.',
+    cta: 'How It Works',
+    href: '/#how-it-works',
+    image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'agents',
+    bg: 'linear-gradient(135deg, #047857 0%, #064E3B 100%)',
+    pill: '🤝 VERIFIED AGENTS',
+    headline: 'Talk to a Local Agent',
+    sub: 'Connect directly with top verified rental agents in Ho, HTU & UHAS.',
+    cta: 'View Agents',
+    href: '/#agents',
+    image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'students',
+    bg: 'linear-gradient(135deg, #92400E 0%, #B45309 100%)',
+    pill: 'STUDENT HOUSING',
+    headline: 'HTU & UHAS Hostels',
+    sub: 'Affordable hostels near campus — book fast without hassle.',
+    cta: 'Browse Hostels',
+    href: '/?type=Student+Hostel',
+    image: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80',
+  },
+];
+
 export default function Home() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -120,6 +163,33 @@ export default function Home() {
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selfContainedBtnRef = useRef<HTMLButtonElement>(null);
+
+  // ── Mobile sliding banner state ──────────────────────────────────────────
+  const [bannerSlide, setBannerSlide] = useState(0);
+  const bannerTouchStartX = useRef<number | null>(null);
+
+  const bannerNext = useCallback(() =>
+    setBannerSlide((s) => (s + 1) % BANNER_SLIDES.length), []);
+  const bannerPrev = useCallback(() =>
+    setBannerSlide((s) => (s - 1 + BANNER_SLIDES.length) % BANNER_SLIDES.length), []);
+
+  // Auto-advance every 4 seconds
+  useEffect(() => {
+    const t = setInterval(bannerNext, 4000);
+    return () => clearInterval(t);
+  }, [bannerNext]);
+
+  const handleBannerTouchStart = (e: React.TouchEvent) => {
+    bannerTouchStartX.current = e.touches[0].clientX;
+  };
+  const handleBannerTouchEnd = (e: React.TouchEvent) => {
+    if (bannerTouchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - bannerTouchStartX.current;
+    if (dx < -40) bannerNext();
+    else if (dx > 40) bannerPrev();
+    bannerTouchStartX.current = null;
+  };
+  // ────────────────────────────────────────────────────────────────────────
 
   const updateDropdownCoords = () => {
     if (selfContainedBtnRef.current) {
@@ -318,9 +388,14 @@ export default function Home() {
 
   return (
     <div className="animate-fade-in">
-      {/* Hero Banner */}
-      <header className={styles.hero}>
-        <div className={styles.heroWrapper}>
+      {/* Hero Banner with Mobile Carousel */}
+      <header
+        className={styles.hero}
+        onTouchStart={handleBannerTouchStart}
+        onTouchEnd={handleBannerTouchEnd}
+      >
+        {/* Desktop View: Standard static layout */}
+        <div className={styles.heroWrapperDesktop}>
           <div className={styles.heroLeft}>
             <h1 className={styles.title}>Find Verified Properties in Ghana</h1>
             <p className={styles.subtitle}>
@@ -356,6 +431,44 @@ export default function Home() {
               <Star size={16} fill="var(--accent)" color="var(--accent)" />
               <span>Trusted by Tenants & Buyers</span>
             </div>
+          </div>
+        </div>
+
+        {/* Mobile View: MTN App-Style Floating Card Carousel */}
+        <div className={styles.heroMobileCarousel}>
+          <div
+            className={styles.heroTrack}
+            style={{ transform: `translateX(-${bannerSlide * 100}%)` }}
+          >
+            {BANNER_SLIDES.map((slide) => (
+              <Link
+                key={slide.id}
+                href={slide.href}
+                className={styles.heroSlide}
+                style={{ background: slide.bg }}
+              >
+                <div className={styles.mobileSlideLeft}>
+                  <span className={styles.mobileHeroPill}>{slide.pill}</span>
+                  <h1 className={styles.mobileHeroTitle}>{slide.headline}</h1>
+                  <p className={styles.mobileHeroSub}>{slide.sub}</p>
+                </div>
+                <div className={styles.mobileSlideRight}>
+                  <img src={slide.image} alt={slide.headline} className={styles.mobileSlideImg} />
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Dots centered directly below the banner card */}
+          <div className={styles.heroDots}>
+            {BANNER_SLIDES.map((_, i) => (
+              <button
+                key={i}
+                className={`${styles.heroDot} ${i === bannerSlide ? styles.heroDotActive : ''}`}
+                onClick={() => setBannerSlide(i)}
+                aria-label={`Go to slide ${i + 1}`}
+              />
+            ))}
           </div>
         </div>
       </header>
@@ -824,6 +937,33 @@ export default function Home() {
               })}
             </div>
           )}
+
+          {/* Bottom Actions: View More Listings & View Other Agents */}
+          <div className={styles.bottomActionsWrapper}>
+            <Link href="/properties" className={styles.bottomActionBtnOutline}>
+              <Building2 size={18} />
+              <span>View All Properties →</span>
+            </Link>
+
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  const agreed = localStorage.getItem('agreed_agent_disclaimer') === 'true' || sessionStorage.getItem('agreed_agent_disclaimer') === 'true';
+                  if (!agreed) {
+                    setVerifyModalOpen(true);
+                  } else {
+                    setActiveTypeFilter('agents');
+                    const gridEl = document.getElementById('listings');
+                    if (gridEl) gridEl.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }
+              }}
+              className={styles.bottomActionBtnPrimary}
+            >
+              <UserCheck size={18} />
+              <span>🤝 View Other Agents</span>
+            </button>
+          </div>
         </div>
       </section>
 

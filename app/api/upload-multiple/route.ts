@@ -19,16 +19,6 @@ function isAuthenticated(req: NextRequest): boolean {
     }
   }
 
-  const userData = req.cookies.get('user_data')?.value;
-  if (userData) {
-    try {
-      const parsed = JSON.parse(userData);
-      if (parsed && parsed.id) return true;
-    } catch {
-      // JSON parse failed
-    }
-  }
-
   return false;
 }
 
