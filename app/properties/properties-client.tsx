@@ -11,7 +11,7 @@ import styles from './properties.module.css';
 import AuthPromptModal from '../../components/AuthPromptModal';
 
 
-import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImageUrl, getStatusLabel } from '../../lib/types';
+import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImageUrl, getStatusLabel, parsePropertyDescription } from '../../lib/types';
 
 
 
@@ -130,14 +130,15 @@ export default function PropertiesClient() {
     } else if (propertyType.toLowerCase() === 'agents') {
       result = result.filter((p) => p.owner?.role === 'agent');
     } else {
-      if (propertyType.toLowerCase() === 'self-contained') {
-        result = result.filter((p) => {
-          const type = p.type.toLowerCase();
-          return (type.includes('sc') || type.includes('self contained') || type.includes('self-contained')) && p.owner?.role !== 'agent';
-        });
-      } else {
-        result = result.filter((p) => p.type.toLowerCase() === propertyType.toLowerCase() && p.owner?.role !== 'agent');
-      }
+      const targetType = propertyType.toLowerCase().trim();
+      result = result.filter((p) => {
+        if (p.owner?.role === 'agent') return false;
+        const pType = (p.type || '').toLowerCase().trim();
+        if (targetType === 'self-contained') {
+          return pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained');
+        }
+        return pType === targetType || pType.includes(targetType) || targetType.includes(pType);
+      });
     }
 
     // Filter by min price
@@ -735,12 +736,13 @@ export default function PropertiesClient() {
                             );
                           }
 
+                          const { cleanDescription, amenities: parsedAmenities, specs } = parsePropertyDescription(rawDesc);
                           const desc = rawDesc.toLowerCase();
-                          let showWifi = desc.includes('wi-fi') || desc.includes('wifi');
-                          let showWater = desc.includes('water');
-                          let showPrepaid = desc.includes('prepaid') || desc.includes('meter');
-                          let showBed = desc.includes('bed') || desc.includes('room') || desc.includes('desk') || desc.includes('hostel');
-                          let showParking = desc.includes('park') || desc.includes('car');
+                          let showWifi = desc.includes('wi-fi') || desc.includes('wifi') || parsedAmenities.includes('WiFi');
+                          let showWater = desc.includes('water') || parsedAmenities.includes('Water');
+                          let showPrepaid = desc.includes('prepaid') || desc.includes('meter') || parsedAmenities.includes('Prepaid') || Boolean(specs.meterType);
+                          let showBed = desc.includes('bed') || desc.includes('room') || desc.includes('desk') || desc.includes('hostel') || Boolean(specs.rooms);
+                          let showParking = desc.includes('park') || desc.includes('car') || parsedAmenities.includes('Parking');
 
                           if (!showWifi && !showWater && !showPrepaid && !showBed) {
                             showWater = true;
@@ -749,15 +751,45 @@ export default function PropertiesClient() {
                           }
 
                           return (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <div className={styles.amenitiesRow}>
-                                {showBed && <span className={styles.amenity}>🛏️ Bed/Room</span>}
-                                {showWater && <span className={styles.amenity}>💧 Water</span>}
-                                {showPrepaid && <span className={styles.amenity}>⚡ Prepaid</span>}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {/* Primary Specs Badges Row */}
+                              <div className={styles.amenitiesRow} style={{ flexWrap: 'wrap', gap: '4px' }}>
+                                {specs.meterType ? (
+                                  <span className={styles.amenity} style={{ backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#D97706', border: '1px solid rgba(245, 158, 11, 0.25)', fontWeight: 700 }}>
+                                    ⚡ {specs.meterType}
+                                  </span>
+                                ) : showPrepaid ? (
+                                  <span className={styles.amenity} style={{ backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#D97706', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
+                                    ⚡ Prepaid
+                                  </span>
+                                ) : null}
+
+                                {specs.rooms ? (
+                                  <span className={styles.amenity} style={{ backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#2563EB', border: '1px solid rgba(59, 130, 246, 0.25)', fontWeight: 700 }}>
+                                    🛏️ {specs.rooms} {specs.rooms === '1' ? 'Room' : 'Rooms'} Avail.
+                                  </span>
+                                ) : showBed ? (
+                                  <span className={styles.amenity}>🛏️ Bed/Room</span>
+                                ) : null}
+
+                                {specs.advance ? (
+                                  <span className={styles.amenity} style={{ backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.25)', fontWeight: 700 }}>
+                                    ⏳ {specs.advance} Adv.
+                                  </span>
+                                ) : null}
+
+                                {specs.availableFrom && specs.availableFrom.toLowerCase() !== 'immediately' ? (
+                                  <span className={styles.amenity} style={{ backgroundColor: 'rgba(139, 92, 246, 0.12)', color: '#7C3AED', border: '1px solid rgba(139, 92, 246, 0.25)', fontWeight: 700 }}>
+                                    📅 {specs.availableFrom}
+                                  </span>
+                                ) : null}
+
+                                {showWater && !specs.meterType && <span className={styles.amenity}>💧 Water</span>}
                                 {showWifi && <span className={styles.amenity}>📶 WiFi</span>}
                                 {showParking && <span className={styles.amenity}>🚗 Parking</span>}
                               </div>
-                              {rawDesc && (
+
+                              {cleanDescription && (
                                 <p
                                   style={{
                                     fontSize: '0.78rem',
@@ -770,7 +802,7 @@ export default function PropertiesClient() {
                                     lineHeight: '1.3'
                                   }}
                                 >
-                                  {rawDesc}
+                                  {cleanDescription}
                                 </p>
                               )}
                             </div>

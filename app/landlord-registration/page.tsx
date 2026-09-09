@@ -697,6 +697,90 @@ export default function LandlordRegistrationPage() {
             </div>
           </div>
 
+          {/* Subscription Package Selection Card */}
+          <div className={styles.card}>
+            <div className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <span>Choose Listing Subscription Package *</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700 }}>Select your package</span>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginTop: '12px' }}>
+              
+              {/* Basic Plan */}
+              <div 
+                onClick={() => setPlan('Basic')}
+                style={{
+                  border: plan === 'Basic' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                  backgroundColor: plan === 'Basic' ? 'rgba(193, 18, 31, 0.05)' : 'var(--bg-surface)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1.02rem', color: 'var(--text-primary)' }}>Basic Plan</span>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 800, padding: '3px 8px', borderRadius: '12px', backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>STANDARD</span>
+                  </div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                    GHS 50 <span style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)' }}>/ one-time</span>
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    <li>Standard listing in search results</li>
+                    <li>Full photo gallery &amp; map location</li>
+                    <li>Direct tenant call &amp; WhatsApp inquiries</li>
+                  </ul>
+                </div>
+                <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', fontWeight: 700, color: plan === 'Basic' ? 'var(--primary)' : 'var(--text-muted)' }}>
+                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: plan === 'Basic' ? '5px solid var(--primary)' : '2px solid var(--border)', boxSizing: 'border-box' }} />
+                  {plan === 'Basic' ? 'Selected Package' : 'Select Basic Plan'}
+                </div>
+              </div>
+
+              {/* Premium Plan */}
+              <div 
+                onClick={() => setPlan('Premium')}
+                style={{
+                  border: plan === 'Premium' ? '2px solid #F59E0B' : '1px solid var(--border)',
+                  backgroundColor: plan === 'Premium' ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-surface)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1.02rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      ⭐ Premium Plan
+                    </span>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 800, padding: '3px 8px', borderRadius: '12px', backgroundColor: '#F59E0B', color: '#fff' }}>FEATURED</span>
+                  </div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#D97706', marginBottom: '8px' }}>
+                    GHS 100 <span style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)' }}>/ one-time</span>
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    <li><b>⭐ Featured placement at top of landing page</b></li>
+                    <li>Priority property verification visit</li>
+                    <li>Highlighted badge &amp; maximum reach</li>
+                  </ul>
+                </div>
+                <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', fontWeight: 700, color: plan === 'Premium' ? '#D97706' : 'var(--text-muted)' }}>
+                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: plan === 'Premium' ? '5px solid #F59E0B' : '2px solid var(--border)', boxSizing: 'border-box' }} />
+                  {plan === 'Premium' ? 'Selected Package ⭐' : 'Select Premium Plan'}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
           <div className={styles.card}>
             <div className={styles.sectionTitle}>Property photos</div>
             <label className={styles.photoDrop} htmlFor="photos-input">
@@ -864,6 +948,29 @@ export default function LandlordRegistrationPage() {
               Please review your registration details below before saving.
             </p>
 
+            {/* Structured Property Specs Quick Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ background: 'var(--bg-surface-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Monthly Rent</div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--primary)', marginTop: '2px' }}>GHS {rent ? parseFloat(rent).toLocaleString() : '0'}</div>
+              </div>
+
+              <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase' }}>⏳ Advance</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>{advance || '1 Year'}</div>
+              </div>
+
+              <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#2563EB', textTransform: 'uppercase' }}>🛏️ Rooms Avail.</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>{rooms || '1'}</div>
+              </div>
+
+              <div style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase' }}>📅 Available From</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>{availableFrom || 'Immediately'}</div>
+              </div>
+            </div>
+
             <div className={styles.reviewList}>
               <div className={styles.reviewRow}>
                 <span className={styles.reviewKey}>Full Name</span>
@@ -882,8 +989,10 @@ export default function LandlordRegistrationPage() {
                 <span className={styles.reviewValue}>{propAddress}</span>
               </div>
               <div className={styles.reviewRow}>
-                <span className={styles.reviewKey}>Monthly Rent</span>
-                <span className={styles.reviewValue}>GHS {parseFloat(rent).toLocaleString()} / month</span>
+                <span className={styles.reviewKey}>Selected Subscription Plan</span>
+                <span className={styles.reviewValue} style={{ fontWeight: 800, color: plan === 'Premium' ? '#D97706' : 'var(--primary)' }}>
+                  {plan === 'Premium' ? '⭐ Premium Featured Plan (GHS 100)' : 'Basic Standard Plan (GHS 50)'}
+                </span>
               </div>
               <div className={styles.reviewRow}>
                 <span className={styles.reviewKey}>Property Type(s)</span>
@@ -894,7 +1003,7 @@ export default function LandlordRegistrationPage() {
                 <span className={styles.reviewValue}>{socialMediaBoost ? 'Yes (GHS 30)' : 'No'}</span>
               </div>
               <div className={styles.reviewRow}>
-                <span className={styles.reviewKey}>Amenities</span>
+                <span className={styles.reviewKey}>Amenities & Metering</span>
                 <span className={styles.reviewValue}>{amenities.join(', ') || 'None selected'}</span>
               </div>
               <div className={styles.reviewRow} style={{ borderBottom: 'none' }}>

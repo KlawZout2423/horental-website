@@ -26,6 +26,8 @@ export const typeDefs = `#graphql
         rentedProperties: Int!
         totalPageVisits: Int!
         todayPageVisits: Int!
+        todayUniqueVisitors: Int!
+        todayLogins: Int!
     }
 
     type VisitSourceBreakdown {
@@ -64,6 +66,8 @@ export const typeDefs = `#graphql
         paystackCustomerCode: String
         paystackSubscriptionCode: String
         momoNumber: String
+        currentPeriodStart: String!
+        currentPeriodEnd: String
         createdAt: String!
     }
 
@@ -130,6 +134,7 @@ export const typeDefs = `#graphql
         isProfileComplete: Boolean
         verificationStatus: String
         mustChangePassword: Boolean
+        lastLoginAt: String
         subscription: Subscription
     }
 
@@ -365,7 +370,7 @@ export const typeDefs = `#graphql
         deleteUser(id: Int!): User!
         updateUserRole(id: Int!, role: String!): User!
         createContactLog(customerName: String!, customerPhone: String!, actionType: String!, propertyId: Int!, landlordPhone: String!): ContactLog!
-        recordPageVisit(path: String!, utmSource: String, utmMedium: String, utmCampaign: String, utmContent: String, referrer: String): Boolean!
+        recordPageVisit(path: String!, utmSource: String, utmMedium: String, utmCampaign: String, utmContent: String, referrer: String, sessionId: String): Boolean!
         deleteOldAuditLogs(days: Int!): BasicPayload!
         deleteAuditLogs(ids: [Int!]!): BasicPayload!
         deleteContactLogs(ids: [Int!]!): BasicPayload!

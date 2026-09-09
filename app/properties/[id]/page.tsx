@@ -10,7 +10,7 @@ import { trackVisit } from '../../../lib/trackVisit';
 import styles from './detail.module.css';
 import AuthPromptModal from '../../../components/AuthPromptModal';
 import Toast from '../../../components/Toast';
-import { getPricePeriodLabel, formatGhanaPhone, isValidGhanaPhone, sanitizeInput, getOptimizedImageUrl } from '../../../lib/types';
+import { getPricePeriodLabel, formatGhanaPhone, isValidGhanaPhone, sanitizeInput, getOptimizedImageUrl, parsePropertyDescription } from '../../../lib/types';
 
 interface GalleryItem {
   id: string;
@@ -467,6 +467,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
             {/* Description & Features box */}
             {(() => {
               const rawDesc = property.description || '';
+              const { cleanDescription, specs: parsedSpecs } = parsePropertyDescription(rawDesc);
               
               // Strip PricePeriod suffix if present
               let cleanText = rawDesc;
@@ -476,7 +477,11 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               }
 
               const featuresIdx = cleanText.indexOf('Features:');
-              let mainDesc = cleanText;
+              let mainDesc = cleanDescription || cleanText;
+              if (featuresIdx !== -1 && !cleanDescription) {
+                mainDesc = cleanText.substring(0, featuresIdx).trim();
+              }
+
               const water: string[] = [];
               const electricity: string[] = [];
               const amenities: string[] = [];
@@ -484,8 +489,14 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               const furnSpecs: string[] = [];
               const other: string[] = [];
 
+              const sanitizeFeatureText = (text: string) => {
+                return text
+                  .replace(/(?:Rooms Available|Advance Required|Available From|Rooms|Advance period|Available from):\s*[^|,\n.]+\.?,?/gi, '')
+                  .replace(/\s+/g, ' ')
+                  .trim();
+              };
+
               if (featuresIdx !== -1) {
-                mainDesc = cleanText.substring(0, featuresIdx).trim();
                 const featuresPart = cleanText.substring(featuresIdx + 'Features:'.length).trim();
                 const segments = featuresPart.split('|');
 
@@ -493,24 +504,29 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                   const trimmedSeg = seg.trim();
                   if (!trimmedSeg) return;
 
+                  // Skip terms/specs segments (handled by Quick Specs cards above)
+                  if (/^(?:Rooms Available|Advance Required|Available From|Rooms|Advance period|Available from):/i.test(trimmedSeg)) {
+                    return;
+                  }
+
                   if (trimmedSeg.startsWith('Water:')) {
                     const items = trimmedSeg.replace('Water:', '').split(',');
-                    items.forEach((i) => { if (i.trim()) water.push(i.trim()); });
+                    items.forEach((i) => { const cleaned = sanitizeFeatureText(i); if (cleaned) water.push(cleaned); });
                   } else if (trimmedSeg.startsWith('Electricity:')) {
                     const items = trimmedSeg.replace('Electricity:', '').split(',');
-                    items.forEach((i) => { if (i.trim()) electricity.push(i.trim()); });
+                    items.forEach((i) => { const cleaned = sanitizeFeatureText(i); if (cleaned) electricity.push(cleaned); });
                   } else if (trimmedSeg.startsWith('Amenities:')) {
                     const items = trimmedSeg.replace('Amenities:', '').split(',');
-                    items.forEach((i) => { if (i.trim()) amenities.push(i.trim()); });
+                    items.forEach((i) => { const cleaned = sanitizeFeatureText(i); if (cleaned) amenities.push(cleaned); });
                   } else if (trimmedSeg.startsWith('Land Specs:')) {
                     const items = trimmedSeg.replace('Land Specs:', '').split(',');
-                    items.forEach((i) => { if (i.trim()) landSpecs.push(i.trim()); });
+                    items.forEach((i) => { const cleaned = sanitizeFeatureText(i); if (cleaned) landSpecs.push(cleaned); });
                   } else if (trimmedSeg.startsWith('Furniture Specs:')) {
                     const items = trimmedSeg.replace('Furniture Specs:', '').split(',');
-                    items.forEach((i) => { if (i.trim()) furnSpecs.push(i.trim()); });
+                    items.forEach((i) => { const cleaned = sanitizeFeatureText(i); if (cleaned) furnSpecs.push(cleaned); });
                   } else if (!trimmedSeg.toLowerCase().includes('priceperiod')) {
                     const items = trimmedSeg.includes(':') ? trimmedSeg.split(':')[1]?.split(',') || [trimmedSeg] : [trimmedSeg];
-                    items.forEach((i) => { if (i.trim()) other.push(i.trim()); });
+                    items.forEach((i) => { const cleaned = sanitizeFeatureText(i); if (cleaned) other.push(cleaned); });
                   }
                 });
               }
@@ -542,10 +558,99 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                 if (lower.includes('shared meter')) electricity.push('ECG Shared Meter');
               }
 
-              const hasAnyFeatures = water.length > 0 || electricity.length > 0 || amenities.length > 0 || landSpecs.length > 0 || furnSpecs.length > 0 || other.length > 0;
+              const isAccommodation = !property.type?.toLowerCase().includes('land') && !property.type?.toLowerCase().includes('furniture');
+
+              const cleanWater = Array.from(new Set(water.filter(Boolean)));
+              const cleanElectricity = Array.from(new Set(electricity.filter(Boolean)));
+              const cleanAmenities = Array.from(new Set(amenities.filter(Boolean)));
+              const cleanOther = Array.from(new Set(other.filter(Boolean)));
+
+              const hasAnyFeatures = cleanWater.length > 0 || cleanElectricity.length > 0 || cleanAmenities.length > 0 || landSpecs.length > 0 || furnSpecs.length > 0 || cleanOther.length > 0;
 
               return (
                 <>
+                  {/* Quick Rental Specifications Cards Grid */}
+                  {isAccommodation && (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                      gap: '12px',
+                      marginBottom: '20px'
+                    }}>
+                      {/* Meter Type Card */}
+                      <div style={{
+                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                        border: '1px solid rgba(245, 158, 11, 0.25)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '12px 14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}>
+                        <span style={{ color: '#D97706', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          ⚡ Electricity Meter
+                        </span>
+                        <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                          {parsedSpecs.meterType || (cleanElectricity[0] || 'ECG Prepaid')}
+                        </span>
+                      </div>
+
+                      {/* Rooms Available Card */}
+                      <div style={{
+                        backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                        border: '1px solid rgba(59, 130, 246, 0.25)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '12px 14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}>
+                        <span style={{ color: '#2563EB', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          🛏️ Rooms Available
+                        </span>
+                        <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                          {parsedSpecs.rooms ? `${parsedSpecs.rooms} ${parsedSpecs.rooms === '1' ? 'Room' : 'Rooms'}` : '1 Room'}
+                        </span>
+                      </div>
+
+                      {/* Advance Required Card */}
+                      <div style={{
+                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                        border: '1px solid rgba(16, 185, 129, 0.25)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '12px 14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}>
+                        <span style={{ color: '#059669', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          ⏳ Advance Required
+                        </span>
+                        <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                          {parsedSpecs.advance || '1 Year'}
+                        </span>
+                      </div>
+
+                      {/* Available From Card */}
+                      <div style={{
+                        backgroundColor: 'rgba(139, 92, 246, 0.08)',
+                        border: '1px solid rgba(139, 92, 246, 0.25)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '12px 14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}>
+                        <span style={{ color: '#7C3AED', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          📅 Available From
+                        </span>
+                        <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                          {parsedSpecs.availableFrom || 'Immediately'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className={styles.descriptionBox}>
                     <h3 className={styles.sectionTitle}>Description</h3>
                     <p className={styles.descriptionText}>
@@ -575,13 +680,13 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                       )}
 
                       {/* Water Supply */}
-                      {water.length > 0 && (
+                      {cleanWater.length > 0 && (
                         <div style={{ marginBottom: '20px' }}>
                           <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
                             💧 Water Supply & Facilities
                           </h4>
                           <div className={styles.featuresGrid}>
-                            {water.map((item, idx) => (
+                            {cleanWater.map((item, idx) => (
                               <div key={idx} className={styles.featureCard}>
                                 <CheckCircle2 size={16} className={styles.featureIcon} style={{ color: '#0EA5E9' }} />
                                 <span>{item}</span>
@@ -592,13 +697,13 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                       )}
 
                       {/* Electricity & Metering */}
-                      {electricity.length > 0 && (
+                      {cleanElectricity.length > 0 && (
                         <div style={{ marginBottom: '20px' }}>
                           <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
                             ⚡ Electricity & Metering
                           </h4>
                           <div className={styles.featuresGrid}>
-                            {electricity.map((item, idx) => (
+                            {cleanElectricity.map((item, idx) => (
                               <div key={idx} className={styles.featureCard}>
                                 <CheckCircle2 size={16} className={styles.featureIcon} style={{ color: '#F59E0B' }} />
                                 <span>{item}</span>
@@ -609,13 +714,13 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                       )}
 
                       {/* Comfort & General Amenities */}
-                      {(amenities.length > 0 || other.length > 0) && (
+                      {(cleanAmenities.length > 0 || cleanOther.length > 0) && (
                         <div>
                           <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
                             ✨ Comforts & Security
                           </h4>
                           <div className={styles.featuresGrid}>
-                            {[...amenities, ...other].map((item, idx) => (
+                            {Array.from(new Set([...cleanAmenities, ...cleanOther])).map((item, idx) => (
                               <div key={idx} className={styles.featureCard}>
                                 <CheckCircle2 size={16} className={styles.featureIcon} style={{ color: 'var(--primary)' }} />
                                 <span>{item}</span>

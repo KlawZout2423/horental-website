@@ -27,6 +27,7 @@ const USER_SAFE_SELECT = {
   isProfileComplete: true,
   verificationStatus: true,
   mustChangePassword: true,
+  lastLoginAt: true,
 };
 
 const PROPERTY_SAFE_SELECT = {
@@ -291,13 +292,30 @@ export const resolvers = {
           }
         }).catch(() => 0);
 
+        const todayUniqueVisitorsResult = await prisma.pageVisit.groupBy({
+          by: ['sessionId'],
+          where: {
+            createdAt: { gte: todayStart },
+            sessionId: { not: null }
+          }
+        }).catch(() => []);
+        const todayUniqueVisitors = todayUniqueVisitorsResult.length;
+
+        const todayLogins = await prisma.user.count({
+          where: {
+            lastLoginAt: { gte: todayStart }
+          }
+        }).catch(() => 0);
+
         return { 
           totalProperties, 
           totalUsers, 
           availableProperties, 
           rentedProperties, 
           totalPageVisits, 
-          todayPageVisits 
+          todayPageVisits,
+          todayUniqueVisitors,
+          todayLogins
         };
       } catch (dbErr: any) {
         console.warn('[DashboardStats] DB connection warning:', dbErr.message);
@@ -307,7 +325,9 @@ export const resolvers = {
           availableProperties: 0,
           rentedProperties: 0,
           totalPageVisits: 0,
-          todayPageVisits: 0
+          todayPageVisits: 0,
+          todayUniqueVisitors: 0,
+          todayLogins: 0
         };
       }
     },
@@ -722,6 +742,12 @@ export const resolvers = {
       const valid = await bcrypt.compare(password, rawUser.password);
       if (!valid) throw new Error('Invalid credentials');
 
+      // Update last login timestamp
+      await prisma.user.update({
+        where: { id: rawUser.id },
+        data: { lastLoginAt: new Date() },
+      }).catch(err => console.error('[Login] Failed to update lastLoginAt:', err));
+
       // Re-fetch with safe select (no password) for the returned payload
       const user = await prisma.user.findUnique({
         where: { id: rawUser.id },
@@ -761,6 +787,12 @@ export const resolvers = {
           }
         });
       }
+
+      // Update last login timestamp
+      await prisma.user.update({
+        where: { id: rawUser.id },
+        data: { lastLoginAt: new Date() },
+      }).catch(err => console.error('[GoogleAuth] Failed to update lastLoginAt:', err));
 
       const user = await prisma.user.findUnique({
         where: { id: rawUser.id },
@@ -1007,6 +1039,28 @@ export const resolvers = {
       await prisma.propertyImage.deleteMany({ where: { propertyId: id } });
       await prisma.notificationRead.deleteMany({ where: { propertyId: id } }).catch(() => {});
 
+      // Sync matching LandlordRegistration status back to 'Unpublished' so it doesn't stay marked as Verified when deleted
+      if (property.landlordName || property.contact) {
+        const cleanPhone = (property.contact || '').replace(/[^0-9]/g, '');
+        const last9 = cleanPhone ? cleanPhone.slice(-9) : '';
+        const whereConditions: any[] = [];
+        if (property.landlordName) {
+          whereConditions.push({ name: { equals: property.landlordName, mode: 'insensitive' } });
+        }
+        if (last9) {
+          whereConditions.push({ phone1: { contains: last9 } });
+        }
+        if (whereConditions.length > 0) {
+          await prisma.landlordRegistration.updateMany({
+            where: {
+              OR: whereConditions,
+              status: 'Verified',
+            },
+            data: { status: 'Unpublished' },
+          }).catch((err) => console.error('[deleteProperty] Error syncing landlord registration status:', err));
+        }
+      }
+
       // Then delete the property
       return prisma.property.delete({
         where: { id },
@@ -1114,6 +1168,26 @@ export const resolvers = {
       const deletedUser = await prisma.user.delete({ where: { id: targetId } });
       createAuditLog('USER_DELETED', `Admin ${fullUser.email} deleted user ${targetUser.name} (${targetUser.email})`, fullUser.email);
       return deletedUser;
+    },
+
+    recordPageVisit: async (_: any, { path, utmSource, utmMedium, utmCampaign, utmContent, referrer, sessionId }: any) => {
+      try {
+        await prisma.pageVisit.create({
+          data: {
+            path: sanitizeInput(path || '/'),
+            utmSource: utmSource ? sanitizeInput(utmSource) : null,
+            utmMedium: utmMedium ? sanitizeInput(utmMedium) : null,
+            utmCampaign: utmCampaign ? sanitizeInput(utmCampaign) : null,
+            utmContent: utmContent ? sanitizeInput(utmContent) : null,
+            referrer: referrer ? sanitizeInput(referrer) : null,
+            sessionId: sessionId ? sanitizeInput(sessionId) : null,
+          }
+        });
+        return true;
+      } catch (err: any) {
+        console.error('[recordPageVisit] Error recording visit:', err?.message || err);
+        return false;
+      }
     },
 
     createLandlordRegistration: async (_: any, { input }: any) => {
@@ -1228,9 +1302,19 @@ export const resolvers = {
       const defaultCompany = await prisma.company.findFirst({ where: { isOwnCompany: true } });
       if (!defaultCompany) throw new Error('Default company not found');
 
-      // 3. Construct description & title
-      const title = `${r.propType} in ${r.city}`;
-      const description = `Beautiful ${r.propType} located in ${r.city}. Rooms: ${r.rooms || 1}. Advance period: ${r.advance || 'N/A'}. Available from: ${r.availableFrom || 'Immediately'}. Utilities/Amenities: ${r.amenities.join(', ') || 'None'}. Landmark: ${r.propLandmark || 'N/A'}.`;
+      // 3. Construct description & title with clean primary property type
+      const primaryType = (r.propType || 'Single Room Self Contain').split(',')[0].trim();
+      const title = `${primaryType} in ${r.city}`;
+      const baseDesc = `Beautiful ${primaryType} located in ${r.city}.${r.propLandmark ? ` Landmark: ${r.propLandmark}.` : ''}`;
+      const featureParts: string[] = [];
+      if (r.rooms) featureParts.push(`Rooms Available: ${r.rooms}`);
+      if (r.advance) featureParts.push(`Advance Required: ${r.advance}`);
+      if (r.availableFrom) featureParts.push(`Available From: ${r.availableFrom}`);
+      if (r.amenities && r.amenities.length > 0) featureParts.push(`Amenities: ${r.amenities.join(', ')}`);
+      
+      const description = featureParts.length > 0 
+        ? `${baseDesc}\n\nFeatures: ${featureParts.join(' | ')}`
+        : baseDesc;
 
       // 4. Create property in database
       const property = await prisma.property.create({
@@ -1243,7 +1327,7 @@ export const resolvers = {
           description: sanitizeInput(description),
           contact: formatGhanaPhone(r.phone1),
           landlordName: sanitizeInput(r.name),
-          type: r.propType || 'Single Room Self Contain',
+          type: primaryType,
           status: 'available',
           imageUrl: r.photos[0] || '',
           isFeatured: r.plan === 'Premium',
@@ -1636,6 +1720,44 @@ export const resolvers = {
         where: { id: { in: numericIds } }
       });
       return { success: true, message: `${numericIds.length} contact log(s) deleted successfully.` };
+    },
+
+    deleteOldAuditLogs: async (_: any, { days }: { days: number }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true, email: true, name: true } });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
+      let deletedCount = 0;
+      if (days === 0) {
+        const res = await prisma.auditLog.deleteMany({});
+        deletedCount = res.count;
+      } else {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+        const res = await prisma.auditLog.deleteMany({
+          where: {
+            createdAt: { lt: cutoffDate }
+          }
+        });
+        deletedCount = res.count;
+      }
+
+      createAuditLog('AUDIT_LOGS_CLEANUP', `Admin ${dbUser.name} deleted ${deletedCount} audit log(s) [Filter: ${days === 0 ? 'All' : `older than ${days} days`}]`, dbUser.email);
+      return { success: true, message: `Successfully deleted ${deletedCount} audit log(s).` };
+    },
+
+    deleteAuditLogs: async (_: any, { ids }: { ids: number[] }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true, email: true, name: true } });
+      if (dbUser?.role !== 'admin') throw new Error('Not authorized');
+
+      const numericIds = (ids || []).map(id => typeof id === 'string' ? parseInt(id, 10) : Number(id));
+      const res = await prisma.auditLog.deleteMany({
+        where: { id: { in: numericIds } }
+      });
+
+      createAuditLog('AUDIT_LOGS_DELETED', `Admin ${dbUser.name} deleted ${res.count} selected audit log(s)`, dbUser.email);
+      return { success: true, message: `Successfully deleted ${res.count} audit log(s).` };
     },
 
     flagFraudAlert: async (_: any, { propertyId, userId, reason, severity }: any, { user }: { user: { id: number } | null }) => {

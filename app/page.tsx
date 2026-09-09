@@ -274,14 +274,15 @@ export default function Home() {
       result = result.filter((p) => p.owner?.role === 'agent');
     } else {
       // Category chips (Student Hostel, Single Room, etc.) exclude agent properties
-      if (activeTypeFilter === 'self-contained') {
-        result = result.filter((p) => {
-          const type = p.type.toLowerCase();
-          return (type.includes('sc') || type.includes('self contained') || type.includes('self-contained')) && p.owner?.role !== 'agent';
-        });
-      } else {
-        result = result.filter((p) => p.type.toLowerCase() === activeTypeFilter.toLowerCase() && p.owner?.role !== 'agent');
-      }
+      const targetType = activeTypeFilter.toLowerCase().trim();
+      result = result.filter((p) => {
+        if (p.owner?.role === 'agent') return false;
+        const pType = (p.type || '').toLowerCase().trim();
+        if (targetType === 'self-contained') {
+          return pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained');
+        }
+        return pType === targetType || pType.includes(targetType) || targetType.includes(pType);
+      });
     }
 
     if (searchQuery.trim()) {

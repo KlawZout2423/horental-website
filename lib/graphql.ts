@@ -376,6 +376,7 @@ export const GET_USERS = `
       subscriptionPlan
       verificationStatus
       mustChangePassword
+      lastLoginAt
     }
   }
 `;
@@ -417,6 +418,7 @@ export const UPDATE_USER_PROFILE_MUTATION = `
       isProfileComplete
       verificationStatus
       mustChangePassword
+      lastLoginAt
     }
   }
 `;
@@ -431,13 +433,15 @@ export const GET_DASHBOARD_STATS = `
       rentedProperties
       totalPageVisits
       todayPageVisits
+      todayUniqueVisitors
+      todayLogins
     }
   }
 `;
 
 export const RECORD_PAGE_VISIT = `
-  mutation RecordPageVisit($path: String!, $utmSource: String, $utmMedium: String, $utmCampaign: String, $utmContent: String, $referrer: String) {
-    recordPageVisit(path: $path, utmSource: $utmSource, utmMedium: $utmMedium, utmCampaign: $utmCampaign, utmContent: $utmContent, referrer: $referrer)
+  mutation RecordPageVisit($path: String!, $sessionId: String, $utmSource: String, $utmMedium: String, $utmCampaign: String, $utmContent: String, $referrer: String) {
+    recordPageVisit(path: $path, sessionId: $sessionId, utmSource: $utmSource, utmMedium: $utmMedium, utmCampaign: $utmCampaign, utmContent: $utmContent, referrer: $referrer)
   }
 `;
 

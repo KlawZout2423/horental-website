@@ -26,6 +26,7 @@ model User {
   resetOtpCode       String?
   resetOtpExpires    DateTime?
   mustChangePassword Boolean  @default(false)
+  lastLoginAt        DateTime?
   companyId          Int?
   subscriptionId     Int?
   createdAt          DateTime @default(now())
@@ -198,6 +199,7 @@ model ContactLog {
 model PageVisit {
   id          Int      @id @default(autoincrement())
   path        String
+  sessionId   String?
   utmSource   String?
   utmMedium   String?
   utmCampaign String?
@@ -208,6 +210,7 @@ model PageVisit {
   @@index([createdAt])
   @@index([path])
   @@index([utmSource])
+  @@index([sessionId])
 }
 
 model PasswordResetRequest {

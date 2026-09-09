@@ -45,6 +45,8 @@ interface DashboardStats {
   rentedProperties: number;
   totalPageVisits: number;
   todayPageVisits: number;
+  todayUniqueVisitors?: number;
+  todayLogins?: number;
 }
 
 import { User, Property } from '../../lib/types';
@@ -308,15 +310,21 @@ function AdminPageContent() {
   const standardUsers = users.filter((u) => u.role !== 'agent' && u.role !== 'landlord');
   const agentUsers = users.filter((u) => u.role === 'agent' || u.role === 'landlord');
 
-  const filteredStandardUsers = standardUsers.filter((u) => {
-    if (!userSearch.trim()) return true;
-    const term = userSearch.toLowerCase();
-    return (
-      (u.name && u.name.toLowerCase().includes(term)) ||
-      (u.email && u.email.toLowerCase().includes(term)) ||
-      (u.phone && u.phone.includes(term))
-    );
-  });
+  const filteredStandardUsers = standardUsers
+    .filter((u) => {
+      if (!userSearch.trim()) return true;
+      const term = userSearch.toLowerCase();
+      return (
+        (u.name && u.name.toLowerCase().includes(term)) ||
+        (u.email && u.email.toLowerCase().includes(term)) ||
+        (u.phone && u.phone.includes(term))
+      );
+    })
+    .sort((a, b) => {
+      const timeA = a.lastLoginAt ? new Date(isNaN(Number(a.lastLoginAt)) ? a.lastLoginAt : Number(a.lastLoginAt)).getTime() : 0;
+      const timeB = b.lastLoginAt ? new Date(isNaN(Number(b.lastLoginAt)) ? b.lastLoginAt : Number(b.lastLoginAt)).getTime() : 0;
+      return timeB - timeA;
+    });
 
   const filteredAgentUsers = agentUsers.filter((ag) => {
     if (!agentSearch.trim()) return true;
@@ -1405,6 +1413,40 @@ function AdminPageContent() {
 
                 <div 
                   className={styles.statCard} 
+                  style={{ borderLeft: '4px solid #10B981', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                  onClick={() => setActiveTab('traffic')}
+                  title="Unique organic visitor sessions today (30-min window)"
+                >
+                  <span className={styles.statLabel} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Unique Visitors Today <Activity size={13} style={{ color: '#10B981' }} />
+                  </span>
+                  <span className={styles.statValue} style={{ color: '#10B981' }}>
+                    {stats.todayUniqueVisitors || 0}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    Organic 30-min sessions
+                  </span>
+                </div>
+
+                <div 
+                  className={styles.statCard} 
+                  style={{ borderLeft: '4px solid #F59E0B', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                  onClick={() => setActiveTab('users')}
+                  title="User logins today"
+                >
+                  <span className={styles.statLabel} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Logins Today <Users size={13} style={{ color: '#F59E0B' }} />
+                  </span>
+                  <span className={styles.statValue} style={{ color: '#F59E0B' }}>
+                    {stats.todayLogins || 0}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    Authenticated user logins
+                  </span>
+                </div>
+
+                <div 
+                  className={styles.statCard} 
                   onClick={() => setActiveTab('reports')}
                   style={{ 
                     borderLeft: '4px solid #EF4444', 
@@ -2158,6 +2200,7 @@ function AdminPageContent() {
                       <th>Name</th>
                       <th>Email Address</th>
                       <th>Phone Number</th>
+                      <th>Last Active</th>
                       <th>System Role</th>
                       <th>Modify Role</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
@@ -2166,7 +2209,7 @@ function AdminPageContent() {
                   <tbody>
                     {filteredStandardUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
                           {userSearch ? 'No users matching your search.' : 'No standard users found in the database. (Agents and Landlords are managed in the Agents / Landlords DB tab)'}
                         </td>
                       </tr>
@@ -2176,6 +2219,9 @@ function AdminPageContent() {
                           <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{u.name}</td>
                           <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{u.email}</td>
                           <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{u.phone || 'N/A'}</td>
+                          <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem' }}>
+                            {u.lastLoginAt ? new Date(isNaN(Number(u.lastLoginAt)) ? u.lastLoginAt : Number(u.lastLoginAt)).toLocaleString() : 'Never logged in'}
+                          </td>
                           <td>
                             <span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-available'}`} style={{ fontSize: '0.65rem' }}>
                               {u.role}
@@ -2232,6 +2278,9 @@ function AdminPageContent() {
                         <div>
                           <div className={styles.adminCardTitle}>{u.name}</div>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{u.phone || u.email}</span>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
+                            Last Active: {u.lastLoginAt ? new Date(isNaN(Number(u.lastLoginAt)) ? u.lastLoginAt : Number(u.lastLoginAt)).toLocaleDateString() : 'Never'}
+                          </span>
                         </div>
                         <span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-available'}`} style={{ fontSize: '0.68rem' }}>
                           {u.role}
@@ -3464,6 +3513,17 @@ function AdminPageContent() {
                                     Agreement Signed
                                   </span>
                                 )}
+                                <span 
+                                  className={styles.landlordBadge} 
+                                  style={{ 
+                                    backgroundColor: r.plan === 'Premium' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.12)', 
+                                    color: r.plan === 'Premium' ? '#D97706' : '#2563EB', 
+                                    border: `1px solid ${r.plan === 'Premium' ? '#F59E0B' : '#93C5FD'}`,
+                                    fontWeight: 700 
+                                  }}
+                                >
+                                  {r.plan === 'Premium' ? '⭐ Premium Plan (GHS 100)' : 'Basic Plan (GHS 50)'}
+                                </span>
                               </div>
                             </div>
 
@@ -4681,23 +4741,60 @@ function AdminPageContent() {
               </div>
 
               {/* Property Details */}
-              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '12px' }}>
-                  Property Listing Details
+              <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '18px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '8px', margin: 0 }}>
+                  Property Specifications & Terms
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85rem' }}>
+
+                {/* Structured Visual Spec Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+                  {/* Rent Card */}
+                  <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Monthly Rent</div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--primary)', marginTop: '2px' }}>GHS {selectedLandlord.rent?.toLocaleString()}</div>
+                  </div>
+
+                  {/* Advance Card */}
+                  <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase' }}>⏳ Advance Payment</div>
+                    <div style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>{selectedLandlord.advance || '1 Year'}</div>
+                  </div>
+
+                  {/* Rooms Card */}
+                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#2563EB', textTransform: 'uppercase' }}>🛏️ Rooms Available</div>
+                    <div style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>{selectedLandlord.rooms || '1'}</div>
+                  </div>
+
+                  {/* Available Date Card */}
+                  <div style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase' }}>📅 Available From</div>
+                    <div style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>{selectedLandlord.availableFrom || 'Immediately'}</div>
+                  </div>
+                </div>
+
+                {/* Additional Metadata */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.84rem', background: 'var(--bg-surface)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div><strong>Property Type:</strong> {selectedLandlord.propType || '—'}</div>
+                  <div><strong>Selected Package:</strong> <span style={{ fontWeight: 800, color: selectedLandlord.plan === 'Premium' ? '#D97706' : 'var(--primary)' }}>{selectedLandlord.plan === 'Premium' ? '⭐ Premium Plan (GHS 100)' : 'Basic Plan (GHS 50)'}</span></div>
+                  <div><strong>Social Media Boost:</strong> {selectedLandlord.socialMediaBoost ? 'Yes (GHS 30 agreed)' : 'No'}</div>
                   <div><strong>Address:</strong> {selectedLandlord.propAddress}</div>
                   <div><strong>Landmark:</strong> {selectedLandlord.propLandmark || '—'}</div>
                   <div><strong>City/Region:</strong> {selectedLandlord.propCity || '—'} {selectedLandlord.propRegion ? `, ${selectedLandlord.propRegion} Region` : ''}</div>
                   <div><strong>GPS Address:</strong> {selectedLandlord.propGps || '—'}</div>
-                  <div><strong>Monthly Rent:</strong> GHS {selectedLandlord.rent.toLocaleString()}</div>
-                  <div><strong>Advance Payment:</strong> {selectedLandlord.advance || '—'}</div>
-                  <div><strong>Rooms Available:</strong> {selectedLandlord.rooms || '—'}</div>
-                  <div><strong>Available From:</strong> {selectedLandlord.availableFrom || '—'}</div>
-                  <div><strong>Property Type:</strong> {selectedLandlord.propType || '—'}</div>
-                  <div><strong>Social Media Boost:</strong> {selectedLandlord.socialMediaBoost ? 'Yes (GHS 30 agreed)' : 'No'}</div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <strong>Amenities:</strong> {selectedLandlord.amenities && selectedLandlord.amenities.length > 0 ? selectedLandlord.amenities.join(', ') : '—'}
+                  <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                    <strong>Utilities & Amenities:</strong>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {selectedLandlord.amenities && selectedLandlord.amenities.length > 0 ? (
+                        selectedLandlord.amenities.map((item, idx) => (
+                          <span key={idx} style={{ background: 'var(--primary-light)', color: 'var(--primary-dark)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 700 }}>
+                            {item}
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>None specified</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

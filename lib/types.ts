@@ -15,6 +15,7 @@ export interface User {
   isProfileComplete?: boolean;
   verificationStatus?: string;
   mustChangePassword?: boolean;
+  lastLoginAt?: string;
 }
 
 export interface Property {
@@ -194,12 +195,51 @@ export function getPricePeriodLabel(desc?: string, short: boolean = true): strin
   return short ? '/sem' : '/ semester';
 }
 
-export function parsePropertyDescription(desc?: string) {
+export interface ParsedPropertyDetails {
+  cleanDescription: string;
+  amenities: string[];
+  specs: {
+    rooms?: string;
+    advance?: string;
+    availableFrom?: string;
+    meterType?: string;
+  };
+}
+
+export function parsePropertyDescription(desc?: string): ParsedPropertyDetails {
   let cleanDesc = desc || '';
   const amenities: string[] = [];
+  const specs: ParsedPropertyDetails['specs'] = {};
 
   if (!desc) {
-    return { cleanDescription: '', amenities: [] };
+    return { cleanDescription: '', amenities: [], specs };
+  }
+
+  // Extract Rooms Available
+  const roomsMatch = cleanDesc.match(/(?:Rooms Available|Rooms):\s*([^.\n|]+)/i);
+  if (roomsMatch) {
+    specs.rooms = roomsMatch[1].trim();
+    cleanDesc = cleanDesc.replace(/(?:Rooms Available|Rooms):\s*[^.\n|]+\.?,?/gi, '').trim();
+  }
+
+  // Extract Advance Period / Required
+  const advanceMatch = cleanDesc.match(/(?:Advance Required|Advance period|Advance Payment|Advance):\s*([^.\n|]+)/i);
+  if (advanceMatch) {
+    specs.advance = advanceMatch[1].trim();
+    cleanDesc = cleanDesc.replace(/(?:Advance Required|Advance period|Advance Payment|Advance):\s*[^.\n|]+\.?,?/gi, '').trim();
+  }
+
+  // Extract Available From Date
+  const availableMatch = cleanDesc.match(/(?:Available From|Available from):\s*([^.\n|]+)/i);
+  if (availableMatch) {
+    specs.availableFrom = availableMatch[1].trim();
+    cleanDesc = cleanDesc.replace(/(?:Available From|Available from):\s*[^.\n|]+\.?,?/gi, '').trim();
+  }
+
+  // Extract ECG Metering Spec
+  const meterMatch = cleanDesc.match(/(ECG Prepaid(?: Meter)?|ECG Separate Meter|ECG Shared Meter|ECG Post-paid|ECG Postpaid|Prepaid Meter)/i);
+  if (meterMatch) {
+    specs.meterType = meterMatch[1].trim();
   }
 
   // 1. Strip PricePeriod tag if present
@@ -221,7 +261,7 @@ export function parsePropertyDescription(desc?: string) {
     keys.forEach(key => {
       if (key === 'wifi') amenities.push('WiFi');
       else if (key === 'water') amenities.push('Water');
-      else if (key === 'electricity') amenities.push('Prepaid');
+      else if (key === 'electricity') { amenities.push('Prepaid'); if (!specs.meterType) specs.meterType = 'ECG Prepaid'; }
       else if (key === 'security') amenities.push('Security');
       else if (key === 'parking') amenities.push('Parking');
       else if (key === 'bathroom') amenities.push('Bathroom');
@@ -248,23 +288,54 @@ export function parsePropertyDescription(desc?: string) {
         amenities.push('Water');
       } else if (trimmedSeg.startsWith('electricity:')) {
         amenities.push('Prepaid');
+        if (!specs.meterType) specs.meterType = seg.split(':')[1]?.trim() || 'ECG Prepaid';
       } else if (trimmedSeg.startsWith('amenities:')) {
         const items = trimmedSeg.replace('amenities:', '').split(',');
         items.forEach(item => {
           const name = item.trim();
-          if (name.includes('wifi') || name.includes('wi-fi')) {
+          if (name.includes('wifi') || name.includes('wi-fi') || name.includes('internet')) {
             if (!amenities.includes('WiFi')) amenities.push('WiFi');
-          } else if (name.includes('cctv')) {
+          }
+          if (name.includes('prepaid') || name.includes('postpaid') || name.includes('post-paid') || name.includes('meter')) {
+            if (!amenities.includes('Prepaid')) amenities.push('Prepaid');
+            if (!specs.meterType) {
+              if (name.includes('prepaid')) specs.meterType = 'ECG Prepaid';
+              else if (name.includes('postpaid') || name.includes('post-paid')) specs.meterType = 'ECG Post-paid';
+              else if (name.includes('shared')) specs.meterType = 'ECG Shared Meter';
+              else if (name.includes('separate')) specs.meterType = 'ECG Separate Meter';
+            }
+          }
+          if (name.includes('water') || name.includes('polytank') || name.includes('borehole') || name.includes('well')) {
+            if (!amenities.includes('Water')) amenities.push('Water');
+          }
+          if (name.includes('bathroom')) {
+            if (!amenities.includes('Bathroom')) amenities.push('Bathroom');
+          }
+          if (name.includes('kitchen')) {
+            if (!amenities.includes('Kitchen')) amenities.push('Kitchen');
+          }
+          if (name.includes('balcony') || name.includes('veranda')) {
+            if (!amenities.includes('Balcony')) amenities.push('Balcony');
+          }
+          if (name.includes('newly built')) {
+            if (!amenities.includes('Newly Built')) amenities.push('Newly Built');
+          }
+          if (name.includes('cctv')) {
             if (!amenities.includes('CCTV')) amenities.push('CCTV');
-          } else if (name.includes('furnished')) {
+          }
+          if (name.includes('furnished')) {
             if (!amenities.includes('Furnished')) amenities.push('Furnished');
-          } else if (name.includes('security') || name.includes('gated') || name.includes('fenced')) {
+          }
+          if (name.includes('security') || name.includes('gated') || name.includes('fenced')) {
             if (!amenities.includes('Security')) amenities.push('Security');
-          } else if (name.includes('parking') || name.includes('car')) {
+          }
+          if (name.includes('parking') || name.includes('car')) {
             if (!amenities.includes('Parking')) amenities.push('Parking');
-          } else if (name.includes('ac') || name.includes('air condition')) {
+          }
+          if (name.includes('ac') || name.includes('air condition')) {
             if (!amenities.includes('AC')) amenities.push('AC');
-          } else if (name.includes('bed') || name.includes('room') || name.includes('desk') || name.includes('hostel')) {
+          }
+          if (name.includes('bed') || name.includes('room') || name.includes('desk') || name.includes('hostel')) {
             if (!amenities.includes('Bed/Room')) amenities.push('Bed/Room');
           }
         });
@@ -273,8 +344,8 @@ export function parsePropertyDescription(desc?: string) {
   }
 
   // 4. Fallback Keyword detection (if no structured format or amenities list is empty)
+  const lower = desc.toLowerCase();
   if (amenities.length === 0) {
-    const lower = desc.toLowerCase();
     if (lower.includes('wifi') || lower.includes('wi-fi')) amenities.push('WiFi');
     if (lower.includes('water')) amenities.push('Water');
     if (lower.includes('prepaid') || lower.includes('meter')) amenities.push('Prepaid');
@@ -287,12 +358,25 @@ export function parsePropertyDescription(desc?: string) {
     }
   }
 
+  if (!specs.meterType) {
+    if (lower.includes('prepaid')) specs.meterType = 'ECG Prepaid';
+    else if (lower.includes('shared meter')) specs.meterType = 'ECG Shared Meter';
+    else if (lower.includes('separate meter')) specs.meterType = 'ECG Separate Meter';
+    else if (lower.includes('postpaid') || lower.includes('post-paid')) specs.meterType = 'ECG Post-paid';
+  }
+
+  // Cleanup description string double spaces & trailing dots
+  cleanDesc = cleanDesc.replace(/Utilities\/Amenities:\s*[^.\n|]+\.?,?/gi, '')
+                      .replace(/\s+/g, ' ')
+                      .trim();
+
   // Deduplicate and filter empty values
   const uniqueAmenities = Array.from(new Set(amenities)).filter(Boolean);
 
   return {
     cleanDescription: cleanDesc,
-    amenities: uniqueAmenities
+    amenities: uniqueAmenities,
+    specs,
   };
 }
 

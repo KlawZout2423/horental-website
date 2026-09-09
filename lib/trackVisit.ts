@@ -62,9 +62,42 @@ export function buildTrackingUrl(
 }
 
 /**
- * Record a page visit with UTM and referrer data.
+ * Get or create an anonymous 30-minute organic session ID.
+ * Session ID is maintained across pageviews and expires after 30 minutes of inactivity.
+ */
+export function getOrCreateSessionId(): string {
+  if (typeof window === 'undefined') return '';
+  const SESSION_KEY = 'ho_session_id';
+  const SESSION_EXPIRY_KEY = 'ho_session_expiry';
+  const now = Date.now();
+  const THIRTY_MINUTES = 30 * 60 * 1000;
+
+  let sessionId = sessionStorage.getItem(SESSION_KEY);
+  const expiry = localStorage.getItem(SESSION_EXPIRY_KEY);
+
+  if (!sessionId || !expiry || now > parseInt(expiry, 10)) {
+    sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    try {
+      sessionStorage.setItem(SESSION_KEY, sessionId);
+      localStorage.setItem(SESSION_EXPIRY_KEY, String(now + THIRTY_MINUTES));
+    } catch {}
+  } else {
+    // Extend session expiry on activity
+    try {
+      localStorage.setItem(SESSION_EXPIRY_KEY, String(now + THIRTY_MINUTES));
+    } catch {}
+  }
+
+  return sessionId;
+}
+
+// In-memory guard against React StrictMode double invocation
+const pendingVisits = new Set<string>();
+
+/**
+ * Record a page visit with UTM, referrer, and organic session data.
  * Respects the existing 24h localStorage cooldown per storageKey.
- * Admin users are excluded — their visits are never counted.
+ * Admin, agent, and landlord users are excluded — only track real prospective customers.
  */
 export function trackVisit(path: string, storageKey: string) {
   if (typeof window === 'undefined') return;
@@ -85,20 +118,36 @@ export function trackVisit(path: string, storageKey: string) {
     // cookie unreadable — proceed normally
   }
 
+  // Prevent synchronous duplicate executions from React 19 StrictMode / double mounts
+  if (pendingVisits.has(storageKey)) return;
+
   const lastVisit = localStorage.getItem(storageKey);
   const now = Date.now();
   const COOLDOWN = 24 * 60 * 60 * 1000;
 
   if (lastVisit && now - parseInt(lastVisit, 10) < COOLDOWN) return;
 
+  // Mark immediately & synchronously to block any parallel execution
+  pendingVisits.add(storageKey);
+  try {
+    localStorage.setItem(storageKey, String(now));
+  } catch {
+    // localStorage quota / private mode fallback
+  }
+
   const utm = readUtmParams();
   const referrer = document.referrer || undefined;
+  const sessionId = getOrCreateSessionId();
 
   graphqlRequest(RECORD_PAGE_VISIT, {
     path,
+    sessionId,
     ...utm,
     referrer,
   })
-    .then(() => localStorage.setItem(storageKey, String(now)))
-    .catch((err: unknown) => console.error('Page visit log error:', err));
+    .catch((err: unknown) => console.error('Page visit log error:', err))
+    .finally(() => {
+      // Remove from in-memory set after 5 seconds
+      setTimeout(() => pendingVisits.delete(storageKey), 5000);
+    });
 }
