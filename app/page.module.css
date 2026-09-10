@@ -1892,3 +1892,121 @@
   }
 }
 
+/* Yuyu Rides Keke Partnership Banner */
+.yuyuBannerWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  background: linear-gradient(135deg, #047857 0%, #064E3B 100%);
+  border-radius: 18px;
+  padding: 32px 40px;
+  margin: 32px 0 40px;
+  color: #ffffff;
+  box-shadow: 0 12px 30px rgba(4, 120, 87, 0.25);
+  overflow: hidden;
+  position: relative;
+}
+
+.yuyuBannerContent {
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.yuyuBannerBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.yuyuBannerTitle {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.yuyuBannerSub {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.yuyuBannerActions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.yuyuBannerImageWrapper {
+  flex-shrink: 0;
+  width: 220px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.yuyuBannerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.3));
+}
+
+@media (max-width: 768px) {
+  .yuyuBannerWrapper {
+    flex-direction: column-reverse;
+    padding: 24px;
+    margin: 24px 0 32px;
+    text-align: center;
+  }
+
+  .yuyuBannerContent {
+    align-items: center;
+  }
+
+  .yuyuBannerBadge {
+    margin: 0 auto;
+  }
+
+  .yuyuBannerTitle {
+    font-size: 1.3rem;
+  }
+
+  .yuyuBannerSub {
+    font-size: 0.88rem;
+  }
+
+  .yuyuBannerActions {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .yuyuBannerActions a {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .yuyuBannerImageWrapper {
+    width: 160px;
+    height: 130px;
+  }
+}
+
+
