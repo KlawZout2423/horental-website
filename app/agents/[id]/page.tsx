@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Phone, MessageCircle, ShieldCheck, MapPin, Building, PlusCircle, ChevronDown, ChevronUp, Heart, Check } from 'lucide-react';
 import { useAuth } from '../../../lib/auth';
 import { graphqlRequest, GET_AGENT, GET_AGENT_PROPERTIES } from '../../../lib/graphql';
-import { Property, getPricePeriodLabel, getOptimizedImageUrl, getStatusLabel } from '../../../lib/types';
+import { Property, getPricePeriodLabel, getOptimizedImageUrl, getStatusLabel, stripIdFromBio } from '../../../lib/types';
 import VerifiedAgentModal from '../../../components/VerifiedAgentModal';
 import styles from './agent.module.css';
 import propStyles from '../../properties/properties.module.css';
@@ -302,10 +302,10 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
             </div>
 
             {/* ── Bio section coming down below profile header ── */}
-            {agent.bio && (
+            {stripIdFromBio(agent.bio) && (
               <div className={`${styles.bioRow} ${profileExpanded ? styles.bioRowOpen : ''}`}>
                 <p className={styles.agentBio}>
-                  {agent.bio}
+                  {stripIdFromBio(agent.bio)}
                 </p>
               </div>
             )}

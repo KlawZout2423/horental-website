@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../../lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
-import { formatGhanaPhone, isValidGhanaPhone, formatGhanaCard, isValidGhanaCard, sanitizeInput } from '../../lib/types';
+import { formatGhanaPhone, isValidGhanaPhone, formatGhanaCard, isValidGhanaCard, sanitizeInput, stripIdFromBio } from '../../lib/types';
 import { getJwtSecret } from '../../lib/env';
 import { collectPayment } from '../../lib/momo';
 import { sendSMS, sendLeadAlertSMS, sendAgentVerifiedSMS, sendPropertyPublishedSMS } from '../../lib/sms';
@@ -1440,7 +1440,7 @@ export const resolvers = {
       const updated = await prisma.user.update({
         where: { id: user.id },
         data: {
-          ...(bio !== undefined ? { bio: bio ? sanitizeInput(bio.trim()) : null } : {}),
+          ...(bio !== undefined ? { bio: bio ? stripIdFromBio(sanitizeInput(bio.trim())) : null } : {}),
           ...(profileImage !== undefined ? { profileImage: profileImage?.trim() || null } : {}),
           ...(agentLocation !== undefined ? { agentLocation: agentLocation ? sanitizeInput(agentLocation.trim()) : null } : {}),
           ...(agentWhatsapp !== undefined ? { agentWhatsapp: agentWhatsapp ? formatGhanaPhone(agentWhatsapp.trim()) : null } : {}),

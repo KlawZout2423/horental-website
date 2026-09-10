@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ShieldCheck, MapPin, Phone, MessageCircle, Search, Users, ChevronRight } from 'lucide-react';
 import { graphqlRequest, GET_AGENTS } from '../../lib/graphql';
-import { getOptimizedImageUrl } from '../../lib/types';
+import { getOptimizedImageUrl, stripIdFromBio } from '../../lib/types';
 
 interface AgentData {
   id: string;
@@ -208,7 +208,7 @@ export default function AgentsClient() {
                   )}
 
                   {/* Bio excerpt */}
-                  {agent.bio && (
+                  {stripIdFromBio(agent.bio) && (
                     <p style={{
                       color: '#94a3b8',
                       fontSize: '0.83rem',
@@ -219,7 +219,7 @@ export default function AgentsClient() {
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
                     }}>
-                      {agent.bio}
+                      {stripIdFromBio(agent.bio)}
                     </p>
                   )}
 

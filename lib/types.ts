@@ -168,6 +168,20 @@ export function isValidGhanaCard(card?: string): boolean {
   return /^GHA-\d{9}-\d$/.test(formatted);
 }
 
+/**
+ * Strips confidential National ID / Ghana Card details from bio strings.
+ */
+export function stripIdFromBio(bio?: string | null): string {
+  if (!bio) return '';
+  let cleaned = bio;
+  // Match and remove patterns like "ID: Ghana Card (GHA-123456789-1)." or "ID: Passport (...)."
+  cleaned = cleaned.replace(/\s*ID:\s*(?:Ghana Card|Passport|Voter ID|License|National ID)?\s*(?:\([^)]*\)|[GHA\d-A-Z]+)?\.?/gi, '');
+  // Match standard standalone Ghana Card numbers GHA-XXXXXXXXX-X
+  cleaned = cleaned.replace(/GHA-\d{9}-\d/gi, '');
+  // Clean up any double spaces or trailing whitespace left over
+  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+  return cleaned;
+}
 export function getPricePeriodLabel(desc?: string, short: boolean = true): string {
   if (!desc) return short ? '/sem' : '/ semester';
   const lower = desc.toLowerCase();

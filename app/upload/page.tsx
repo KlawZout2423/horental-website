@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
 import { graphqlRequest, CREATE_PROPERTY, UPDATE_PROPERTY, UPDATE_AGENT_PROFILE, GET_AGENT_PROPERTIES, GET_VERIFICATION_REQUESTS } from '../../lib/graphql';
 import { UploadCloud, Image as ImageIcon, Sparkles, Loader, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, parsePropertyDescription, Property, User } from '../../lib/types';
+import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, parsePropertyDescription, Property, User, stripIdFromBio } from '../../lib/types';
 import VerifiedAgentModal from '../../components/VerifiedAgentModal';
 import styles from './upload.module.css';
 
@@ -1145,7 +1145,7 @@ export default function UploadPage({
                   </span>
                 </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '3px 0 0 0' }}>
-                  {user.bio || 'Verified Rental Agent on HO Rentals'}
+                  {stripIdFromBio(user.bio) || 'Verified Rental Agent on HO Rentals'}
                 </p>
               </div>
             </div>

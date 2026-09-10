@@ -21,7 +21,7 @@ import {
   Phone,
   UploadCloud
 } from 'lucide-react';
-import { formatGhanaPhone, isValidGhanaPhone, formatGhanaCard, isValidGhanaCard, sanitizeInput } from '../../lib/types';
+import { formatGhanaPhone, isValidGhanaPhone, formatGhanaCard, isValidGhanaCard, sanitizeInput, stripIdFromBio } from '../../lib/types';
 import { graphqlRequest, UPDATE_AGENT_PROFILE, UPDATE_USER_ROLE } from '../../lib/graphql';
 import styles from '../login/login.module.css';
 
@@ -304,8 +304,8 @@ export default function AgentRegisterForm() {
 
       // Update Agent Profile with detailed credentials
       try {
-        const defaultBio = `${sanitizedAgency ? `Agent at ${sanitizedAgency}.` : 'Registered Agent.'} Experience: ${experience}. Target Market: ${sanitizedOps || 'Students & Workers'}. ID: ${idType} (${sanitizedIdNumber}). Address: ${sanitizedDigitalAddr || sanitizedHomeAddr || sanitizedCity}.`;
-        const fullBio = sanitizedBio || defaultBio;
+        const defaultBio = `${sanitizedAgency ? `Agent at ${sanitizedAgency}.` : 'Registered Agent.'} Experience: ${experience}. Target Market: ${sanitizedOps || 'Students & Workers'}. Address: ${sanitizedDigitalAddr || sanitizedHomeAddr || sanitizedCity}.`;
+        const fullBio = stripIdFromBio(sanitizedBio || defaultBio);
         
         await graphqlRequest(UPDATE_AGENT_PROFILE, {
           bio: fullBio,
