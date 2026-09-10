@@ -44,7 +44,7 @@ export default function PwaInstallPrompt() {
       // Prevent the browser's default prompt from appearing automatically
       e.preventDefault();
       // Save the event so it can be triggered later
-      deferredPromptRef.current = e;
+      deferredPromptRef.current = e as BeforeInstallPromptEvent;
 
       // If we have a pending trigger, show the banner now!
       const isPending = sessionStorage.getItem('pwa_trigger_pending') === 'true';
