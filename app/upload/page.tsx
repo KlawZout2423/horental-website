@@ -1475,10 +1475,13 @@ export default function UploadPage({
                 <option value="Two Bedroom SC">Two Bedroom SC (Self-Contained)</option>
                 <option value="Three Bedroom SC">Three Bedroom SC (Self-Contained)</option>
                 <option value="Four Bedroom SC">Four Bedroom SC (Self-Contained)</option>
+                <option value="Full House / Villa">Full House / Villa</option>
+                <option value="Office / Commercial Space">Office / Commercial Space</option>
                 <option value="Furnitures">Furnitures</option>
                 <option value="Lands">Lands</option>
                 <option value="Shops">Shops</option>
                 <option value="Short Stay">Short Stay</option>
+                <option value="Warehouse / Storage">Warehouse / Storage</option>
               </select>
             </div>
 

@@ -1276,6 +1276,12 @@ function AdminPageContent() {
                     <FileText size={16} /> Landlord Submissions ({landlordRegistrations.length})
                   </button>
                   <button
+                    onClick={() => { setActiveTab('yuyu_rides'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'yuyu_rides' ? styles.activeNavItem : ''}`}
+                  >
+                    <Car size={16} style={{ color: '#10B981' }} /> Yuyu Ride Logs ({rideReferrals.length})
+                  </button>
+                  <button
                     onClick={() => { setActiveTab('sms'); setIsMobileDrawerOpen(false); }}
                     className={`${styles.navItem} ${activeTab === 'sms' ? styles.activeNavItem : ''}`}
                   >

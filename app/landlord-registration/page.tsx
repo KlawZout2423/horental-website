@@ -58,6 +58,7 @@ export default function LandlordRegistrationPage() {
   const [propRegion, setPropRegion] = useState('');
   const [propGps, setPropGps] = useState('');
   const [rent, setRent] = useState('');
+  const [pricePeriod, setPricePeriod] = useState('per Month');
   const [advance, setAdvance] = useState('');
   const [rooms, setRooms] = useState('');
   const [availableFrom, setAvailableFrom] = useState('');
@@ -90,17 +91,30 @@ export default function LandlordRegistrationPage() {
   ];
 
   const propertyTypes = [
-    'Single Room', 'Single Room Self Contain', 'Chamber & Hall', 
-    'Chamber & Hall Self Contain', '2-Bedroom Apartment', 
-    '3-Bedroom Apartment or more', '4 Bedroom Self Contain', 'Shop'
+    'Student Hostel',
+    'Single Room',
+    'Single Room Self Contain',
+    'Chamber & Hall',
+    'Chamber & Hall Self Contain',
+    '2-Bedroom Apartment',
+    '3-Bedroom Apartment',
+    '4-Bedroom Apartment or More',
+    'Full House / Villa',
+    'Shop / Store',
+    'Office / Commercial Space',
+    'Land / Building Plot',
+    'Furnitures / Household Items',
+    'Short Stay / Airbnb',
+    'Warehouse / Storage'
   ];
 
   const amenityOptions = [
     'ECG Prepaid', 'ECG Post-paid', 'ECG Shared Meter', 'ECG Separate Meter',
     'Ghana Water (Shared)', 'Ghana Water (Separate)', 'Bathroom (Shared)',
     'Kitchen (Private)', 'Kitchen (Shared)', 'Polytank', 'Fenced/Gated',
-    'Furnished', 'Borehole', 'Well', 'Balcony/Veranda', 'Internet/Wi-Fi',
-    'CCTV Camera', 'Newly Built', 'Bed', 'Study Desk'
+    'Furnished', 'Air Conditioning (A/C)', 'Water Heater', 'Standby Generator',
+    'Parking Space', 'Security Watchman', 'Borehole', 'Well', 'Balcony/Veranda',
+    'Internet/Wi-Fi', 'CCTV Camera', 'Newly Built', 'Bed', 'Study Desk', 'Washing Machine'
   ];
 
   const agreementPoints = [
@@ -296,7 +310,7 @@ export default function LandlordRegistrationPage() {
         propRegion: propRegion || undefined,
         propGps: propGps || undefined,
         rent: parseFloat(rent),
-        advance: advance || undefined,
+        advance: advance ? `${advance} (${pricePeriod})` : pricePeriod,
         rooms: rooms ? parseInt(rooms, 10) : undefined,
         availableFrom: availableFrom || undefined,
         propType: propTypes.join(', '),
@@ -643,12 +657,23 @@ export default function LandlordRegistrationPage() {
                 <input type="text" placeholder="VH-0012-3456" value={propGps} onChange={e => setPropGps(e.target.value)} />
               </div>
               <div className={styles.field}>
-                <label>Monthly rent (GHS) *</label>
+                <label>Rent / Price Amount (GHS) *</label>
                 <input type="number" placeholder="800" min="0" value={rent} onChange={e => setRent(e.target.value)} />
               </div>
               <div className={styles.field}>
+                <label>Rent Frequency / Pricing Period</label>
+                <select value={pricePeriod} onChange={e => setPricePeriod(e.target.value)}>
+                  <option value="per Month">per Month</option>
+                  <option value="per Semester">per Semester</option>
+                  <option value="per Academic Year">per Academic Year</option>
+                  <option value="per Year">per Year</option>
+                  <option value="per Night">per Night (Short Stay)</option>
+                  <option value="per Plot">per Plot / Acre (Land)</option>
+                </select>
+              </div>
+              <div className={styles.field}>
                 <label>Advance payment required</label>
-                <input type="text" placeholder="e.g. 6 months" value={advance} onChange={e => setAdvance(e.target.value)} />
+                <input type="text" placeholder="e.g. 6 months / 1 year" value={advance} onChange={e => setAdvance(e.target.value)} />
               </div>
               <div className={styles.field}>
                 <label>Rooms available</label>
