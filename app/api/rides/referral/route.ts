@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { sendRideReferralAlertSMS } from "@/lib/sms";
+import prisma from "../../../../lib/prisma";
+import { sendRideReferralAlertSMS } from "../../../../lib/sms";
 
-const prisma = new PrismaClient();
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
