@@ -41,6 +41,7 @@ model User {
   fraudAlerts         FraudAlert[]
   notificationReads   NotificationRead[]
   reports             Report[]
+  rideReferrals       RideReferral[]
 }
 
 model Company {
@@ -94,6 +95,7 @@ model Property {
   fraudAlerts  FraudAlert[]
   notificationReads NotificationRead[]
   reports      Report[]
+  rideReferrals RideReferral[]
 
   @@index([status, isFeatured])
   @@index([price])
@@ -297,3 +299,27 @@ model Report {
   @@index([createdAt])
   @@index([status])
 }
+
+model RideReferral {
+  id             Int       @id @default(autoincrement())
+  refCode        String    @unique
+  propertyId     Int
+  userId         Int?
+  tenantName     String?
+  tenantPhone    String?
+  pickupLocation String?
+  status         String    @default("redirected") // "redirected" | "completed" | "cancelled" | "paid"
+  tripFare       Float?    @default(0.0)
+  commissionAmt  Float?    @default(0.0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([refCode])
+  @@index([propertyId])
+  @@index([status])
+}
+

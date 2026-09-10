@@ -339,6 +339,174 @@
     overflow: hidden;
   }
 
+  .partnershipFeaturesRow {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .featurePillGreen {
+    font-size: 0.56rem;
+    font-weight: 700;
+    color: #34D399;
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 2px 7px;
+    border-radius: 9999px;
+    white-space: nowrap;
+  }
+
+  .featurePillRed {
+    font-size: 0.56rem;
+    font-weight: 700;
+    color: #FCA5A5;
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    padding: 2px 7px;
+    border-radius: 9999px;
+    white-space: nowrap;
+  }
+
+  .featurePillGold {
+    font-size: 0.56rem;
+    font-weight: 700;
+    color: #FDE68A;
+    background: rgba(245, 158, 11, 0.18);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    padding: 2px 7px;
+    border-radius: 9999px;
+    white-space: nowrap;
+  }
+
+  .mobilePartnershipRight {
+    flex: 1.15;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    z-index: 2;
+    overflow: visible;
+  }
+
+  .kekeHeroImg {
+    height: 135%;
+    width: auto;
+    max-width: 150px;
+    object-fit: contain;
+    position: absolute;
+    right: 4px;
+    bottom: -10px;
+    z-index: 1;
+    filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.65));
+    pointer-events: none;
+    transition: transform 0.3s ease;
+  }
+
+  .partnershipCardWrapper {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 5px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .partnershipHeaderTag {
+    font-size: 0.48rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.75);
+    text-transform: uppercase;
+  }
+
+  .partnershipBadgeContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Small small apart */
+  }
+
+  .partnershipLogoBox {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: #ffffff;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
+  }
+
+  .partnershipLogoImg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .partnershipInfinityBox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #F59E0B;
+    background: rgba(245, 158, 11, 0.18);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+    flex-shrink: 0;
+    animation: infinityPulse 3s ease-in-out infinite;
+  }
+
+  .partnershipInfinityIcon {
+    color: #F59E0B;
+  }
+
+  .partnershipRideBox {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 8px rgba(16, 185, 129, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+
+  .partnershipTagline {
+    font-size: 0.54rem;
+    font-weight: 700;
+    color: #34D399;
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 1px 7px;
+    border-radius: 9999px;
+    white-space: nowrap;
+  }
+
+  @keyframes infinityPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(245, 158, 11, 0.2); }
+    50% { transform: scale(1.1); box-shadow: 0 0 16px rgba(245, 158, 11, 0.5); }
+  }
+
   .mobileSlideImg {
     width: 100%;
     height: 100%;

@@ -98,9 +98,10 @@ export async function sendSMS({
 
     console.log(`✅ [SailUp SMS Sent] To: ${validRecipients.join(', ')} | From: ${fromSender}`);
     return { success: true, messageId: data?.id || data?.message_id || 'sent' };
-  } catch (err: any) {
-    console.error('❌ [SailUp SMS Exception]', err.message || err);
-    return { success: false, error: err.message || 'Network error' };
+  } catch (err: unknown) {
+    const errorMsg = (err as Error)?.message || String(err);
+    console.error('❌ [SailUp SMS Exception]', errorMsg);
+    return { success: false, error: errorMsg || 'Network error' };
   }
 }
 
@@ -175,5 +176,40 @@ export async function sendPropertyPublishedSMS({
   return sendSMS({
     to: ownerPhone,
     message,
+  });
+}
+
+/**
+ * 4. Sends real-time SMS notification to HO Rentals admin when a tenant requests a Yuyu Ride for property inspection
+ */
+export async function sendRideReferralAlertSMS({
+  customerName,
+  customerPhone,
+  propertyTitle,
+  propertyLocation,
+  referralCode,
+}: {
+  customerName?: string;
+  customerPhone?: string;
+  propertyTitle: string;
+  propertyLocation?: string;
+  referralCode: string;
+}): Promise<SendSmsResponse> {
+  const adminPhones = [
+    process.env.ADMIN_NOTIFICATION_PHONE,
+    process.env.NEXT_PUBLIC_SUPPORT_PHONE,
+    '0204940602',
+  ].filter(Boolean) as string[];
+
+  const cleanCustomerName = (customerName || 'Tenant').trim();
+  const cleanCustomerPhone = customerPhone ? formatGhanaPhone(customerPhone) : 'Web App';
+  const shortTitle = propertyTitle.length > 25 ? `${propertyTitle.slice(0, 22)}...` : propertyTitle;
+
+  const message = `HO RENTALS RIDE ALERT: ${cleanCustomerName} (${cleanCustomerPhone}) requested a Yuyu Ride for "${shortTitle}" (${propertyLocation || 'Ho'}). Ref: ${referralCode}. Est Comm: GHc5.00`;
+
+  return sendSMS({
+    to: adminPhones,
+    message,
+    dedupKey: `ride_${referralCode}`,
   });
 }

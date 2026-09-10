@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../lib/auth';
-import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart, Building2, Zap, UserCheck, Building, Check, CheckCircle } from 'lucide-react';
+import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart, Building2, Zap, UserCheck, Building, Check, CheckCircle, Infinity, Car } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTIES, GET_AGENTS } from '../lib/graphql';
 import { trackVisit } from '../lib/trackVisit';
 import styles from './page.module.css';
@@ -71,6 +71,16 @@ const BANNER_SLIDES = [
     image: '/student_campus_vibe.png',
   },
   {
+    id: 'yuyu-partnership',
+    bg: 'linear-gradient(135deg, #047857 0%, #064E3B 100%)',
+    pill: '🤝 OFFICIAL PARTNERSHIP',
+    headline: 'HO Rentals × Yuyu Rides',
+    sub: 'Book instant keke rides to view properties in Ho.',
+    cta: 'Request Ride',
+    href: '/properties',
+    image: '/keke_ride_hero.png',
+  },
+  {
     id: 'verified',
     bg: 'linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%)',
     pill: '100% VERIFIED',
@@ -108,7 +118,6 @@ export default function Home() {
   
   // Data State
   const [properties, setProperties] = useState<Property[]>([]);
-  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [agents, setAgents] = useState<AgentUser[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -146,30 +155,47 @@ export default function Home() {
   const [showSelfContainedDropdown, setShowSelfContainedDropdown] = useState(false);
   const [dropdownCoords, setDropdownCoords] = useState<{ top: number; left: number } | null>(null);
 
-  // Bookmark active state
-  const [savedIds, setSavedIds] = useState<string[]>([]);
+  // Bookmark active state initialized lazily
+  const [savedIds, setSavedIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('saved_properties');
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (err) {
+          console.error('Error parsing saved properties from localStorage:', err);
+        }
+      }
+    }
+    return [];
+  });
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
-
-  const handleCardClick = (e: React.MouseEvent, propertyId: string) => {
-    if (!user) {
-      e.preventDefault();
-      setTargetPropertyId(propertyId);
-      setShowAuthModal(true);
-    }
-  };
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selfContainedBtnRef = useRef<HTMLButtonElement>(null);
 
-  // ── Mobile sliding banner state ──────────────────────────────────────────
+  // ── Mobile sliding banner state (Seamless 1-Way Infinite Loop) ───────────
   const [bannerSlide, setBannerSlide] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(true);
   const bannerTouchStartX = useRef<number | null>(null);
 
-  const bannerNext = useCallback(() =>
-    setBannerSlide((s) => (s + 1) % BANNER_SLIDES.length), []);
-  const bannerPrev = useCallback(() =>
-    setBannerSlide((s) => (s - 1 + BANNER_SLIDES.length) % BANNER_SLIDES.length), []);
+  const bannerNext = useCallback(() => {
+    setIsTransitioning(true);
+    setBannerSlide((s) => s + 1);
+  }, []);
+
+  const bannerPrev = useCallback(() => {
+    setIsTransitioning(true);
+    setBannerSlide((s) => (s === 0 ? BANNER_SLIDES.length - 1 : s - 1));
+  }, []);
+
+  const handleBannerTransitionEnd = () => {
+    if (bannerSlide >= BANNER_SLIDES.length) {
+      setIsTransitioning(false);
+      setBannerSlide(0);
+    }
+  };
 
   // Auto-advance every 4 seconds
   useEffect(() => {
@@ -243,7 +269,6 @@ export default function Home() {
             return a.isFeatured ? -1 : 1;
           });
           setProperties(sorted);
-          setFilteredProperties(sorted);
         }
 
         if (agentsRes && agentsRes.agents) {
@@ -262,8 +287,8 @@ export default function Home() {
     trackVisit('/', 'visit_landing_timestamp');
   }, []);
 
-  // Apply filters
-  useEffect(() => {
+  // Apply filters with useMemo
+  const filteredProperties = useMemo(() => {
     let result = properties;
 
     if (activeTypeFilter === 'All') {
@@ -295,12 +320,10 @@ export default function Home() {
     }
 
     // Always keep featured at the top within any filter result
-    result = [...result].sort((a, b) => {
+    return [...result].sort((a, b) => {
       if (a.isFeatured === b.isFeatured) return 0;
       return a.isFeatured ? -1 : 1;
     });
-
-    setFilteredProperties(result);
   }, [activeTypeFilter, searchQuery, properties]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -346,20 +369,6 @@ export default function Home() {
     setActiveTypeFilter(subType);
     setShowSelfContainedDropdown(false);
   };
-
-  // Load saved bookmarks from localStorage on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('saved_properties');
-      if (stored) {
-        try {
-          setSavedIds(JSON.parse(stored));
-        } catch (err) {
-          console.error('Error parsing saved properties from localStorage:', err);
-        }
-      }
-    }
-  }, []);
 
   const handleToggleSave = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -437,11 +446,15 @@ export default function Home() {
         <div className={styles.heroMobileCarousel}>
           <div
             className={styles.heroTrack}
-            style={{ transform: `translateX(-${bannerSlide * 100}%)` }}
+            onTransitionEnd={handleBannerTransitionEnd}
+            style={{
+              transform: `translateX(-${bannerSlide * 100}%)`,
+              transition: isTransitioning ? 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+            }}
           >
-            {BANNER_SLIDES.map((slide) => (
+            {[...BANNER_SLIDES, BANNER_SLIDES[0]].map((slide, idx) => (
               <Link
-                key={slide.id}
+                key={`${slide.id}-${idx}`}
                 href={slide.href}
                 className={styles.heroSlide}
                 style={{ background: slide.bg }}
@@ -451,7 +464,9 @@ export default function Home() {
                   <h1 className={styles.mobileHeroTitle}>{slide.headline}</h1>
                   <p className={styles.mobileHeroSub}>{slide.sub}</p>
                 </div>
+
                 <div className={styles.mobileSlideRight}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={slide.image} alt={slide.headline} className={styles.mobileSlideImg} />
                 </div>
               </Link>
@@ -463,8 +478,11 @@ export default function Home() {
             {BANNER_SLIDES.map((_, i) => (
               <button
                 key={i}
-                className={`${styles.heroDot} ${i === bannerSlide ? styles.heroDotActive : ''}`}
-                onClick={() => setBannerSlide(i)}
+                className={`${styles.heroDot} ${(bannerSlide % BANNER_SLIDES.length) === i ? styles.heroDotActive : ''}`}
+                onClick={() => {
+                  setIsTransitioning(true);
+                  setBannerSlide(i);
+                }}
                 aria-label={`Go to slide ${i + 1}`}
               />
             ))}
@@ -887,11 +905,11 @@ export default function Home() {
                         }
 
                         const desc = rawDesc.toLowerCase();
-                        let showWifi = desc.includes('wi-fi') || desc.includes('wifi');
+                        const showWifi = desc.includes('wi-fi') || desc.includes('wifi');
                         let showWater = desc.includes('water');
                         let showPrepaid = desc.includes('prepaid') || desc.includes('meter');
                         let showBed = desc.includes('bed') || desc.includes('room') || desc.includes('desk') || desc.includes('hostel');
-                        let showParking = desc.includes('park') || desc.includes('car');
+                        const showParking = desc.includes('park') || desc.includes('car');
                         
                         if (!showWifi && !showWater && !showPrepaid && !showBed) {
                           showWater = true;
@@ -965,7 +983,7 @@ export default function Home() {
           <div className={styles.trustBannerItem}>
             <PhoneCall size={20} className={styles.trustIcon} />
             <div>
-              <strong>24/7 Support:</strong> We're here to help you find or list a property.
+              <strong>24/7 Support:</strong> We&apos;re here to help you find or list a property.
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth';
-import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2, Maximize2, Navigation } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2, Maximize2, Navigation, Car } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTY_BY_ID, UPDATE_PROPERTY, CREATE_REPORT } from '../../../lib/graphql';
 import { trackVisit } from '../../../lib/trackVisit';
 import styles from './detail.module.css';
@@ -155,6 +155,44 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
       setToastMsg('Property link copied to clipboard! 📋');
+    }
+  };
+
+  const [isBookingRide, setIsBookingRide] = useState(false);
+
+  const handleYuyuRideClick = async () => {
+    if (!property?.id) return;
+
+    if (!user) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
+    setIsBookingRide(true);
+    try {
+      const res = await fetch('/api/rides/referral', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId: parseInt(property.id, 10),
+          tenantName: user?.name,
+          tenantPhone: user?.phone,
+          userId: user?.id ? parseInt(user.id, 10) : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.whatsappUrl) {
+        window.open(data.whatsappUrl, '_blank');
+      } else {
+        const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}`);
+        window.open(`https://wa.me/233000000000?text=${fallbackText}`, '_blank');
+      }
+    } catch (err) {
+      console.error('Failed to log Yuyu ride referral:', err);
+      const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}`);
+      window.open(`https://wa.me/233000000000?text=${fallbackText}`, '_blank');
+    } finally {
+      setIsBookingRide(false);
     }
   };
 
@@ -757,8 +795,8 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                         </div>
                       )}
 
-                      {/* Google Maps Turn-by-Turn Directions Button */}
-                      <div style={{ marginTop: '8px' }}>
+                      {/* Directions & Ride Booking Buttons */}
+                      <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <a
                           href={
                             property.latitude && property.longitude
@@ -768,10 +806,33 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-outline"
-                          style={{ padding: '8px 16px', fontSize: '0.85rem', fontWeight: 700, gap: '8px', width: '100%', justifyContent: 'center', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                          style={{ padding: '10px 16px', fontSize: '0.85rem', fontWeight: 700, gap: '8px', width: '100%', justifyContent: 'center', borderColor: 'var(--primary)', color: 'var(--primary)' }}
                         >
                           <Navigation size={16} /> 🧭 Get Turn-by-Turn Directions in Google Maps
                         </a>
+
+                        <button
+                          onClick={handleYuyuRideClick}
+                          disabled={isBookingRide}
+                          className="btn"
+                          style={{
+                            padding: '9px 14px',
+                            fontSize: '0.82rem',
+                            fontWeight: 800,
+                            gap: '8px',
+                            width: '100%',
+                            justifyContent: 'center',
+                            background: 'linear-gradient(135deg, #34D399 0%, #10B981 50%, #C1121F 100%)',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: 'var(--radius-sm)',
+                            cursor: 'pointer',
+                            boxShadow: '0 3px 12px rgba(16, 185, 129, 0.3)',
+                          }}
+                        >
+                          {isBookingRide ? <Loader size={16} className="animate-spin" /> : <Car size={16} />}
+                          🚗 Request Inspection Ride with Yuyu Rides
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -875,6 +936,36 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
                     <MessageSquare size={16} /> {property.owner?.role === 'agent' ? 'SMS Agent' : 'SMS HO Rentals'}
+                  </button>
+
+                  <button
+                    onClick={handleYuyuRideClick}
+                    disabled={isBookingRide}
+                    className="btn"
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '11px 14px',
+                      fontSize: '0.85rem',
+                      background: 'linear-gradient(135deg, #34D399 0%, #10B981 50%, #C1121F 100%)',
+                      color: '#FFFFFF',
+                      fontWeight: 800,
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer',
+                      marginTop: '4px',
+                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                    }}
+                  >
+                    {isBookingRide ? (
+                      <Loader size={16} className="animate-spin" />
+                    ) : (
+                      <Car size={16} />
+                    )}
+                    Request Ride with Yuyu Rides
                   </button>
                 </div>
               </>

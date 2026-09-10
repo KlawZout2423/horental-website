@@ -71,6 +71,8 @@ export default function UploadPage({
   const [landmarks, setLandmarks] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const [isDetectingGps, setIsDetectingGps] = useState(false);
+  const [gpsStatusMsg, setGpsStatusMsg] = useState<string | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [landlordName, setLandlordName] = useState('');
@@ -170,6 +172,7 @@ export default function UploadPage({
   };
 
   // Pre-fill state when editing an existing property via initialData
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || '');
@@ -320,6 +323,69 @@ export default function UploadPage({
       return prev.filter((_, i) => i !== index);
     });
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleGetGpsLocation = () => {
+    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      alert('⚠️ GPS location requires a secure HTTPS connection. Mobile browsers block location access on unencrypted HTTP.');
+      return;
+    }
+
+    if (!('geolocation' in navigator)) {
+      alert('⚠️ Geolocation is not supported by your mobile browser.');
+      return;
+    }
+
+    setIsDetectingGps(true);
+    setGpsStatusMsg('📡 Connecting to phone GPS satellite...');
+
+    const handleSuccess = (pos: GeolocationPosition, providerLabel: string) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      setLatitude(lat);
+      setLongitude(lng);
+      setIsDetectingGps(false);
+      setGpsStatusMsg(`✅ GPS Acquired via ${providerLabel}: (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
+    };
+
+    const handleError = (err: GeolocationPositionError) => {
+      setIsDetectingGps(false);
+      console.error('GPS Detection Error:', err);
+      
+      let errorDetail = '';
+      switch (err.code) {
+        case err.PERMISSION_DENIED:
+          errorDetail = 'Location permission was denied. Please allow location access in your browser settings (tap the lock icon next to the website URL).';
+          break;
+        case err.POSITION_UNAVAILABLE:
+          errorDetail = 'GPS location unavailable. Please ensure Location/GPS is turned ON in your phone settings.';
+          break;
+        case err.TIMEOUT:
+          errorDetail = 'GPS request timed out. Please step outdoors or near a window for satellite reception.';
+          break;
+        default:
+          errorDetail = err.message || 'Unknown GPS error occurred.';
+          break;
+      }
+      setGpsStatusMsg(`⚠️ GPS Error: ${errorDetail}`);
+      alert(`Could not detect GPS location:\n\n${errorDetail}`);
+    };
+
+    // Attempt 1: High Accuracy Satellite GPS
+    navigator.geolocation.getCurrentPosition(
+      (pos) => handleSuccess(pos, 'High-Accuracy Satellite GPS'),
+      (err) => {
+        console.warn('High accuracy GPS failed, trying network fallback...', err);
+        setGpsStatusMsg('📡 High-accuracy GPS timed out, trying cellular/network location...');
+        // Attempt 2: Low Accuracy Network/Cellular fallback
+        navigator.geolocation.getCurrentPosition(
+          (pos) => handleSuccess(pos, 'Cellular/Network Location'),
+          (finalErr) => handleError(finalErr),
+          { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1271,36 +1337,83 @@ export default function UploadPage({
             </div>
 
             <div className={styles.fullWidth}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-surface-secondary)', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', flexWrap: 'wrap', gap: '8px' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  {latitude && longitude
-                    ? `📍 GPS Coordinates Saved: (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`
-                    : '📍 No custom GPS set (defaults to selected Ho area)'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if ('geolocation' in navigator) {
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                          setLatitude(pos.coords.latitude);
-                          setLongitude(pos.coords.longitude);
-                          alert(`On-Site GPS Detected! Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)}`);
-                        },
-                        (err) => {
-                          console.error(err);
-                          alert('Could not detect GPS location. Please check your phone GPS settings or select an Area Preset.');
-                        }
-                      );
-                    } else {
-                      alert('Geolocation is not supported by your browser.');
-                    }
-                  }}
-                  className="btn btn-outline"
-                  style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                >
-                  📍 Use Live On-Site GPS
-                </button>
+              <div style={{
+                backgroundColor: latitude && longitude ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-surface-secondary)',
+                padding: '14px 16px',
+                borderRadius: 'var(--radius-md)',
+                border: latitude && longitude ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      📍 Property On-Site GPS Location
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      {latitude && longitude
+                        ? `Coordinates: Lat ${latitude.toFixed(5)}, Lng ${longitude.toFixed(5)}`
+                        : 'No GPS coordinates saved yet (defaults to selected area centroid)'}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {latitude && longitude && (
+                      <>
+                        <a
+                          href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline"
+                          style={{ padding: '6px 12px', fontSize: '0.78rem', gap: '4px', borderColor: '#10B981', color: '#10B981', fontWeight: 700 }}
+                        >
+                          🗺️ Open in Google Maps
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLatitude(null);
+                            setLongitude(null);
+                            setGpsStatusMsg(null);
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          Clear
+                        </button>
+                      </>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleGetGpsLocation}
+                      disabled={isDetectingGps}
+                      className="btn btn-primary"
+                      style={{ padding: '8px 14px', fontSize: '0.82rem', fontWeight: 800, gap: '6px', display: 'inline-flex', alignItems: 'center' }}
+                    >
+                      {isDetectingGps ? (
+                        <>
+                          <Loader size={14} className="animate-spin" /> Detecting GPS...
+                        </>
+                      ) : (
+                        '📍 Detect Live On-Site GPS'
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {gpsStatusMsg && (
+                  <div style={{
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    backgroundColor: gpsStatusMsg.includes('✅') ? 'rgba(16, 185, 129, 0.15)' : gpsStatusMsg.includes('⚠️') ? 'rgba(239, 68, 68, 0.12)' : 'rgba(59, 130, 246, 0.12)',
+                    color: gpsStatusMsg.includes('✅') ? '#047857' : gpsStatusMsg.includes('⚠️') ? '#DC2626' : '#1D4ED8',
+                  }}>
+                    {gpsStatusMsg}
+                  </div>
+                )}
               </div>
             </div>
 

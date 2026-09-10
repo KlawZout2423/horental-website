@@ -1,14 +1,25 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Smartphone, X, DownloadCloud } from 'lucide-react';
+import { X, DownloadCloud } from 'lucide-react';
+import { useAuth } from '../lib/auth';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => void;
+  userChoice?: Promise<{ outcome: string }>;
+}
 
 export default function PwaInstallPrompt() {
+  const { user } = useAuth();
   const [showPrompt, setShowPrompt] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
-  const deferredPromptRef = useRef<any>(null);
+  const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
+    // Disable prompt entirely for admin users
+    if (user?.role === 'admin') {
+      return;
+    }
     // Register Service Worker
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
@@ -80,18 +91,22 @@ export default function PwaInstallPrompt() {
       window.removeEventListener('trigger-pwa-prompt', handleTriggerPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []);
+  }, [user?.role]);
 
   const handleInstallClick = async () => {
     const promptEvent = deferredPromptRef.current;
     if (!promptEvent) return;
 
     // Show the browser's native install prompt dialog
-    promptEvent.prompt();
+    if (typeof promptEvent.prompt === 'function') {
+      promptEvent.prompt();
+    }
 
     // Wait for the user to respond to the prompt
-    const { outcome } = await promptEvent.userChoice;
-    console.log(`User response to install prompt: ${outcome}`);
+    if (promptEvent.userChoice) {
+      const { outcome } = await promptEvent.userChoice;
+      console.log(`User response to install prompt: ${outcome}`);
+    }
 
     // We no longer need the prompt
     deferredPromptRef.current = null;
@@ -105,7 +120,7 @@ export default function PwaInstallPrompt() {
     localStorage.setItem('pwa_prompt_dismissed', 'true');
   };
 
-  if (!showPrompt || isDismissed) {
+  if (!showPrompt || isDismissed || user?.role === 'admin') {
     return null;
   }
 

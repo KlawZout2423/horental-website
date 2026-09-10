@@ -34,7 +34,7 @@ import {
   SEND_ADMIN_SMS
 } from '../../lib/graphql';
 import { buildTrackingUrl } from '../../lib/trackVisit';
-import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp, Send, MessageSquare, Radio, CheckCheck, Smartphone, Sparkles, Zap, PhoneCall } from 'lucide-react';
+import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp, Send, MessageSquare, Radio, CheckCheck, Smartphone, Sparkles, Zap, PhoneCall, Car, Clock } from 'lucide-react';
 import styles from './admin.module.css';
 import { getFriendlyErrorMessage, LandlordRegistration, getStatusLabel, getToggleStatusLabel, formatGhanaPhone, isValidGhanaPhone } from '../../lib/types';
 
@@ -98,6 +98,28 @@ interface ReportItem {
   };
 }
 
+interface RideReferralItem {
+  id: number;
+  refCode: string;
+  propertyId: number;
+  createdAt: string;
+  status: string;
+  commissionAmt?: number;
+  tenantName?: string;
+  tenantPhone?: string;
+  property?: {
+    id: number;
+    title: string;
+    location: string;
+  };
+  user?: {
+    id: number;
+    name: string;
+    phone?: string;
+    email?: string;
+  };
+}
+
 interface EditGalleryItem {
   id?: string | number;
   url: string;
@@ -105,8 +127,8 @@ interface EditGalleryItem {
   previewUrl: string;
 }
 
-type AdminTab = 'analytics' | 'properties' | 'users' | 'agents' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic' | 'sms';
-const VALID_ADMIN_TABS: AdminTab[] = ['analytics', 'properties', 'users', 'agents', 'moderation', 'audits', 'reports', 'upload', 'landlords', 'traffic', 'sms'];
+type AdminTab = 'analytics' | 'properties' | 'users' | 'agents' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic' | 'sms' | 'yuyu_rides';
+const VALID_ADMIN_TABS: AdminTab[] = ['analytics', 'properties', 'users', 'agents', 'moderation', 'audits', 'reports', 'upload', 'landlords', 'traffic', 'sms', 'yuyu_rides'];
 
 function AdminPageContent() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -154,6 +176,19 @@ function AdminPageContent() {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [rideReferrals, setRideReferrals] = useState<RideReferralItem[]>([]);
+
+  const loadRideReferrals = async () => {
+    try {
+      const res = await fetch('/api/rides/referral');
+      const data = await res.json();
+      if (data.referrals) {
+        setRideReferrals(data.referrals);
+      }
+    } catch (err) {
+      console.error('Failed to fetch Yuyu ride referrals:', err);
+    }
+  };
 
   // SMS Broadcast State
   const [smsTargetType, setSmsTargetType] = useState<'single' | 'role' | 'all'>('single');
@@ -362,6 +397,9 @@ function AdminPageContent() {
       loadReportsData();
     } else if (activeTab === 'landlords' && !loadedTabs.has('landlords')) {
       loadLandlordsData();
+    } else if (activeTab === 'yuyu_rides' && !loadedTabs.has('yuyu_rides')) {
+      loadRideReferrals();
+      setLoadedTabs(prev => new Set([...prev, 'yuyu_rides']));
     }
   }, [activeTab, user]);
 
@@ -1049,6 +1087,17 @@ function AdminPageContent() {
               <span>Landlord Submissions</span>
               <span className={styles.navCountBadge}>
                 {landlordRegistrations.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('yuyu_rides')}
+              className={`${styles.navItem} ${activeTab === 'yuyu_rides' ? styles.activeNavItem : ''}`}
+            >
+              <Car size={16} style={{ color: '#10B981' }} />
+              <span>Yuyu Ride Logs</span>
+              <span className={styles.navCountBadge} style={{ backgroundColor: '#10B981', color: '#FFFFFF' }}>
+                {rideReferrals.length}
               </span>
             </button>
 
@@ -4706,6 +4755,154 @@ function AdminPageContent() {
 
               </div>
 
+            </div>
+          )}
+
+          {activeTab === 'yuyu_rides' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h1 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Car size={24} style={{ color: '#F59E0B' }} />
+                    <span>Yuyu Rides Referral Logs</span>
+                  </h1>
+                  <p className={styles.sectionSubtitle}>
+                    Track every tenant who clicked to book an inspection ride with Yuyu Rides.
+                  </p>
+                </div>
+                <button
+                  onClick={loadRideReferrals}
+                  className="btn btn-outline"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.85rem' }}
+                >
+                  <RefreshCw size={14} /> Refresh Logs
+                </button>
+              </div>
+
+              {/* Stats Bar */}
+              <div className={styles.statsGrid} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '24px' }}>
+                <div className={styles.statCard}>
+                  <div className={styles.statHeader}>
+                    <span className={styles.statTitle}>Total Ride Requests</span>
+                    <Car size={20} style={{ color: '#F59E0B' }} />
+                  </div>
+                  <div className={styles.statValue}>{rideReferrals.length}</div>
+                  <span className={styles.statSubtext}>Click referrals recorded</span>
+                </div>
+
+                <div className={styles.statCard}>
+                  <div className={styles.statHeader}>
+                    <span className={styles.statTitle}>Today&apos;s Requests</span>
+                    <Clock size={20} style={{ color: 'var(--primary)' }} />
+                  </div>
+                  <div className={styles.statValue}>
+                    {rideReferrals.filter(r => {
+                      const today = new Date().toISOString().split('T')[0];
+                      return r.createdAt?.split('T')[0] === today;
+                    }).length}
+                  </div>
+                  <span className={styles.statSubtext}>Rides requested today</span>
+                </div>
+
+                <div className={styles.statCard}>
+                  <div className={styles.statHeader}>
+                    <span className={styles.statTitle}>Properties Interested</span>
+                    <Building size={20} style={{ color: '#10B981' }} />
+                  </div>
+                  <div className={styles.statValue}>
+                    {new Set(rideReferrals.map(r => r.propertyId)).size}
+                  </div>
+                  <span className={styles.statSubtext}>Unique properties with ride requests</span>
+                </div>
+
+                <div className={styles.statCard} style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.15) 100%)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                  <div className={styles.statHeader}>
+                    <span className={styles.statTitle} style={{ color: '#047857', fontWeight: 800 }}>Est. Total Commission</span>
+                    <TrendingUp size={20} style={{ color: '#059669' }} />
+                  </div>
+                  <div className={styles.statValue} style={{ color: '#047857', fontWeight: 900 }}>
+                    GH₵ {(rideReferrals.reduce((sum, r) => sum + (r.commissionAmt || 5.0), 0)).toFixed(2)}
+                  </div>
+                  <span className={styles.statSubtext} style={{ color: '#059669', fontWeight: 700 }}>GH₵ 5.00 earned per ride</span>
+                </div>
+              </div>
+
+              {/* Referrals Table */}
+              <div className={styles.tableCard}>
+                {rideReferrals.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
+                    <Car size={40} style={{ color: '#F59E0B', opacity: 0.5, marginBottom: '12px' }} />
+                    <p style={{ fontWeight: 600 }}>No Yuyu Ride referrals recorded yet.</p>
+                    <p style={{ fontSize: '0.85rem' }}>When tenants click &quot;Request Ride with Yuyu Rides&quot;, logs will appear here.</p>
+                  </div>
+                ) : (
+                  <div className={styles.tableResponsive}>
+                    <table className={styles.dataTable}>
+                      <thead>
+                        <tr>
+                          <th>Date &amp; Time</th>
+                          <th>Ref Code</th>
+                          <th>Property Title</th>
+                          <th>Location</th>
+                          <th>Tenant Info</th>
+                          <th>Est. Commission</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rideReferrals.map((item: RideReferralItem) => (
+                          <tr key={item.id}>
+                            <td style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                              {new Date(item.createdAt).toLocaleString()}
+                            </td>
+                            <td>
+                              <span style={{ fontWeight: 800, fontFamily: 'monospace', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#D97706', padding: '3px 8px', borderRadius: '4px' }}>
+                                {item.refCode}
+                              </span>
+                            </td>
+                            <td>
+                              <strong>{item.property?.title || `Property #${item.propertyId}`}</strong>
+                            </td>
+                            <td style={{ fontSize: '0.85rem' }}>
+                              {item.property?.location || '—'}
+                            </td>
+                            <td style={{ fontSize: '0.85rem' }}>
+                              {item.tenantName || item.user?.name ? (
+                                <div>
+                                  <strong>{item.tenantName || item.user?.name}</strong>
+                                  <br />
+                                  <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{item.tenantPhone || item.user?.phone || 'Guest'}</span>
+                                </div>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)' }}>Guest Prospect</span>
+                              )}
+                            </td>
+                            <td style={{ fontWeight: 800, color: '#059669', fontSize: '0.88rem' }}>
+                              GH₵ {(item.commissionAmt || 5.0).toFixed(2)}
+                            </td>
+                            <td>
+                              <span style={{ backgroundColor: '#FEF3C7', color: '#B45309', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'capitalize' }}>
+                                {item.status}
+                              </span>
+                            </td>
+                            <td>
+                              <Link
+                                href={`/properties/${item.propertyId}`}
+                                target="_blank"
+                                className="btn btn-outline"
+                                style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                              >
+                                View Property
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
