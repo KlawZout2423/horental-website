@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     }).catch((err) => console.warn("Failed to dispatch ride SMS alert:", err));
 
     // Default Yuyu Rides WhatsApp contact (can be overridden via env variable YUYU_WHATSAPP_NUMBER)
-    const yuyuNumber = process.env.YUYU_WHATSAPP_NUMBER || "233000000000";
+    const yuyuNumber = process.env.YUYU_WHATSAPP_NUMBER || "233557922593";
 
     const text = `Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}\n📌 Ref Code: ${refCode}`;
 

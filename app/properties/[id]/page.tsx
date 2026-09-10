@@ -185,12 +185,12 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         window.open(data.whatsappUrl, '_blank');
       } else {
         const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}`);
-        window.open(`https://wa.me/233000000000?text=${fallbackText}`, '_blank');
+        window.open(`https://wa.me/233557922593?text=${fallbackText}`, '_blank');
       }
     } catch (err) {
       console.error('Failed to log Yuyu ride referral:', err);
       const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}`);
-      window.open(`https://wa.me/233000000000?text=${fallbackText}`, '_blank');
+      window.open(`https://wa.me/233557922593?text=${fallbackText}`, '_blank');
     } finally {
       setIsBookingRide(false);
     }
