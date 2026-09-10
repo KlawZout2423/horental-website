@@ -587,37 +587,6 @@ export default function Home() {
       {/* Property Listings Section */}
       <section className={`${styles.section} ${styles.listingsSection}`} style={{ maxWidth: 'none' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          {/* Yuyu Rides Keke Partnership Banner */}
-          <div id="yuyu-rides" className={styles.yuyuBannerWrapper}>
-            <div className={styles.yuyuBannerContent}>
-              <div className={styles.yuyuBannerBadge}>
-                <span>🚗 OFFICIAL PARTNERSHIP</span>
-              </div>
-              <h3 className={styles.yuyuBannerTitle}>Instant Inspection Keke Rides in Ho</h3>
-              <p className={styles.yuyuBannerSub}>
-                Going to inspect a hostel or apartment in Ho? Book an instant Yuyu Keke Ride directly to any property location with verified local drivers.
-              </p>
-              <div className={styles.yuyuBannerActions}>
-                <a
-                  href="https://wa.me/233000000000?text=Hi%20Yuyu%20Rides!%20%F0%9F%9A%97%20I'd%20like%20to%20request%20a%20ride%20to%20inspect%20a%20property%20listed%20on%20HO%20Rentals."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-primary"
-                  style={{ backgroundColor: '#10B981', borderColor: '#10B981', gap: '8px', fontWeight: 700 }}
-                >
-                  🚗 Book Inspection Ride (WhatsApp)
-                </a>
-                <Link href="/properties" className="btn btn-outline" style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
-                  Explore Listings &rarr;
-                </Link>
-              </div>
-            </div>
-            <div className={styles.yuyuBannerImageWrapper}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/keke_ride_hero.png" alt="Yuyu Rides Keke" className={styles.yuyuBannerImage} />
-            </div>
-          </div>
-
           <div className={styles.sectionHeaderRow}>
             <div>
               <h2 className={styles.sectionHeaderTitle}>
