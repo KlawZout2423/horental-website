@@ -183,8 +183,9 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
     setIsBookingRide(true);
 
     const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const yuyuNumber = '233557922593';
 
-    // Pre-open window synchronously on desktop to bypass browser popup blockers
+    // Pre-open blank tab on desktop to bypass browser popup blockers
     let win: Window | null = null;
     if (!isMobile && typeof window !== 'undefined') {
       try {
@@ -197,9 +198,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
     try {
       // Attempt to retrieve user's live GPS coordinates (3.5s timeout fallback)
       const livePickup = await getUserLiveLocation();
-      const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}${livePickup ? `\n📍 Pickup / Live Location: ${livePickup}` : ''}`);
-      const fallbackUrl = `https://wa.me/233557922593?text=${fallbackText}`;
-
+      
       const res = await fetch('/api/rides/referral', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -212,27 +211,35 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         }),
       });
 
-      let targetUrl = fallbackUrl;
+      let targetUrl = '';
       if (res.ok) {
         const data = await res.json();
-        if (data?.whatsappUrl) {
-          targetUrl = data.whatsappUrl;
-        }
+        targetUrl = isMobile && data?.whatsappAppUrl ? data.whatsappAppUrl : (data?.whatsappUrl || '');
       }
 
-      if (win && !win.closed) {
+      if (!targetUrl) {
+        const msgText = `Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}${livePickup ? `\n📍 Pickup / GPS: ${livePickup}` : ''}\n📍 I will add my live location now`;
+        const encoded = encodeURIComponent(msgText);
+        targetUrl = isMobile ? `whatsapp://send?phone=${yuyuNumber}&text=${encoded}` : `https://wa.me/${yuyuNumber}?text=${encoded}`;
+      }
+
+      if (isMobile) {
+        window.location.href = targetUrl;
+      } else if (win && !win.closed) {
         win.location.href = targetUrl;
       } else {
-        window.location.href = targetUrl;
+        window.open(targetUrl, '_blank');
       }
     } catch (err) {
       console.error('Failed to log Yuyu ride referral:', err);
-      const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}`);
-      const fallbackUrl = `https://wa.me/233557922593?text=${fallbackText}`;
-      if (win && !win.closed) {
-        win.location.href = fallbackUrl;
+      const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}\n📍 I will add my live location now`);
+      const targetUrl = isMobile ? `whatsapp://send?phone=${yuyuNumber}&text=${fallbackText}` : `https://wa.me/${yuyuNumber}?text=${fallbackText}`;
+      if (isMobile) {
+        window.location.href = targetUrl;
+      } else if (win && !win.closed) {
+        win.location.href = targetUrl;
       } else {
-        window.location.href = fallbackUrl;
+        window.open(targetUrl, '_blank');
       }
     } finally {
       setIsBookingRide(false);

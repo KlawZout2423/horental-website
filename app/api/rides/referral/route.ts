@@ -66,17 +66,20 @@ export async function POST(req: Request) {
     let text = `Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}`;
 
     if (cleanPickup) {
-      text += `\n📍 Pickup / Live Location: ${cleanPickup}`;
+      text += `\n📍 Pickup / GPS: ${cleanPickup}`;
     }
 
+    text += `\n📍 I will add my live location now`;
     text += `\n📌 Ref Code: ${refCode}`;
 
     const whatsappUrl = `https://wa.me/${yuyuNumber}?text=${encodeURIComponent(text)}`;
+    const whatsappAppUrl = `whatsapp://send?phone=${yuyuNumber}&text=${encodeURIComponent(text)}`;
 
     return NextResponse.json({
       success: true,
       refCode: referral.refCode,
       whatsappUrl,
+      whatsappAppUrl,
     });
   } catch (error: unknown) {
     console.error("Error creating ride referral:", error);
