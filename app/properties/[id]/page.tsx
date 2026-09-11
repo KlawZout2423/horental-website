@@ -247,6 +247,11 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
   };
 
   const handleConnectClick = async (actionType: 'call' | 'whatsapp' | 'sms') => {
+    if (!user) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
     const isOwnerOrAdmin = user && (user.role === 'admin' || user.id === property?.owner?.id);
 
     if (!isOwnerOrAdmin && property?.id) {
@@ -846,7 +851,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                       )}
 
                       {/* Directions & Ride Booking Buttons */}
-                      <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
                         <a
                           href={
                             property.latitude && property.longitude
@@ -856,33 +861,35 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-outline"
-                          style={{ padding: '10px 16px', fontSize: '0.85rem', fontWeight: 700, gap: '8px', width: '100%', justifyContent: 'center', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                          style={{ padding: '12px 18px', fontSize: '0.88rem', fontWeight: 700, gap: '10px', width: '100%', justifyContent: 'center', borderColor: 'var(--primary)', color: 'var(--primary)', borderRadius: 'var(--radius-md)' }}
                         >
-                          <Navigation size={16} /> 🧭 Get Turn-by-Turn Directions in Google Maps
+                          <Navigation size={18} /> 🧭 Get Turn-by-Turn Directions in Google Maps
                         </a>
 
-                        <button
-                          onClick={handleYuyuRideClick}
-                          disabled={isBookingRide}
-                          className="btn"
-                          style={{
-                            padding: '9px 14px',
-                            fontSize: '0.82rem',
-                            fontWeight: 800,
-                            gap: '8px',
-                            width: '100%',
-                            justifyContent: 'center',
-                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: 'var(--radius-sm)',
-                            cursor: 'pointer',
-                            boxShadow: '0 3px 10px rgba(16, 185, 129, 0.25)',
-                          }}
-                        >
-                          {isBookingRide ? <Loader size={16} className="animate-spin" /> : <Car size={16} />}
-                          Request Yuyu Ride
-                        </button>
+                        {property.owner?.role !== 'agent' && (
+                          <button
+                            onClick={handleYuyuRideClick}
+                            disabled={isBookingRide}
+                            className="btn"
+                            style={{
+                              padding: '12px 18px',
+                              fontSize: '0.88rem',
+                              fontWeight: 800,
+                              gap: '10px',
+                              width: '100%',
+                              justifyContent: 'center',
+                              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: 'var(--radius-md)',
+                              cursor: 'pointer',
+                              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                            }}
+                          >
+                            {isBookingRide ? <Loader size={18} className="animate-spin" /> : <Car size={18} />}
+                            Request Yuyu Ride
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -988,35 +995,37 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     <MessageSquare size={16} /> {property.owner?.role === 'agent' ? 'SMS Agent' : 'SMS HO Rentals'}
                   </button>
 
-                  <button
-                    onClick={handleYuyuRideClick}
-                    disabled={isBookingRide}
-                    className="btn"
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      padding: '11px 14px',
-                      fontSize: '0.85rem',
-                      background: 'linear-gradient(135deg, #34D399 0%, #10B981 50%, #C1121F 100%)',
-                      color: '#FFFFFF',
-                      fontWeight: 800,
-                      border: 'none',
-                      borderRadius: 'var(--radius-md)',
-                      cursor: 'pointer',
-                      marginTop: '4px',
-                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
-                    }}
-                  >
-                    {isBookingRide ? (
-                      <Loader size={16} className="animate-spin" />
-                    ) : (
-                      <Car size={16} />
-                    )}
-                    Request Ride with Yuyu Rides
-                  </button>
+                  {property.owner?.role !== 'agent' && (
+                    <button
+                      onClick={handleYuyuRideClick}
+                      disabled={isBookingRide}
+                      className="btn"
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        padding: '13px 16px',
+                        fontSize: '0.88rem',
+                        background: 'linear-gradient(135deg, #34D399 0%, #10B981 50%, #C1121F 100%)',
+                        color: '#FFFFFF',
+                        fontWeight: 800,
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer',
+                        marginTop: '10px',
+                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                      }}
+                    >
+                      {isBookingRide ? (
+                        <Loader size={18} className="animate-spin" />
+                      ) : (
+                        <Car size={18} />
+                      )}
+                      Request Ride with Yuyu Rides
+                    </button>
+                  )}
                 </div>
               </>
             );
@@ -1213,6 +1222,8 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
           </div>
         </div>
       )}
+
+      <AuthPromptModal isOpen={showAuthPrompt} onClose={() => setShowAuthPrompt(false)} />
 
       {toastMsg && (
         <Toast message={toastMsg} onClose={() => setToastMsg(null)} />

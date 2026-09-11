@@ -1373,7 +1373,13 @@ export const resolvers = {
       const baseDesc = `Beautiful ${primaryType} located in ${r.city}.${r.propLandmark ? ` Landmark: ${r.propLandmark}.` : ''}`;
       const featureParts: string[] = [];
       if (r.rooms) featureParts.push(`Rooms Available: ${r.rooms}`);
-      if (r.advance) featureParts.push(`Advance Required: ${r.advance}`);
+      if (r.advance) {
+        featureParts.push(`Advance Required: ${r.advance}`);
+        const periodMatch = r.advance.match(/\((per [^)]+)\)/i);
+        if (periodMatch) {
+          featureParts.push(`PricePeriod: ${periodMatch[1]}`);
+        }
+      }
       if (r.availableFrom) featureParts.push(`Available From: ${r.availableFrom}`);
       if (r.amenities && r.amenities.length > 0) featureParts.push(`Amenities: ${r.amenities.join(', ')}`);
       

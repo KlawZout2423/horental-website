@@ -5,14 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../lib/auth';
 import UploadPage from '../upload/page';
-import { 
-  graphqlRequest, 
-  GET_DASHBOARD_STATS, 
-  GET_USERS, 
-  GET_PROPERTIES, 
-  DELETE_PROPERTY, 
-  DELETE_USER, 
-  UPDATE_USER_ROLE, 
+import {
+  graphqlRequest,
+  GET_DASHBOARD_STATS,
+  GET_USERS,
+  GET_PROPERTIES,
+  DELETE_PROPERTY,
+  DELETE_USER,
+  UPDATE_USER_ROLE,
   UPDATE_PROPERTY,
   UPDATE_PROPERTY_STATUS,
   GET_CONTACT_LOGS,
@@ -36,7 +36,7 @@ import {
 import { buildTrackingUrl } from '../../lib/trackVisit';
 import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp, Send, MessageSquare, Radio, CheckCheck, Smartphone, Sparkles, Zap, PhoneCall, Car, Clock } from 'lucide-react';
 import styles from './admin.module.css';
-import { getFriendlyErrorMessage, LandlordRegistration, getStatusLabel, getToggleStatusLabel, formatGhanaPhone, isValidGhanaPhone } from '../../lib/types';
+import { getFriendlyErrorMessage, LandlordRegistration, getStatusLabel, getToggleStatusLabel, formatGhanaPhone, isValidGhanaPhone, getPricePeriodLabel } from '../../lib/types';
 
 interface DashboardStats {
   totalProperties: number;
@@ -159,7 +159,7 @@ function AdminPageContent() {
         if (p && VALID_ADMIN_TABS.includes(p)) return p;
         const stored = localStorage.getItem('ho_admin_active_tab') as AdminTab | null;
         if (stored && VALID_ADMIN_TABS.includes(stored)) return stored;
-      } catch (e) {}
+      } catch (e) { }
     }
     return 'analytics';
   });
@@ -170,7 +170,7 @@ function AdminPageContent() {
       setActiveTabState(urlTab);
       try {
         localStorage.setItem('ho_admin_active_tab', urlTab);
-      } catch (e) {}
+      } catch (e) { }
     }
   }, [urlTab]);
 
@@ -178,7 +178,7 @@ function AdminPageContent() {
     setActiveTabState(tab);
     try {
       localStorage.setItem('ho_admin_active_tab', tab);
-    } catch (e) {}
+    } catch (e) { }
     router.replace(`/admin?tab=${tab}`, { scroll: false });
   };
 
@@ -196,18 +196,46 @@ function AdminPageContent() {
 
   const loadRideReferrals = async () => {
     try {
-      const res = await fetch('/api/rides/referral?limit=200');
+      const res = await fetch(`/api/rides/referral?limit=200&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+      });
       const data = await res.json();
-      if (data.referrals) {
+      if (res.ok && Array.isArray(data.referrals)) {
         setRideReferrals(data.referrals);
-      }
-      if (typeof data.total === 'number') {
-        setTotalRideReferralsCount(data.total);
+        if (typeof data.total === 'number') {
+          setTotalRideReferralsCount(data.total);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch Yuyu ride referrals:', err);
     }
   };
+
+  const [deletingReferralId, setDeletingReferralId] = useState<number | null>(null);
+
+  const handleDeleteRideReferral = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this Yuyu Ride referral log record?')) return;
+    setDeletingReferralId(id);
+    try {
+      const res = await fetch(`/api/rides/referral?id=${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setRideReferrals((prev: RideReferralItem[]) => prev.filter((r: RideReferralItem) => r.id !== id));
+        setTotalRideReferralsCount((prev: number) => Math.max(0, prev - 1));
+      } else {
+        alert(data.error || 'Failed to delete referral record.');
+      }
+    } catch (err) {
+      console.error('Error deleting ride referral record:', err);
+      alert('An error occurred while deleting the referral log.');
+    } finally {
+      setDeletingReferralId(null);
+    }
+  };
+
 
   // SMS Broadcast State
   const [smsTargetType, setSmsTargetType] = useState<'single' | 'role' | 'all'>('single');
@@ -229,7 +257,7 @@ function AdminPageContent() {
   }
   const [analytics, setAnalytics] = useState<PageAnalytics | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsPeriod, setAnalyticsPeriod] = useState<'today'|'7d'|'30d'|'90d'|'all'>('30d');
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<'today' | '7d' | '30d' | '90d' | 'all'>('30d');
   // Campaign link generator state
   const [campPlatform, setCampPlatform] = useState('tiktok');
   const [campCampaign, setCampCampaign] = useState('');
@@ -277,7 +305,7 @@ function AdminPageContent() {
       const res = await fetch('/api/admin/cleanup-orphaned-images', { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Cleanup failed');
-      
+
       setMessage({
         text: `Cleaned up ${data.cleanedCount || 0} orphaned image(s) successfully!`,
         isError: false,
@@ -307,12 +335,12 @@ function AdminPageContent() {
     const recipientCount = smsTargetType === 'single'
       ? 1
       : (smsTargetRole === 'all'
-          ? users.filter(u => u.phone).length
-          : smsTargetRole === 'verified_agents'
-            ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
-            : smsTargetRole === 'agents'
-              ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
-              : users.filter(u => u.role === 'user' && u.phone).length);
+        ? users.filter(u => u.phone).length
+        : smsTargetRole === 'verified_agents'
+          ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
+          : smsTargetRole === 'agents'
+            ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
+            : users.filter(u => u.role === 'user' && u.phone).length);
 
     if (recipientCount === 0) {
       setMessage({ text: 'No registered users with valid phone numbers found for the selected audience.', isError: true });
@@ -459,7 +487,7 @@ function AdminPageContent() {
         graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] })),
         graphqlRequest<{ landlordRegistrations: LandlordRegistration[] }>(GET_LANDLORD_REGISTRATIONS).catch(() => ({ landlordRegistrations: [] }))
       ]);
-      
+
       const newStats = statsData?.dashboardStats || null;
       const newUsers = usersData?.users || [];
       const newProps = propertiesData?.properties || [];
@@ -636,7 +664,7 @@ function AdminPageContent() {
       const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
       const targetLandlord = landlordRegistrations.find(r => String(r.id) === String(id));
       await graphqlRequest(DELETE_LANDLORD_REGISTRATION, { id: parsedId });
-      
+
       setLandlordRegistrations(prev => prev.filter(r => r.id !== id));
       if (selectedLandlord?.id === id) setSelectedLandlord(null);
 
@@ -665,7 +693,7 @@ function AdminPageContent() {
     try {
       const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
       await graphqlRequest(PUBLISH_LANDLORD_REGISTRATION, { id: parsedId });
-      
+
       // Update registration status to verified locally
       setLandlordRegistrations(prev =>
         prev.map(r => r.id === id ? { ...r, status: 'Verified' } : r)
@@ -728,7 +756,7 @@ function AdminPageContent() {
       };
 
       await graphqlRequest(UPDATE_PROPERTY, { id: parsedId, input });
-      
+
       setProperties((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p))
       );
@@ -881,9 +909,9 @@ function AdminPageContent() {
     setMessage(null);
     try {
       const parsedId = parseInt(userId);
-      await graphqlRequest(UPDATE_USER_ROLE, { 
-        id: isNaN(parsedId) ? userId : parsedId, 
-        role: newRole 
+      await graphqlRequest(UPDATE_USER_ROLE, {
+        id: isNaN(parsedId) ? userId : parsedId,
+        role: newRole
       });
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
@@ -1039,7 +1067,7 @@ function AdminPageContent() {
 
   return (
     <div className={styles.adminLayout}>
-      
+
       {/* Side Navigation panel */}
       <aside className={styles.sidebar}>
         <div className={styles.sidebarBrand}>
@@ -1075,9 +1103,9 @@ function AdminPageContent() {
             >
               <CheckCircle size={16} style={{ color: pendingProperties.length > 0 ? '#F59E0B' : undefined }} />
               <span style={{ fontWeight: pendingProperties.length > 0 ? 700 : 500 }}>Pending Approvals</span>
-              <span 
+              <span
                 className={styles.navCountBadge}
-                style={{ 
+                style={{
                   backgroundColor: pendingProperties.length > 0 ? '#F59E0B' : undefined,
                   color: pendingProperties.length > 0 ? '#FFFFFF' : undefined
                 }}
@@ -1121,11 +1149,11 @@ function AdminPageContent() {
             >
               <Flag size={16} style={{ color: reports.some((r) => r.status === 'pending') ? '#EF4444' : undefined }} />
               <span style={{ fontWeight: reports.some((r) => r.status === 'pending') ? 700 : 500 }}>Property Reports</span>
-              <span 
-                className={styles.navCountBadge} 
-                style={{ 
-                  backgroundColor: reports.some((r) => r.status === 'pending') ? '#EF4444' : undefined, 
-                  color: reports.some((r) => r.status === 'pending') ? '#FFFFFF' : undefined 
+              <span
+                className={styles.navCountBadge}
+                style={{
+                  backgroundColor: reports.some((r) => r.status === 'pending') ? '#EF4444' : undefined,
+                  color: reports.some((r) => r.status === 'pending') ? '#FFFFFF' : undefined
                 }}
               >
                 {reports.filter((r) => r.status === 'pending').length}
@@ -1210,7 +1238,7 @@ function AdminPageContent() {
 
       {/* Main Workspace content area */}
       <main className={styles.mainContent}>
-        
+
         {/* Top Header bar with Breadcrumbs & Mobile Hamburger */}
         <header className={styles.topHeader}>
           <div className={styles.breadcrumbs} style={{ display: 'flex', alignItems: 'center' }}>
@@ -1239,22 +1267,22 @@ function AdminPageContent() {
           >
             <Menu size={16} /> Admin Menu
           </button>
-          
+
           <div className={styles.headerActions}>
-            <button 
-              onClick={handleRunStorageCleanup} 
+            <button
+              onClick={handleRunStorageCleanup}
               disabled={isCleaningMedia}
-              className="btn btn-outline" 
+              className="btn btn-outline"
               style={{ padding: '8px 16px', fontSize: '0.85rem', height: '36px', gap: '6px', color: '#F59E0B', borderColor: '#F59E0B' }}
               title="Scan and delete unreferenced/orphaned images from Cloudinary storage"
             >
               <Trash2 size={14} className={isCleaningMedia ? 'animate-spin' : ''} />
               {isCleaningMedia ? 'Cleaning Storage...' : 'Clean Unused Media'}
             </button>
-            <button 
-              onClick={() => loadAdminDashboardData()} 
+            <button
+              onClick={() => loadAdminDashboardData()}
               disabled={loadingData}
-              className="btn btn-outline" 
+              className="btn btn-outline"
               style={{ padding: '8px 16px', fontSize: '0.85rem', height: '36px', gap: '6px' }}
             >
               <RefreshCw size={14} className={loadingData ? 'animate-spin' : ''} />
@@ -1273,8 +1301,8 @@ function AdminPageContent() {
                   <img src="/logo.png" alt="HO Rentals Logo" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} />
                   <span className={styles.brandName}>HO<span style={{ color: 'var(--primary)' }}>Rentals</span></span>
                 </div>
-                <button 
-                  onClick={() => setIsMobileDrawerOpen(false)} 
+                <button
+                  onClick={() => setIsMobileDrawerOpen(false)}
                   style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}
                   aria-label="Close Admin Menu"
                 >
@@ -1361,8 +1389,8 @@ function AdminPageContent() {
                 </nav>
 
                 <div style={{ marginTop: '20px', borderTop: '1px solid #1E293B', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <button 
-                    onClick={() => { handleRunStorageCleanup(); setIsMobileDrawerOpen(false); }} 
+                  <button
+                    onClick={() => { handleRunStorageCleanup(); setIsMobileDrawerOpen(false); }}
                     disabled={isCleaningMedia}
                     className={styles.sidebarHomeBtn}
                     style={{ color: '#F59E0B', borderColor: '#F59E0B', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -1370,8 +1398,8 @@ function AdminPageContent() {
                     <Trash2 size={14} className={isCleaningMedia ? 'animate-spin' : ''} />
                     {isCleaningMedia ? 'Cleaning Storage...' : 'Clean Unused Media'}
                   </button>
-                  <button 
-                    onClick={() => { loadAdminDashboardData(); setIsMobileDrawerOpen(false); }} 
+                  <button
+                    onClick={() => { loadAdminDashboardData(); setIsMobileDrawerOpen(false); }}
                     disabled={loadingData}
                     className={styles.sidebarHomeBtn}
                     style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -1426,7 +1454,7 @@ function AdminPageContent() {
 
           {/* Pending Reports Quick Banner Alert */}
           {reports.some((r) => r.status === 'pending') && activeTab !== 'reports' && (
-            <div 
+            <div
               onClick={() => setActiveTab('reports')}
               style={{
                 backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -1466,8 +1494,8 @@ function AdminPageContent() {
               boxShadow: 'var(--shadow-sm)'
             }}>
               <span>{message.text}</span>
-              <button 
-                onClick={() => setMessage(null)} 
+              <button
+                onClick={() => setMessage(null)}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: 'bold', fontSize: '1.2rem' }}
               >
                 &times;
@@ -1488,19 +1516,19 @@ function AdminPageContent() {
               </div>
             ) : stats ? (
               <div className={styles.statsGrid}>
-                
+
                 <div className={styles.statCard} style={{ borderLeft: '4px solid #3B82F6' }}>
                   <span className={styles.statLabel}>User Registry</span>
                   <span className={styles.statValue}>{stats.totalUsers}</span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Registered accounts</span>
                 </div>
-                
+
                 <div className={styles.statCard} style={{ borderLeft: '4px solid #8B5CF6' }}>
                   <span className={styles.statLabel}>Inventory Listings</span>
                   <span className={styles.statValue} style={{ color: '#8B5CF6' }}>{stats.totalProperties}</span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Active & pending properties</span>
                 </div>
-                
+
                 <div className={styles.statCard} style={{ borderLeft: '4px solid var(--primary)' }}>
                   <span className={styles.statLabel}>Space Occupancy</span>
                   <span className={styles.statValue} style={{ color: 'var(--primary)' }}>
@@ -1510,7 +1538,7 @@ function AdminPageContent() {
                     {stats.availableProperties} available space(s)
                   </span>
                 </div>
-                
+
                 <div
                   className={styles.statCard}
                   style={{ borderLeft: '4px solid #06B6D4', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
@@ -1530,8 +1558,8 @@ function AdminPageContent() {
                   </span>
                 </div>
 
-                <div 
-                  className={styles.statCard} 
+                <div
+                  className={styles.statCard}
                   style={{ borderLeft: '4px solid #10B981', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
                   onClick={() => setActiveTab('traffic')}
                   title="Unique organic visitor sessions today (30-min window)"
@@ -1547,8 +1575,8 @@ function AdminPageContent() {
                   </span>
                 </div>
 
-                <div 
-                  className={styles.statCard} 
+                <div
+                  className={styles.statCard}
                   style={{ borderLeft: '4px solid #F59E0B', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
                   onClick={() => setActiveTab('users')}
                   title="User logins today"
@@ -1564,13 +1592,13 @@ function AdminPageContent() {
                   </span>
                 </div>
 
-                <div 
-                  className={styles.statCard} 
+                <div
+                  className={styles.statCard}
                   onClick={() => setActiveTab('reports')}
-                  style={{ 
-                    borderLeft: '4px solid #EF4444', 
+                  style={{
+                    borderLeft: '4px solid #EF4444',
                     cursor: 'pointer',
-                    backgroundColor: reports.some((r) => r.status === 'pending') ? 'rgba(239, 68, 68, 0.05)' : undefined 
+                    backgroundColor: reports.some((r) => r.status === 'pending') ? 'rgba(239, 68, 68, 0.05)' : undefined
                   }}
                   title="Click to view all reported property listings"
                 >
@@ -1587,7 +1615,7 @@ function AdminPageContent() {
                     Manage Reports &rarr;
                   </span>
                 </div>
-                
+
               </div>
             ) : null
           )}
@@ -1602,10 +1630,10 @@ function AdminPageContent() {
             </div>
           ) : activeTab === 'analytics' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-              
+
               {/* Distribution & Regional Analytics Cards Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', width: '100%', maxWidth: '100%' }}>
-                
+
                 {/* Property Types mix grid list */}
                 <div className="card glass" style={{ padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box', overflow: 'hidden' }}>
                   <div>
@@ -1621,17 +1649,17 @@ function AdminPageContent() {
                           const percentage = properties.length > 0 ? Math.round((count / properties.length) * 100) : 0;
                           const color = colorsList[index % colorsList.length];
                           return (
-                            <div 
-                              key={type} 
-                              style={{ 
-                                padding: '14px 12px', 
-                                backgroundColor: 'var(--bg-surface-secondary)', 
-                                border: '1px solid var(--border)', 
-                                borderRadius: 'var(--radius-sm)', 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                justifyContent: 'space-between', 
-                                gap: '10px', 
+                            <div
+                              key={type}
+                              style={{
+                                padding: '14px 12px',
+                                backgroundColor: 'var(--bg-surface-secondary)',
+                                border: '1px solid var(--border)',
+                                borderRadius: 'var(--radius-sm)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                gap: '10px',
                                 minHeight: '90px',
                                 boxShadow: 'var(--shadow-xs)',
                               }}
@@ -1706,7 +1734,7 @@ function AdminPageContent() {
                               <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>Rented</span>
                             </div>
                           </div>
-                          
+
                           {/* Legend details */}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flexGrow: 1, minWidth: '140px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1800,9 +1828,9 @@ function AdminPageContent() {
                         <tr key={p.id}>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <img 
-                                src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'} 
-                                alt={p.title} 
+                              <img
+                                src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'}
+                                alt={p.title}
                                 style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)', flexShrink: 0 }}
                               />
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -1868,7 +1896,7 @@ function AdminPageContent() {
                               >
                                 <Edit size={14} />
                               </button>
-                              
+
                               <button
                                 onClick={() => handleDeleteProperty(p.id)}
                                 disabled={actionLoading}
@@ -1911,7 +1939,9 @@ function AdminPageContent() {
                       </div>
 
                       <div className={styles.adminCardMeta}>
-                        <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1rem' }}>GH₵ {p.price.toLocaleString()}</span>
+                        <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1rem' }}>
+                          GH₵ {p.price.toLocaleString()} <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>{getPricePeriodLabel(p.description, true)}</span>
+                        </span>
                         {p.isFeatured && (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#F59E0B' }}>
                             <Star size={12} fill="#F59E0B" /> Featured
@@ -1970,325 +2000,325 @@ function AdminPageContent() {
             </>
           ) : activeTab === 'moderation' ? (
             (() => {
-            const filteredPending = pendingProperties.filter((p) => {
-              if (!moderationSearch.trim()) return true;
-              const q = moderationSearch.toLowerCase();
-              const sName = p.owner?.name || p.landlordName || 'Unknown';
-              const sContact = p.contact || p.owner?.email || '';
-              return (
-                sName.toLowerCase().includes(q) ||
-                sContact.toLowerCase().includes(q) ||
-                p.title.toLowerCase().includes(q) ||
-                p.location.toLowerCase().includes(q) ||
-                p.type.toLowerCase().includes(q)
-              );
-            });
+              const filteredPending = pendingProperties.filter((p) => {
+                if (!moderationSearch.trim()) return true;
+                const q = moderationSearch.toLowerCase();
+                const sName = p.owner?.name || p.landlordName || 'Unknown';
+                const sContact = p.contact || p.owner?.email || '';
+                return (
+                  sName.toLowerCase().includes(q) ||
+                  sContact.toLowerCase().includes(q) ||
+                  p.title.toLowerCase().includes(q) ||
+                  p.location.toLowerCase().includes(q) ||
+                  p.type.toLowerCase().includes(q)
+                );
+              });
 
-            // Group filtered pending properties by submitter (Agent or Landlord)
-            interface SubmitterGroup {
-              key: string;
-              submitterName: string;
-              role: string;
-              phone: string;
-              email: string;
-              avatar?: string | null;
-              properties: Property[];
-            }
-
-            const groupedMap: Record<string, SubmitterGroup> = {};
-
-            filteredPending.forEach((p) => {
-              const name = (p.owner?.name || p.landlordName || (p.owner?.email ? p.owner.email.split('@')[0] : 'Direct Submissions')).trim();
-              const key = name.toLowerCase();
-              if (!groupedMap[key]) {
-                groupedMap[key] = {
-                  key,
-                  submitterName: name,
-                  role: p.owner?.role || (p.landlordName ? 'landlord' : 'agent'),
-                  phone: p.contact || '',
-                  email: p.owner?.email || '',
-                  avatar: null,
-                  properties: []
-                };
+              // Group filtered pending properties by submitter (Agent or Landlord)
+              interface SubmitterGroup {
+                key: string;
+                submitterName: string;
+                role: string;
+                phone: string;
+                email: string;
+                avatar?: string | null;
+                properties: Property[];
               }
-              groupedMap[key].properties.push(p);
-            });
 
-            const submitterGroups = Object.values(groupedMap);
+              const groupedMap: Record<string, SubmitterGroup> = {};
 
-            return (
-              <>
-                {/* Moderation Search & Summary Bar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                  <div style={{ position: 'relative', maxWidth: '420px', width: '100%' }}>
-                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input
-                      type="text"
-                      placeholder="Search pending by agent name, phone, title..."
-                      value={moderationSearch}
-                      onChange={(e) => setModerationSearch(e.target.value)}
-                      className="form-control"
-                      style={{ paddingLeft: '38px', borderRadius: '10px', fontSize: '0.88rem' }}
-                    />
+              filteredPending.forEach((p) => {
+                const name = (p.owner?.name || p.landlordName || (p.owner?.email ? p.owner.email.split('@')[0] : 'Direct Submissions')).trim();
+                const key = name.toLowerCase();
+                if (!groupedMap[key]) {
+                  groupedMap[key] = {
+                    key,
+                    submitterName: name,
+                    role: p.owner?.role || (p.landlordName ? 'landlord' : 'agent'),
+                    phone: p.contact || '',
+                    email: p.owner?.email || '',
+                    avatar: null,
+                    properties: []
+                  };
+                }
+                groupedMap[key].properties.push(p);
+              });
+
+              const submitterGroups = Object.values(groupedMap);
+
+              return (
+                <>
+                  {/* Moderation Search & Summary Bar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ position: 'relative', maxWidth: '420px', width: '100%' }}>
+                      <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                      <input
+                        type="text"
+                        placeholder="Search pending by agent name, phone, title..."
+                        value={moderationSearch}
+                        onChange={(e) => setModerationSearch(e.target.value)}
+                        className="form-control"
+                        style={{ paddingLeft: '38px', borderRadius: '10px', fontSize: '0.88rem' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '6px 12px', borderRadius: '16px', backgroundColor: 'var(--bg-surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                        👥 {submitterGroups.length} Submitter{submitterGroups.length === 1 ? '' : 's'}
+                      </span>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '6px 12px', borderRadius: '16px', backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#D97706', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                        ⏳ {filteredPending.length} Total Pending
+                      </span>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '6px 12px', borderRadius: '16px', backgroundColor: 'var(--bg-surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-                      👥 {submitterGroups.length} Submitter{submitterGroups.length === 1 ? '' : 's'}
-                    </span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '6px 12px', borderRadius: '16px', backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#D97706', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-                      ⏳ {filteredPending.length} Total Pending
-                    </span>
-                  </div>
-                </div>
+                  {submitterGroups.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '48px 16px', backgroundColor: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                      <CheckCircle size={40} style={{ color: '#10B981', margin: '0 auto 12px' }} />
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+                        {moderationSearch ? 'No matching pending listings found' : 'All Agent Listings are Reviewed!'}
+                      </h3>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                        {moderationSearch ? 'Try a different search query.' : 'There are currently no listings awaiting admin approval.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      {submitterGroups.map((group) => {
+                        const isCollapsed = !!collapsedSubmitters[group.key];
+                        const propIds = group.properties.map((p) => p.id);
 
-                {submitterGroups.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '48px 16px', backgroundColor: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border)' }}>
-                    <CheckCircle size={40} style={{ color: '#10B981', margin: '0 auto 12px' }} />
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-                      {moderationSearch ? 'No matching pending listings found' : 'All Agent Listings are Reviewed!'}
-                    </h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                      {moderationSearch ? 'Try a different search query.' : 'There are currently no listings awaiting admin approval.'}
-                    </p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {submitterGroups.map((group) => {
-                      const isCollapsed = !!collapsedSubmitters[group.key];
-                      const propIds = group.properties.map((p) => p.id);
-
-                      return (
-                        <div 
-                          key={group.key}
-                          style={{ 
-                            backgroundColor: 'var(--bg-surface)', 
-                            border: '1px solid var(--border)', 
-                            borderRadius: '16px', 
-                            overflow: 'hidden',
-                            boxShadow: 'var(--shadow-sm)'
-                          }}
-                        >
-                          {/* Group Submitter Header Bar */}
-                          <div 
-                            style={{ 
-                              padding: '14px 18px', 
-                              backgroundColor: 'var(--bg-surface-secondary)', 
-                              borderBottom: isCollapsed ? 'none' : '1px solid var(--border)',
-                              display: 'flex', 
-                              justifyContent: 'space-between', 
-                              alignItems: 'center', 
-                              flexWrap: 'wrap', 
-                              gap: '12px' 
+                        return (
+                          <div
+                            key={group.key}
+                            style={{
+                              backgroundColor: 'var(--bg-surface)',
+                              border: '1px solid var(--border)',
+                              borderRadius: '16px',
+                              overflow: 'hidden',
+                              boxShadow: 'var(--shadow-sm)'
                             }}
                           >
-                            <div 
-                              onClick={() => setCollapsedSubmitters(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
-                              style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1, minWidth: '220px' }}
-                              title="Click to collapse / expand this group"
+                            {/* Group Submitter Header Bar */}
+                            <div
+                              style={{
+                                padding: '14px 18px',
+                                backgroundColor: 'var(--bg-surface-secondary)',
+                                borderBottom: isCollapsed ? 'none' : '1px solid var(--border)',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '12px'
+                              }}
                             >
-                              <div style={{ width: 38, height: 38, borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', overflow: 'hidden', flexShrink: 0 }}>
-                                {group.avatar ? (
-                                  <img src={group.avatar} alt={group.submitterName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                  group.submitterName.slice(0, 2).toUpperCase()
-                                )}
-                              </div>
-                              <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                  <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>
-                                    {group.submitterName}
-                                  </span>
-                                  <span className={`badge badge-${group.role === 'agent' ? 'primary' : 'available'}`} style={{ fontSize: '0.68rem', textTransform: 'capitalize' }}>
-                                    {group.role}
-                                  </span>
-                                  <span style={{ fontSize: '0.74rem', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#D97706' }}>
-                                    {group.properties.length} Pending Listing{group.properties.length === 1 ? '' : 's'}
-                                  </span>
-                                </div>
-                                {group.phone && (
-                                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    📞 <a href={`tel:${group.phone}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{group.phone}</a>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Batch Approve All for this Submitter */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleApproveAllProperties(propIds, group.submitterName);
-                                }}
-                                disabled={actionLoading}
-                                className="btn"
-                                style={{
-                                  backgroundColor: '#10B981',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  borderRadius: '8px',
-                                  padding: '7px 14px',
-                                  fontSize: '0.8rem',
-                                  fontWeight: 700,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  cursor: 'pointer'
-                                }}
-                                title={`Approve all ${group.properties.length} listings for ${group.submitterName}`}
-                              >
-                                <CheckCircle size={14} /> Approve All ({group.properties.length})
-                              </button>
-
-                              <button
+                              <div
                                 onClick={() => setCollapsedSubmitters(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
-                                className="btn btn-outline"
-                                style={{ padding: '7px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-surface)' }}
-                                title={isCollapsed ? 'Expand group' : 'Collapse group'}
+                                style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1, minWidth: '220px' }}
+                                title="Click to collapse / expand this group"
                               >
-                                {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Submitter Group Content (Desktop Table & Mobile Cards) */}
-                          {!isCollapsed && (
-                            <>
-                              {/* Desktop Table View */}
-                              <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`} style={{ margin: 0, border: 'none', borderRadius: 0 }}>
-                                <table className={styles.table}>
-                                  <thead>
-                                    <tr>
-                                      <th>Listing Info</th>
-                                      <th>Type</th>
-                                      <th>Price (GH₵)</th>
-                                      <th>Location</th>
-                                      <th>Date Submitted</th>
-                                      <th style={{ textAlign: 'right' }}>Actions</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {group.properties.map((p) => (
-                                      <tr key={p.id}>
-                                        <td>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <img 
-                                              src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'} 
-                                              alt={p.title} 
-                                              style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}
-                                            />
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                              <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.title}</span>
-                                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID #{p.id}</span>
-                                            </div>
-                                          </div>
-                                        </td>
-                                        <td style={{ textTransform: 'capitalize', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.84rem' }}>{p.type}</td>
-                                        <td style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.92rem' }}>GH₵ {p.price.toLocaleString()}</td>
-                                        <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.84rem' }}>{p.location}</td>
-                                        <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                                          {p.createdAt ? new Date(isNaN(Number(p.createdAt)) ? p.createdAt : Number(p.createdAt)).toLocaleDateString() : 'N/A'}
-                                        </td>
-                                        <td>
-                                          <div className={styles.actionsCell} style={{ justifyContent: 'flex-end', gap: '6px' }}>
-                                            <Link
-                                              href={`/properties/${p.id}`}
-                                              target="_blank"
-                                              className="btn btn-outline"
-                                              style={{ padding: '6px 12px', fontSize: '0.78rem', height: '30px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', borderColor: 'var(--primary-light)' }}
-                                            >
-                                              Preview
-                                            </Link>
-                                            <button
-                                              onClick={() => handleApproveProperty(p.id)}
-                                              disabled={actionLoading}
-                                              className="btn"
-                                              style={{ padding: '6px 12px', fontSize: '0.78rem', height: '30px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}
-                                            >
-                                              Approve
-                                            </button>
-                                            <button
-                                              onClick={() => handleDeleteProperty(p.id)}
-                                              disabled={actionLoading}
-                                              className="btn btn-outline"
-                                              style={{ padding: '6px 12px', fontSize: '0.78rem', height: '30px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
-                                            >
-                                              Reject
-                                            </button>
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-
-                              {/* Mobile Card List View for this Submitter */}
-                              <div className={styles.mobileCardList} style={{ padding: '12px' }}>
-                                {group.properties.map((p) => (
-                                  <div key={p.id} className={styles.adminCardItem} style={{ marginBottom: '10px' }}>
-                                    <div className={styles.adminCardHeader}>
-                                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                        <img
-                                          src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'}
-                                          alt={p.title}
-                                          style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}
-                                        />
-                                        <div>
-                                          <div className={styles.adminCardTitle} style={{ fontSize: '0.92rem' }}>{p.title}</div>
-                                          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textTransform: 'capitalize', fontWeight: 600 }}>{p.type} • {p.location}</span>
-                                        </div>
-                                      </div>
-                                      <span className="badge badge-pending" style={{ fontSize: '0.65rem' }}>Pending</span>
-                                    </div>
-
-                                    <div className={styles.adminCardMeta}>
-                                      <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.98rem' }}>GH₵ {p.price.toLocaleString()}</span>
-                                      <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-                                        {p.createdAt ? new Date(isNaN(Number(p.createdAt)) ? p.createdAt : Number(p.createdAt)).toLocaleDateString() : 'N/A'}
-                                      </span>
-                                    </div>
-
-                                    <div className={styles.adminCardActions}>
-                                      <Link
-                                        href={`/properties/${p.id}`}
-                                        target="_blank"
-                                        className="btn btn-outline"
-                                        style={{ padding: '8px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
-                                      >
-                                        Preview
-                                      </Link>
-                                      <button
-                                        onClick={() => handleApproveProperty(p.id)}
-                                        disabled={actionLoading}
-                                        className="btn"
-                                        style={{ padding: '8px 12px', fontSize: '0.8rem', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700 }}
-                                      >
-                                        Approve
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteProperty(p.id)}
-                                        disabled={actionLoading}
-                                        className="btn btn-outline"
-                                        style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--danger)' }}
-                                      >
-                                        Reject
-                                      </button>
-                                    </div>
+                                <div style={{ width: 38, height: 38, borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', overflow: 'hidden', flexShrink: 0 }}>
+                                  {group.avatar ? (
+                                    <img src={group.avatar} alt={group.submitterName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  ) : (
+                                    group.submitterName.slice(0, 2).toUpperCase()
+                                  )}
+                                </div>
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>
+                                      {group.submitterName}
+                                    </span>
+                                    <span className={`badge badge-${group.role === 'agent' ? 'primary' : 'available'}`} style={{ fontSize: '0.68rem', textTransform: 'capitalize' }}>
+                                      {group.role}
+                                    </span>
+                                    <span style={{ fontSize: '0.74rem', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#D97706' }}>
+                                      {group.properties.length} Pending Listing{group.properties.length === 1 ? '' : 's'}
+                                    </span>
                                   </div>
-                                ))}
+                                  {group.phone && (
+                                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      📞 <a href={`tel:${group.phone}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{group.phone}</a>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            );
-          })()
+
+                              {/* Batch Approve All for this Submitter */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleApproveAllProperties(propIds, group.submitterName);
+                                  }}
+                                  disabled={actionLoading}
+                                  className="btn"
+                                  style={{
+                                    backgroundColor: '#10B981',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    padding: '7px 14px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 700,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    cursor: 'pointer'
+                                  }}
+                                  title={`Approve all ${group.properties.length} listings for ${group.submitterName}`}
+                                >
+                                  <CheckCircle size={14} /> Approve All ({group.properties.length})
+                                </button>
+
+                                <button
+                                  onClick={() => setCollapsedSubmitters(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
+                                  className="btn btn-outline"
+                                  style={{ padding: '7px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-surface)' }}
+                                  title={isCollapsed ? 'Expand group' : 'Collapse group'}
+                                >
+                                  {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Submitter Group Content (Desktop Table & Mobile Cards) */}
+                            {!isCollapsed && (
+                              <>
+                                {/* Desktop Table View */}
+                                <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`} style={{ margin: 0, border: 'none', borderRadius: 0 }}>
+                                  <table className={styles.table}>
+                                    <thead>
+                                      <tr>
+                                        <th>Listing Info</th>
+                                        <th>Type</th>
+                                        <th>Price (GH₵)</th>
+                                        <th>Location</th>
+                                        <th>Date Submitted</th>
+                                        <th style={{ textAlign: 'right' }}>Actions</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {group.properties.map((p) => (
+                                        <tr key={p.id}>
+                                          <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                              <img
+                                                src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'}
+                                                alt={p.title}
+                                                style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}
+                                              />
+                                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.title}</span>
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID #{p.id}</span>
+                                              </div>
+                                            </div>
+                                          </td>
+                                          <td style={{ textTransform: 'capitalize', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.84rem' }}>{p.type}</td>
+                                          <td style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.92rem' }}>GH₵ {p.price.toLocaleString()}</td>
+                                          <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.84rem' }}>{p.location}</td>
+                                          <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                            {p.createdAt ? new Date(isNaN(Number(p.createdAt)) ? p.createdAt : Number(p.createdAt)).toLocaleDateString() : 'N/A'}
+                                          </td>
+                                          <td>
+                                            <div className={styles.actionsCell} style={{ justifyContent: 'flex-end', gap: '6px' }}>
+                                              <Link
+                                                href={`/properties/${p.id}`}
+                                                target="_blank"
+                                                className="btn btn-outline"
+                                                style={{ padding: '6px 12px', fontSize: '0.78rem', height: '30px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', borderColor: 'var(--primary-light)' }}
+                                              >
+                                                Preview
+                                              </Link>
+                                              <button
+                                                onClick={() => handleApproveProperty(p.id)}
+                                                disabled={actionLoading}
+                                                className="btn"
+                                                style={{ padding: '6px 12px', fontSize: '0.78rem', height: '30px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}
+                                              >
+                                                Approve
+                                              </button>
+                                              <button
+                                                onClick={() => handleDeleteProperty(p.id)}
+                                                disabled={actionLoading}
+                                                className="btn btn-outline"
+                                                style={{ padding: '6px 12px', fontSize: '0.78rem', height: '30px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                                              >
+                                                Reject
+                                              </button>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+
+                                {/* Mobile Card List View for this Submitter */}
+                                <div className={styles.mobileCardList} style={{ padding: '12px' }}>
+                                  {group.properties.map((p) => (
+                                    <div key={p.id} className={styles.adminCardItem} style={{ marginBottom: '10px' }}>
+                                      <div className={styles.adminCardHeader}>
+                                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                          <img
+                                            src={p.imageUrl || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=60&q=80'}
+                                            alt={p.title}
+                                            style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}
+                                          />
+                                          <div>
+                                            <div className={styles.adminCardTitle} style={{ fontSize: '0.92rem' }}>{p.title}</div>
+                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textTransform: 'capitalize', fontWeight: 600 }}>{p.type} • {p.location}</span>
+                                          </div>
+                                        </div>
+                                        <span className="badge badge-pending" style={{ fontSize: '0.65rem' }}>Pending</span>
+                                      </div>
+
+                                      <div className={styles.adminCardMeta}>
+                                        <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.98rem' }}>GH₵ {p.price.toLocaleString()}</span>
+                                        <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                                          {p.createdAt ? new Date(isNaN(Number(p.createdAt)) ? p.createdAt : Number(p.createdAt)).toLocaleDateString() : 'N/A'}
+                                        </span>
+                                      </div>
+
+                                      <div className={styles.adminCardActions}>
+                                        <Link
+                                          href={`/properties/${p.id}`}
+                                          target="_blank"
+                                          className="btn btn-outline"
+                                          style={{ padding: '8px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                                        >
+                                          Preview
+                                        </Link>
+                                        <button
+                                          onClick={() => handleApproveProperty(p.id)}
+                                          disabled={actionLoading}
+                                          className="btn"
+                                          style={{ padding: '8px 12px', fontSize: '0.8rem', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700 }}
+                                        >
+                                          Approve
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteProperty(p.id)}
+                                          disabled={actionLoading}
+                                          className="btn btn-outline"
+                                          style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--danger)' }}
+                                        >
+                                          Reject
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              );
+            })()
           ) : activeTab === 'users' ? (
             <>
               {/* User Search Bar */}
@@ -2488,7 +2518,7 @@ function AdminPageContent() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Search Bar for Audits & Contact Inquiry Leads */}
               <div style={{ position: 'relative', marginBottom: '18px', width: '100%' }}>
                 <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -2609,16 +2639,16 @@ function AdminPageContent() {
 
                 return (
                   <div style={{ marginBottom: auditLogView === 'all' ? '24px' : '0px' }}>
-                    <div 
+                    <div
                       onClick={() => setIsContactsCollapsed(!isContactsCollapsed)}
-                      style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        marginBottom: isContactsCollapsed ? '0px' : '14px', 
-                        padding: '12px 16px', 
-                        borderRadius: '12px', 
-                        backgroundColor: 'var(--bg-surface-secondary)', 
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: isContactsCollapsed ? '0px' : '14px',
+                        padding: '12px 16px',
+                        borderRadius: '12px',
+                        backgroundColor: 'var(--bg-surface-secondary)',
                         border: '1px solid var(--border)',
                         cursor: 'pointer',
                         userSelect: 'none',
@@ -2638,297 +2668,296 @@ function AdminPageContent() {
                     {!isContactsCollapsed && (
                       <>
 
-                    {/* Batch Selection Action Bar for Contact Leads */}
-                    {selectedContactLogIds.length > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', marginBottom: '14px', animation: 'fadeIn 0.2s ease' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <CheckCircle size={15} /> {selectedContactLogIds.length} contact lead(s) selected
-                        </span>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <button
-                            onClick={() => handleDeleteSelectedContactLogs()}
-                            disabled={actionLoading}
-                            className="btn"
-                            style={{ background: '#EF4444', color: '#FFFFFF', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                          >
-                            <Trash2 size={13} /> Delete Selected ({selectedContactLogIds.length})
-                          </button>
-                          <button
-                            onClick={() => setSelectedContactLogIds([])}
-                            className="btn btn-outline"
-                            style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Desktop Lead Buttons */}
-                    <div className={styles.desktopFilters} style={{ gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => setAuditFilter('all')}
-                        className={`btn ${auditFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
-                        style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
-                      >
-                        All Leads ({contactLogs.length})
-                      </button>
-                      <button
-                        onClick={() => setAuditFilter('call')}
-                        className={`btn ${auditFilter === 'call' ? 'btn-primary' : 'btn-outline'}`}
-                        style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
-                      >
-                        📞 Calls ({contactLogs.filter((l) => l.actionType === 'call').length})
-                      </button>
-                      <button
-                        onClick={() => setAuditFilter('whatsapp')}
-                        className={`btn ${auditFilter === 'whatsapp' ? 'btn-primary' : 'btn-outline'}`}
-                        style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
-                      >
-                        💬 WhatsApp ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})
-                      </button>
-                      <button
-                        onClick={() => setAuditFilter('book_viewing')}
-                        className={`btn ${auditFilter === 'book_viewing' ? 'btn-primary' : 'btn-outline'}`}
-                        style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
-                      >
-                        📅 Viewings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})
-                      </button>
-                      <button
-                        onClick={() => setAuditFilter('sms')}
-                        className={`btn ${auditFilter === 'sms' ? 'btn-primary' : 'btn-outline'}`}
-                        style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
-                      >
-                        📱 SMS ({contactLogs.filter((l) => l.actionType === 'sms').length})
-                      </button>
-                    </div>
-
-                    {/* Mobile Lead Select Dropdown */}
-                    <div className={styles.mobileFilters} style={{ marginBottom: '12px' }}>
-                      <select
-                        value={auditFilter}
-                        onChange={(e) => setAuditFilter(e.target.value as 'all' | 'call' | 'whatsapp' | 'book_viewing' | 'sms')}
-                        className="form-control"
-                        style={{ fontSize: '0.85rem', fontWeight: 700, padding: '8px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-surface)' }}
-                        aria-label="Filter Leads"
-                      >
-                        <option value="all">🔍 All Inquiry Leads ({contactLogs.length})</option>
-                        <option value="call">📞 Phone Calls ({contactLogs.filter((l) => l.actionType === 'call').length})</option>
-                        <option value="whatsapp">💬 WhatsApp Inquiries ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})</option>
-                        <option value="book_viewing">📅 Viewing Bookings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})</option>
-                        <option value="sms">📱 SMS Leads ({contactLogs.filter((l) => l.actionType === 'sms').length})</option>
-                      </select>
-                    </div>
-
-                  <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
-                    <table className={styles.table}>
-                      <thead>
-                        <tr>
-                          <th style={{ width: '40px', textAlign: 'center' }}>
-                            <input
-                              type="checkbox"
-                              checked={filteredContactLogs.length > 0 && filteredContactLogs.every((l) => selectedContactLogIds.includes(l.id))}
-                              onChange={() => handleSelectAllContactLogs(filteredContactLogs)}
-                              aria-label="Select all contact inquiry logs"
-                              style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
-                            />
-                          </th>
-                          <th>Timestamp</th>
-                          <th>Customer Name</th>
-                          <th>Customer Phone</th>
-                          <th>Action Type</th>
-                          <th>Landlord Number</th>
-                          <th>Property Title</th>
-                          <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredContactLogs.length === 0 ? (
-                          <tr>
-                            <td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                              {auditSearch ? 'No matching contact records found.' : 'No contact lead records found.'}
-                            </td>
-                          </tr>
-                        ) : (
-                          filteredContactLogs.map((log) => {
-                            const isSelected = selectedContactLogIds.includes(log.id);
-                            return (
-                              <tr key={log.id} style={{ backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.04)' : undefined }}>
-                                <td style={{ textAlign: 'center' }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={() => handleToggleSelectContactLog(log.id)}
-                                    aria-label={`Select contact log ${log.id}`}
-                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
-                                  />
-                                </td>
-                                <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                                  {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                                </td>
-                                <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
-                                <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
-                                <td>
-                                  <span className="badge badge-available" style={{ fontSize: '0.68rem', padding: '3px 8px', textTransform: 'capitalize' }}>
-                                    {log.actionType === 'call' && '📞 Phone Call'}
-                                    {log.actionType === 'whatsapp' && '💬 WhatsApp'}
-                                    {log.actionType === 'book_viewing' && '📅 Viewing'}
-                                    {log.actionType === 'sms' && '📱 SMS Lead'}
-                                    {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
-                                  </span>
-                                </td>
-                                <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
-                                <td style={{ color: 'var(--text-primary)' }}>
-                                  {log.property ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                      <Link
-                                        href={`/properties/${log.property.id}`}
-                                        target="_blank"
-                                        style={{
-                                          color: 'var(--text-primary)',
-                                          fontWeight: 700,
-                                          fontSize: '0.86rem',
-                                          textDecoration: 'none',
-                                          lineHeight: 1.35
-                                        }}
-                                        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--primary)')}
-                                        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                                      >
-                                        {log.property.title}
-                                      </Link>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
-                                        {log.property.price !== undefined && log.property.price !== null && (
-                                          <span style={{ fontWeight: 800, color: 'var(--primary)' }}>
-                                            GH₵{log.property.price.toLocaleString()}
-                                          </span>
-                                        )}
-                                        {log.property.location && (
-                                          <>
-                                            <span style={{ opacity: 0.4 }}>•</span>
-                                            <span style={{ color: 'var(--text-muted)' }}>{log.property.location}</span>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>N/A</span>
-                                  )}
-                                </td>
-                                <td style={{ textAlign: 'center' }}>
-                                  <button
-                                    onClick={() => handleDeleteSelectedContactLogs([log.id])}
-                                    disabled={actionLoading}
-                                    title="Delete this contact record"
-                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-                                  >
-                                    <Trash2 size={15} />
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Mobile Contact Cards */}
-                  <div className={styles.mobileCardList}>
-                    {filteredContactLogs.length === 0 ? (
-                      <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>{auditSearch ? 'No matching contact records.' : 'No contact records found.'}</p>
-                    ) : (
-                      filteredContactLogs.map((log) => {
-                        const isSelected = selectedContactLogIds.includes(log.id);
-                        return (
-                          <div key={log.id} className={styles.adminCardItem} style={{ border: isSelected ? '1px solid var(--primary)' : undefined }}>
-                            <div className={styles.adminCardHeader}>
-                              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => handleToggleSelectContactLog(log.id)}
-                                  style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--primary)', flexShrink: 0 }}
-                                />
-                                <div style={{ minWidth: 0, flex: 1 }}>
-                                  <div className={styles.adminCardTitle} style={{ fontSize: '0.98rem', fontWeight: 800, wordBreak: 'break-word' }}>{log.customerName}</div>
-                                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '2px', wordBreak: 'break-all' }}>
-                                    👤 Phone: <a href={`tel:${log.customerPhone}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>{log.customerPhone}</a>
-                                  </div>
-                                </div>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                <span className={`badge ${
-                                  log.actionType === 'whatsapp' ? 'badge-pending' :
-                                  log.actionType === 'book_viewing' ? 'badge-primary' : 'badge-available'
-                                }`} style={{ fontSize: '0.65rem' }}>
-                                  {log.actionType}
-                                </span>
-                                <button
-                                  onClick={() => handleDeleteSelectedContactLogs([log.id])}
-                                  disabled={actionLoading}
-                                  title="Delete contact record"
-                                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '2px', cursor: 'pointer' }}
-                                >
-                                  <Trash2 size={15} style={{ color: '#EF4444' }} />
-                                </button>
-                              </div>
-                            </div>
-                            
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', paddingLeft: '28px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '0.82rem', color: 'var(--text-secondary)', gap: '8px' }}>
-                                <span style={{ flexShrink: 0 }}>🏢 Property:</span>
-                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right', wordBreak: 'break-word' }}>
-                                  {log.property ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                                      <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--text-primary)', fontWeight: 700, textDecoration: 'none' }}>
-                                        {log.property.title}
-                                      </Link>
-                                      {log.property.price !== undefined && log.property.price !== null && (
-                                        <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 800 }}>
-                                          GH₵{log.property.price.toLocaleString()}
-                                        </span>
-                                      )}
-                                    </div>
-                                  ) : 'N/A'}
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)', flexWrap: 'wrap', gap: '6px' }}>
-                                <span style={{ flexShrink: 0 }}>📞 Landlord:</span>
-                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                  <a href={`tel:${log.landlordPhone}`} style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{log.landlordPhone}</a>
-                                  <a href={`tel:${log.landlordPhone}`} title="Call Landlord" style={{ color: 'var(--primary)', fontSize: '0.9rem', display: 'inline-flex' }}>
-                                    📞
-                                  </a>
-                                  {(() => {
-                                    const cleanWa = (log.landlordPhone || '').replace(/[^0-9]/g, '');
-                                    const waTarget = cleanWa.startsWith('233') ? cleanWa : (cleanWa.startsWith('0') ? '233' + cleanWa.substring(1) : (cleanWa.length === 9 ? '233' + cleanWa : cleanWa));
-                                    return (
-                                      <a href={`https://wa.me/${waTarget}`} target="_blank" rel="noopener noreferrer" title="WhatsApp Landlord" style={{ color: '#25D366', fontSize: '0.9rem', display: 'inline-flex' }}>
-                                        💬
-                                      </a>
-                                    );
-                                  })()}
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                <span>🕒 Time:</span>
-                                <span>
-                                  {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                                </span>
-                              </div>
+                        {/* Batch Selection Action Bar for Contact Leads */}
+                        {selectedContactLogIds.length > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', marginBottom: '14px', animation: 'fadeIn 0.2s ease' }}>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <CheckCircle size={15} /> {selectedContactLogIds.length} contact lead(s) selected
+                            </span>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <button
+                                onClick={() => handleDeleteSelectedContactLogs()}
+                                disabled={actionLoading}
+                                className="btn"
+                                style={{ background: '#EF4444', color: '#FFFFFF', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                              >
+                                <Trash2 size={13} /> Delete Selected ({selectedContactLogIds.length})
+                              </button>
+                              <button
+                                onClick={() => setSelectedContactLogIds([])}
+                                className="btn btn-outline"
+                                style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}
+                              >
+                                Cancel
+                              </button>
                             </div>
                           </div>
-                        );
-                      })
+                        )}
+
+                        {/* Desktop Lead Buttons */}
+                        <div className={styles.desktopFilters} style={{ gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => setAuditFilter('all')}
+                            className={`btn ${auditFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
+                            style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                          >
+                            All Leads ({contactLogs.length})
+                          </button>
+                          <button
+                            onClick={() => setAuditFilter('call')}
+                            className={`btn ${auditFilter === 'call' ? 'btn-primary' : 'btn-outline'}`}
+                            style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                          >
+                            📞 Calls ({contactLogs.filter((l) => l.actionType === 'call').length})
+                          </button>
+                          <button
+                            onClick={() => setAuditFilter('whatsapp')}
+                            className={`btn ${auditFilter === 'whatsapp' ? 'btn-primary' : 'btn-outline'}`}
+                            style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                          >
+                            💬 WhatsApp ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})
+                          </button>
+                          <button
+                            onClick={() => setAuditFilter('book_viewing')}
+                            className={`btn ${auditFilter === 'book_viewing' ? 'btn-primary' : 'btn-outline'}`}
+                            style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                          >
+                            📅 Viewings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})
+                          </button>
+                          <button
+                            onClick={() => setAuditFilter('sms')}
+                            className={`btn ${auditFilter === 'sms' ? 'btn-primary' : 'btn-outline'}`}
+                            style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '14px' }}
+                          >
+                            📱 SMS ({contactLogs.filter((l) => l.actionType === 'sms').length})
+                          </button>
+                        </div>
+
+                        {/* Mobile Lead Select Dropdown */}
+                        <div className={styles.mobileFilters} style={{ marginBottom: '12px' }}>
+                          <select
+                            value={auditFilter}
+                            onChange={(e) => setAuditFilter(e.target.value as 'all' | 'call' | 'whatsapp' | 'book_viewing' | 'sms')}
+                            className="form-control"
+                            style={{ fontSize: '0.85rem', fontWeight: 700, padding: '8px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-surface)' }}
+                            aria-label="Filter Leads"
+                          >
+                            <option value="all">🔍 All Inquiry Leads ({contactLogs.length})</option>
+                            <option value="call">📞 Phone Calls ({contactLogs.filter((l) => l.actionType === 'call').length})</option>
+                            <option value="whatsapp">💬 WhatsApp Inquiries ({contactLogs.filter((l) => l.actionType === 'whatsapp').length})</option>
+                            <option value="book_viewing">📅 Viewing Bookings ({contactLogs.filter((l) => l.actionType === 'book_viewing').length})</option>
+                            <option value="sms">📱 SMS Leads ({contactLogs.filter((l) => l.actionType === 'sms').length})</option>
+                          </select>
+                        </div>
+
+                        <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
+                          <table className={styles.table}>
+                            <thead>
+                              <tr>
+                                <th style={{ width: '40px', textAlign: 'center' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={filteredContactLogs.length > 0 && filteredContactLogs.every((l) => selectedContactLogIds.includes(l.id))}
+                                    onChange={() => handleSelectAllContactLogs(filteredContactLogs)}
+                                    aria-label="Select all contact inquiry logs"
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                  />
+                                </th>
+                                <th>Timestamp</th>
+                                <th>Customer Name</th>
+                                <th>Customer Phone</th>
+                                <th>Action Type</th>
+                                <th>Landlord Number</th>
+                                <th>Property Title</th>
+                                <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredContactLogs.length === 0 ? (
+                                <tr>
+                                  <td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                                    {auditSearch ? 'No matching contact records found.' : 'No contact lead records found.'}
+                                  </td>
+                                </tr>
+                              ) : (
+                                filteredContactLogs.map((log) => {
+                                  const isSelected = selectedContactLogIds.includes(log.id);
+                                  return (
+                                    <tr key={log.id} style={{ backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.04)' : undefined }}>
+                                      <td style={{ textAlign: 'center' }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() => handleToggleSelectContactLog(log.id)}
+                                          aria-label={`Select contact log ${log.id}`}
+                                          style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                        />
+                                      </td>
+                                      <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                                        {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                      </td>
+                                      <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{log.customerName}</td>
+                                      <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.customerPhone}</td>
+                                      <td>
+                                        <span className="badge badge-available" style={{ fontSize: '0.68rem', padding: '3px 8px', textTransform: 'capitalize' }}>
+                                          {log.actionType === 'call' && '📞 Phone Call'}
+                                          {log.actionType === 'whatsapp' && '💬 WhatsApp'}
+                                          {log.actionType === 'book_viewing' && '📅 Viewing'}
+                                          {log.actionType === 'sms' && '📱 SMS Lead'}
+                                          {!['call', 'whatsapp', 'book_viewing', 'sms'].includes(log.actionType) && log.actionType}
+                                        </span>
+                                      </td>
+                                      <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{log.landlordPhone}</td>
+                                      <td style={{ color: 'var(--text-primary)' }}>
+                                        {log.property ? (
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                            <Link
+                                              href={`/properties/${log.property.id}`}
+                                              target="_blank"
+                                              style={{
+                                                color: 'var(--text-primary)',
+                                                fontWeight: 700,
+                                                fontSize: '0.86rem',
+                                                textDecoration: 'none',
+                                                lineHeight: 1.35
+                                              }}
+                                              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--primary)')}
+                                              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+                                            >
+                                              {log.property.title}
+                                            </Link>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
+                                              {log.property.price !== undefined && log.property.price !== null && (
+                                                <span style={{ fontWeight: 800, color: 'var(--primary)' }}>
+                                                  GH₵{log.property.price.toLocaleString()}
+                                                </span>
+                                              )}
+                                              {log.property.location && (
+                                                <>
+                                                  <span style={{ opacity: 0.4 }}>•</span>
+                                                  <span style={{ color: 'var(--text-muted)' }}>{log.property.location}</span>
+                                                </>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>N/A</span>
+                                        )}
+                                      </td>
+                                      <td style={{ textAlign: 'center' }}>
+                                        <button
+                                          onClick={() => handleDeleteSelectedContactLogs([log.id])}
+                                          disabled={actionLoading}
+                                          title="Delete this contact record"
+                                          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                          onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
+                                          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                                        >
+                                          <Trash2 size={15} />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Mobile Contact Cards */}
+                        <div className={styles.mobileCardList}>
+                          {filteredContactLogs.length === 0 ? (
+                            <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>{auditSearch ? 'No matching contact records.' : 'No contact records found.'}</p>
+                          ) : (
+                            filteredContactLogs.map((log) => {
+                              const isSelected = selectedContactLogIds.includes(log.id);
+                              return (
+                                <div key={log.id} className={styles.adminCardItem} style={{ border: isSelected ? '1px solid var(--primary)' : undefined }}>
+                                  <div className={styles.adminCardHeader}>
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => handleToggleSelectContactLog(log.id)}
+                                        style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--primary)', flexShrink: 0 }}
+                                      />
+                                      <div style={{ minWidth: 0, flex: 1 }}>
+                                        <div className={styles.adminCardTitle} style={{ fontSize: '0.98rem', fontWeight: 800, wordBreak: 'break-word' }}>{log.customerName}</div>
+                                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '2px', wordBreak: 'break-all' }}>
+                                          👤 Phone: <a href={`tel:${log.customerPhone}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>{log.customerPhone}</a>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                      <span className={`badge ${log.actionType === 'whatsapp' ? 'badge-pending' :
+                                        log.actionType === 'book_viewing' ? 'badge-primary' : 'badge-available'
+                                        }`} style={{ fontSize: '0.65rem' }}>
+                                        {log.actionType}
+                                      </span>
+                                      <button
+                                        onClick={() => handleDeleteSelectedContactLogs([log.id])}
+                                        disabled={actionLoading}
+                                        title="Delete contact record"
+                                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '2px', cursor: 'pointer' }}
+                                      >
+                                        <Trash2 size={15} style={{ color: '#EF4444' }} />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', paddingLeft: '28px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '0.82rem', color: 'var(--text-secondary)', gap: '8px' }}>
+                                      <span style={{ flexShrink: 0 }}>🏢 Property:</span>
+                                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right', wordBreak: 'break-word' }}>
+                                        {log.property ? (
+                                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                                            <Link href={`/properties/${log.property.id}`} target="_blank" style={{ color: 'var(--text-primary)', fontWeight: 700, textDecoration: 'none' }}>
+                                              {log.property.title}
+                                            </Link>
+                                            {log.property.price !== undefined && log.property.price !== null && (
+                                              <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 800 }}>
+                                                GH₵{log.property.price.toLocaleString()}
+                                              </span>
+                                            )}
+                                          </div>
+                                        ) : 'N/A'}
+                                      </span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)', flexWrap: 'wrap', gap: '6px' }}>
+                                      <span style={{ flexShrink: 0 }}>📞 Landlord:</span>
+                                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                        <a href={`tel:${log.landlordPhone}`} style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{log.landlordPhone}</a>
+                                        <a href={`tel:${log.landlordPhone}`} title="Call Landlord" style={{ color: 'var(--primary)', fontSize: '0.9rem', display: 'inline-flex' }}>
+                                          📞
+                                        </a>
+                                        {(() => {
+                                          const cleanWa = (log.landlordPhone || '').replace(/[^0-9]/g, '');
+                                          const waTarget = cleanWa.startsWith('233') ? cleanWa : (cleanWa.startsWith('0') ? '233' + cleanWa.substring(1) : (cleanWa.length === 9 ? '233' + cleanWa : cleanWa));
+                                          return (
+                                            <a href={`https://wa.me/${waTarget}`} target="_blank" rel="noopener noreferrer" title="WhatsApp Landlord" style={{ color: '#25D366', fontSize: '0.9rem', display: 'inline-flex' }}>
+                                              💬
+                                            </a>
+                                          );
+                                        })()}
+                                      </span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                      <span>🕒 Time:</span>
+                                      <span>
+                                        {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
-                  </>
-                  )}
-                </div>
-              );
-            })()}
+                );
+              })()}
 
               {/* System Security Audit Logs Section (Second) */}
               {(auditLogView === 'all' || auditLogView === 'system') && (() => {
@@ -2944,16 +2973,16 @@ function AdminPageContent() {
 
                 return (
                   <div>
-                    <div 
+                    <div
                       onClick={() => setIsSecurityAuditsCollapsed(!isSecurityAuditsCollapsed)}
-                      style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        marginBottom: isSecurityAuditsCollapsed ? '0px' : '14px', 
-                        padding: '12px 16px', 
-                        borderRadius: '12px', 
-                        backgroundColor: 'var(--bg-surface-secondary)', 
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: isSecurityAuditsCollapsed ? '0px' : '14px',
+                        padding: '12px 16px',
+                        borderRadius: '12px',
+                        backgroundColor: 'var(--bg-surface-secondary)',
                         border: '1px solid var(--border)',
                         cursor: 'pointer',
                         userSelect: 'none',
@@ -2973,158 +3002,157 @@ function AdminPageContent() {
                     {!isSecurityAuditsCollapsed && (
                       <>
 
-                    {/* Batch Selection Action Bar for Security Audits */}
-                    {selectedAuditLogIds.length > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', marginBottom: '14px', animation: 'fadeIn 0.2s ease' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <CheckCircle size={15} /> {selectedAuditLogIds.length} security log(s) selected
-                        </span>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <button
-                            onClick={() => handleDeleteSelectedAuditLogs()}
-                            disabled={actionLoading}
-                            className="btn"
-                            style={{ background: '#EF4444', color: '#FFFFFF', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                          >
-                            <Trash2 size={13} /> Delete Selected ({selectedAuditLogIds.length})
-                          </button>
-                          <button
-                            onClick={() => setSelectedAuditLogIds([])}
-                            className="btn btn-outline"
-                            style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                        {/* Batch Selection Action Bar for Security Audits */}
+                        {selectedAuditLogIds.length > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', marginBottom: '14px', animation: 'fadeIn 0.2s ease' }}>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <CheckCircle size={15} /> {selectedAuditLogIds.length} security log(s) selected
+                            </span>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <button
+                                onClick={() => handleDeleteSelectedAuditLogs()}
+                                disabled={actionLoading}
+                                className="btn"
+                                style={{ background: '#EF4444', color: '#FFFFFF', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                              >
+                                <Trash2 size={13} /> Delete Selected ({selectedAuditLogIds.length})
+                              </button>
+                              <button
+                                onClick={() => setSelectedAuditLogIds([])}
+                                className="btn btn-outline"
+                                style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
-                    <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
-                      <table className={styles.table}>
-                        <thead>
-                          <tr>
-                            <th style={{ width: '40px', textAlign: 'center' }}>
-                              <input
-                                type="checkbox"
-                                checked={filteredAuditLogs.length > 0 && filteredAuditLogs.every((l) => selectedAuditLogIds.includes(l.id))}
-                                onChange={() => handleSelectAllAuditLogs(filteredAuditLogs)}
-                                aria-label="Select all security audit logs"
-                                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
-                              />
-                            </th>
-                            <th>Timestamp</th>
-                            <th>Action</th>
-                            <th>Details</th>
-                            <th>User / Email</th>
-                            <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                        <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
+                          <table className={styles.table}>
+                            <thead>
+                              <tr>
+                                <th style={{ width: '40px', textAlign: 'center' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={filteredAuditLogs.length > 0 && filteredAuditLogs.every((l) => selectedAuditLogIds.includes(l.id))}
+                                    onChange={() => handleSelectAllAuditLogs(filteredAuditLogs)}
+                                    aria-label="Select all security audit logs"
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                  />
+                                </th>
+                                <th>Timestamp</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                                <th>User / Email</th>
+                                <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredAuditLogs.length === 0 ? (
+                                <tr>
+                                  <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                                    {auditSearch ? 'No security logs match your search.' : 'No security audit logs recorded yet. Crucial actions (logins, password resets, role updates) will appear here.'}
+                                  </td>
+                                </tr>
+                              ) : (
+                                filteredAuditLogs.map((log) => {
+                                  const isSelected = selectedAuditLogIds.includes(log.id);
+                                  return (
+                                    <tr key={log.id} style={{ backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.04)' : undefined }}>
+                                      <td style={{ textAlign: 'center' }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() => handleToggleSelectAuditLog(log.id)}
+                                          aria-label={`Select log ${log.id}`}
+                                          style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                        />
+                                      </td>
+                                      <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                                        {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                      </td>
+                                      <td>
+                                        <span className={`badge ${log.action.includes('RESET') ? 'badge-primary' :
+                                          log.action.includes('LOGIN') ? 'badge-available' :
+                                            log.action.includes('ROLE') ? 'badge-primary' : 'badge-available'
+                                          }`} style={{ fontSize: '0.68rem', padding: '3px 8px', fontWeight: 700 }}>
+                                          {log.action}
+                                        </span>
+                                      </td>
+                                      <td style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
+                                        {log.details}
+                                      </td>
+                                      <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
+                                        {log.userEmail || 'System'}
+                                      </td>
+                                      <td style={{ textAlign: 'center' }}>
+                                        <button
+                                          onClick={() => handleDeleteSelectedAuditLogs([log.id])}
+                                          disabled={actionLoading}
+                                          title="Delete this audit log"
+                                          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                          onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
+                                          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                                        >
+                                          <Trash2 size={15} />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Mobile Security Audit Cards */}
+                        <div className={styles.mobileCardList}>
                           {filteredAuditLogs.length === 0 ? (
-                            <tr>
-                              <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                                {auditSearch ? 'No security logs match your search.' : 'No security audit logs recorded yet. Crucial actions (logins, password resets, role updates) will appear here.'}
-                              </td>
-                            </tr>
+                            <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>{auditSearch ? 'No matching security records.' : 'No security audit logs recorded yet.'}</p>
                           ) : (
                             filteredAuditLogs.map((log) => {
                               const isSelected = selectedAuditLogIds.includes(log.id);
                               return (
-                                <tr key={log.id} style={{ backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.04)' : undefined }}>
-                                  <td style={{ textAlign: 'center' }}>
-                                    <input
-                                      type="checkbox"
-                                      checked={isSelected}
-                                      onChange={() => handleToggleSelectAuditLog(log.id)}
-                                      aria-label={`Select log ${log.id}`}
-                                      style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
-                                    />
-                                  </td>
-                                  <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                                    {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                                  </td>
-                                  <td>
-                                    <span className={`badge ${
-                                      log.action.includes('RESET') ? 'badge-primary' :
-                                      log.action.includes('LOGIN') ? 'badge-available' :
-                                      log.action.includes('ROLE') ? 'badge-primary' : 'badge-available'
-                                    }`} style={{ fontSize: '0.68rem', padding: '3px 8px', fontWeight: 700 }}>
-                                      {log.action}
-                                    </span>
-                                  </td>
-                                  <td style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                                    {log.details}
-                                  </td>
-                                  <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
-                                    {log.userEmail || 'System'}
-                                  </td>
-                                  <td style={{ textAlign: 'center' }}>
-                                    <button
-                                      onClick={() => handleDeleteSelectedAuditLogs([log.id])}
-                                      disabled={actionLoading}
-                                      title="Delete this audit log"
-                                      style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                                      onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
-                                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-                                    >
-                                      <Trash2 size={15} />
-                                    </button>
-                                  </td>
-                                </tr>
+                                <div key={log.id} className={styles.adminCardItem} style={{ border: isSelected ? '1px solid var(--primary)' : undefined }}>
+                                  <div className={styles.adminCardHeader}>
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => handleToggleSelectAuditLog(log.id)}
+                                        style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                      />
+                                      <div>
+                                        <div className={styles.adminCardTitle} style={{ fontSize: '0.9rem' }}>{log.details}</div>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                          {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>{log.action}</span>
+                                      <button
+                                        onClick={() => handleDeleteSelectedAuditLogs([log.id])}
+                                        disabled={actionLoading}
+                                        title="Delete log"
+                                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '2px', cursor: 'pointer' }}
+                                      >
+                                        <Trash2 size={15} style={{ color: '#EF4444' }} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                  {log.userEmail && (
+                                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', paddingLeft: '28px' }}>
+                                      User: {log.userEmail}
+                                    </div>
+                                  )}
+                                </div>
                               );
                             })
                           )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Mobile Security Audit Cards */}
-                    <div className={styles.mobileCardList}>
-                      {filteredAuditLogs.length === 0 ? (
-                        <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>{auditSearch ? 'No matching security records.' : 'No security audit logs recorded yet.'}</p>
-                      ) : (
-                        filteredAuditLogs.map((log) => {
-                          const isSelected = selectedAuditLogIds.includes(log.id);
-                          return (
-                            <div key={log.id} className={styles.adminCardItem} style={{ border: isSelected ? '1px solid var(--primary)' : undefined }}>
-                              <div className={styles.adminCardHeader}>
-                                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={() => handleToggleSelectAuditLog(log.id)}
-                                    style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--primary)' }}
-                                  />
-                                  <div>
-                                    <div className={styles.adminCardTitle} style={{ fontSize: '0.9rem' }}>{log.details}</div>
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                      {new Date(isNaN(Number(log.createdAt)) ? log.createdAt : Number(log.createdAt)).toLocaleString()}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>{log.action}</span>
-                                  <button
-                                    onClick={() => handleDeleteSelectedAuditLogs([log.id])}
-                                    disabled={actionLoading}
-                                    title="Delete log"
-                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '2px', cursor: 'pointer' }}
-                                  >
-                                    <Trash2 size={15} style={{ color: '#EF4444' }} />
-                                  </button>
-                                </div>
-                              </div>
-                              {log.userEmail && (
-                                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', paddingLeft: '28px' }}>
-                                  User: {log.userEmail}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                    </>
+                        </div>
+                      </>
                     )}
                   </div>
                 );
@@ -3160,16 +3188,16 @@ function AdminPageContent() {
                             {new Date(isNaN(Number(report.createdAt)) ? report.createdAt : Number(report.createdAt)).toLocaleDateString()}
                           </td>
                           <td>
-                            <span style={{ 
-                              display: 'inline-flex', 
-                              alignItems: 'center', 
-                              gap: '6px', 
-                              padding: '4px 10px', 
-                              borderRadius: '4px', 
-                              fontSize: '0.75rem', 
-                              fontWeight: 700, 
-                              backgroundColor: report.reason.includes('Scam') || report.reason.includes('Fake') ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)', 
-                              color: report.reason.includes('Scam') || report.reason.includes('Fake') ? 'var(--danger)' : '#D97706' 
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              backgroundColor: report.reason.includes('Scam') || report.reason.includes('Fake') ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                              color: report.reason.includes('Scam') || report.reason.includes('Fake') ? 'var(--danger)' : '#D97706'
                             }}>
                               <AlertTriangle size={12} /> {report.reason}
                             </span>
@@ -3177,10 +3205,10 @@ function AdminPageContent() {
                           <td>
                             {report.property ? (
                               <div>
-                                <a 
-                                  href={`/properties/${report.property.id}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
+                                <a
+                                  href={`/properties/${report.property.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
                                   style={{ fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}
                                 >
                                   {report.property.title} (#{report.property.id})
@@ -3195,9 +3223,8 @@ function AdminPageContent() {
                             {report.details || <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No additional details</span>}
                           </td>
                           <td>
-                            <span className={`badge ${
-                              report.status === 'resolved' ? 'badge-available' : report.status === 'dismissed' ? 'badge-rented' : 'badge-primary'
-                            }`} style={{ fontSize: '0.7rem', padding: '4px 8px', textTransform: 'capitalize' }}>
+                            <span className={`badge ${report.status === 'resolved' ? 'badge-available' : report.status === 'dismissed' ? 'badge-rented' : 'badge-primary'
+                              }`} style={{ fontSize: '0.7rem', padding: '4px 8px', textTransform: 'capitalize' }}>
                               {report.status}
                             </span>
                           </td>
@@ -3271,11 +3298,11 @@ function AdminPageContent() {
                     <div key={report.id} className={styles.adminCardItem}>
                       <div className={styles.adminCardHeader}>
                         <div>
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            fontWeight: 700, 
+                          <span style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
                             color: report.reason.includes('Scam') || report.reason.includes('Fake') ? 'var(--danger)' : '#D97706',
-                            display: 'block' 
+                            display: 'block'
                           }}>
                             🚨 {report.reason}
                           </span>
@@ -3283,9 +3310,8 @@ function AdminPageContent() {
                             {report.property ? report.property.title : `Property #${report.propertyId}`}
                           </div>
                         </div>
-                        <span className={`badge ${
-                          report.status === 'resolved' ? 'badge-available' : report.status === 'dismissed' ? 'badge-rented' : 'badge-primary'
-                        }`} style={{ fontSize: '0.68rem' }}>
+                        <span className={`badge ${report.status === 'resolved' ? 'badge-available' : report.status === 'dismissed' ? 'badge-rented' : 'badge-primary'
+                          }`} style={{ fontSize: '0.68rem' }}>
                           {report.status}
                         </span>
                       </div>
@@ -3340,16 +3366,16 @@ function AdminPageContent() {
             <>
               {/* Shareable Links */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                <a 
-                  href="/register-agent" 
-                  target="_blank" 
+                <a
+                  href="/register-agent"
+                  target="_blank"
                   rel="noopener noreferrer"
-                  className="btn btn-outline" 
+                  className="btn btn-outline"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', textDecoration: 'none', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
                 >
                   🛡️ Open Agent Registration
                 </a>
-                <button 
+                <button
                   className="btn btn-outline"
                   onClick={() => {
                     const link = `${window.location.origin}/register-agent`;
@@ -3360,7 +3386,7 @@ function AdminPageContent() {
                 >
                   🔗 Copy Agent Link
                 </button>
-                <button 
+                <button
                   className="btn btn-outline"
                   onClick={() => handleOpenQrModal(`${typeof window !== 'undefined' ? window.location.origin : 'https://horentals.com'}/register-agent`, 'Agent Registration Portal')}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
@@ -3495,24 +3521,24 @@ function AdminPageContent() {
                                   </button>
 
                                   <select
-                                     value={ag.verificationStatus === 'verified' ? 'verified' : 'unverified'}
-                                     onChange={(e) => handleVerifyAgent(ag.id, e.target.value)}
-                                     disabled={actionLoading}
-                                     className={styles.selectRole}
-                                     style={{
-                                       fontSize: '0.76rem',
-                                       padding: '4px 8px',
-                                       fontWeight: 700,
-                                       backgroundColor: ag.verificationStatus === 'verified' ? '#ECFDF5' : '#FEF3C7',
-                                       color: ag.verificationStatus === 'verified' ? '#047857' : '#B45309',
-                                       border: `1px solid ${ag.verificationStatus === 'verified' ? '#10B981' : '#F59E0B'}`,
-                                       borderRadius: 'var(--radius-sm)',
-                                       cursor: 'pointer'
-                                     }}
-                                   >
-                                     <option value="verified" style={{ backgroundColor: '#fff', color: '#047857', fontWeight: 700 }}>✓ Verify</option>
-                                     <option value="unverified" style={{ backgroundColor: '#fff', color: '#B45309', fontWeight: 600 }}>Unverify</option>
-                                   </select>
+                                    value={ag.verificationStatus === 'verified' ? 'verified' : 'unverified'}
+                                    onChange={(e) => handleVerifyAgent(ag.id, e.target.value)}
+                                    disabled={actionLoading}
+                                    className={styles.selectRole}
+                                    style={{
+                                      fontSize: '0.76rem',
+                                      padding: '4px 8px',
+                                      fontWeight: 700,
+                                      backgroundColor: ag.verificationStatus === 'verified' ? '#ECFDF5' : '#FEF3C7',
+                                      color: ag.verificationStatus === 'verified' ? '#047857' : '#B45309',
+                                      border: `1px solid ${ag.verificationStatus === 'verified' ? '#10B981' : '#F59E0B'}`,
+                                      borderRadius: 'var(--radius-sm)',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <option value="verified" style={{ backgroundColor: '#fff', color: '#047857', fontWeight: 700 }}>✓ Verify</option>
+                                    <option value="unverified" style={{ backgroundColor: '#fff', color: '#B45309', fontWeight: 600 }}>Unverify</option>
+                                  </select>
                                 </div>
                               </td>
                             </tr>
@@ -3551,16 +3577,16 @@ function AdminPageContent() {
 
               {/* Shareable Links */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                <a 
-                  href="/landlord-registration" 
-                  target="_blank" 
+                <a
+                  href="/landlord-registration"
+                  target="_blank"
                   rel="noopener noreferrer"
-                  className="btn btn-outline" 
+                  className="btn btn-outline"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', textDecoration: 'none', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
                 >
                   🌐 Open Landlord Form
                 </a>
-                <button 
+                <button
                   className="btn btn-outline"
                   onClick={() => {
                     const link = `${window.location.origin}/landlord-registration`;
@@ -3571,7 +3597,7 @@ function AdminPageContent() {
                 >
                   🔗 Copy Landlord Link
                 </button>
-                <button 
+                <button
                   className="btn btn-outline"
                   onClick={() => handleOpenQrModal(`${typeof window !== 'undefined' ? window.location.origin : 'https://horentals.com'}/landlord-registration`, 'Landlord Property Submission Portal')}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 16px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
@@ -3642,10 +3668,9 @@ function AdminPageContent() {
                               </div>
 
                               <div className={styles.landlordBadgesRow} style={{ marginTop: '8px' }}>
-                                <span 
-                                  className={`${styles.landlordBadge} ${
-                                    r.status === 'Verified' ? styles.landlordBadgeVerified : styles.landlordBadgePending
-                                  }`}
+                                <span
+                                  className={`${styles.landlordBadge} ${r.status === 'Verified' ? styles.landlordBadgeVerified : styles.landlordBadgePending
+                                    }`}
                                 >
                                   {r.status}
                                 </span>
@@ -3654,13 +3679,13 @@ function AdminPageContent() {
                                     Agreement Signed
                                   </span>
                                 )}
-                                <span 
-                                  className={styles.landlordBadge} 
-                                  style={{ 
-                                    backgroundColor: r.plan === 'Premium' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.12)', 
-                                    color: r.plan === 'Premium' ? '#D97706' : '#2563EB', 
+                                <span
+                                  className={styles.landlordBadge}
+                                  style={{
+                                    backgroundColor: r.plan === 'Premium' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.12)',
+                                    color: r.plan === 'Premium' ? '#D97706' : '#2563EB',
                                     border: `1px solid ${r.plan === 'Premium' ? '#F59E0B' : '#93C5FD'}`,
-                                    fontWeight: 700 
+                                    fontWeight: 700
                                   }}
                                 >
                                   {r.plan === 'Premium' ? '⭐ Premium Plan (GHS 100)' : 'Basic Plan (GHS 50)'}
@@ -3711,8 +3736,8 @@ function AdminPageContent() {
                               </a>
 
                               {r.status !== 'Verified' ? (
-                                <button 
-                                  className="btn btn-primary" 
+                                <button
+                                  className="btn btn-primary"
                                   style={{ width: '100%', padding: '7px 12px', fontSize: '0.8rem', backgroundColor: '#10B981', borderColor: '#10B981', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 700 }}
                                   onClick={() => handlePublishLandlord(r.id)}
                                   disabled={actionLoading}
@@ -3720,8 +3745,8 @@ function AdminPageContent() {
                                   <UploadCloud size={14} /> Publish Listing
                                 </button>
                               ) : (
-                                <button 
-                                  className="btn btn-outline" 
+                                <button
+                                  className="btn btn-outline"
                                   style={{ width: '100%', padding: '7px 12px', fontSize: '0.8rem', color: '#10B981', borderColor: '#10B981', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 700 }}
                                   onClick={() => handlePublishLandlord(r.id)}
                                   disabled={actionLoading}
@@ -3731,24 +3756,24 @@ function AdminPageContent() {
                                 </button>
                               )}
 
-                              <button 
-                                className="btn btn-outline" 
+                              <button
+                                className="btn btn-outline"
                                 style={{ width: '100%', padding: '7px 12px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', borderColor: isExpanded ? 'var(--primary)' : 'var(--border)' }}
                                 onClick={() => setExpandedLandlordId(isExpanded ? null : r.id)}
                               >
                                 <Building size={14} /> {isExpanded ? 'Hide Properties' : `Properties (${matchingProps.length})`} {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                               </button>
 
-                              <button 
-                                className="btn btn-outline" 
+                              <button
+                                className="btn btn-outline"
                                 style={{ width: '100%', padding: '7px 12px', fontSize: '0.78rem' }}
                                 onClick={() => setSelectedLandlord(r)}
                               >
                                 Review Details
                               </button>
 
-                              <button 
-                                className="btn btn-outline" 
+                              <button
+                                className="btn btn-outline"
                                 style={{ width: '100%', padding: '6px 12px', fontSize: '0.75rem', color: 'var(--primary)', borderColor: 'var(--primary-light)' }}
                                 onClick={() => handleDeleteLandlord(r.id)}
                                 disabled={actionLoading}
@@ -3838,314 +3863,314 @@ function AdminPageContent() {
           ) : activeTab === 'traffic' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
-            {/* ── Section: Key Metrics ──────────────────────────────────── */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-                <div>
-                  <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Overview</p>
-                  <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Page View Metrics</h2>
+              {/* ── Section: Key Metrics ──────────────────────────────────── */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Overview</p>
+                    <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Page View Metrics</h2>
+                  </div>
+                  {/* Period Selector */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface-secondary)', borderRadius: '24px', padding: '4px', border: '1px solid var(--border)' }}>
+                    {(['today', '7d', '30d', '90d', 'all'] as const).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setAnalyticsPeriod(p)}
+                        style={{
+                          padding: '5px 13px',
+                          borderRadius: '20px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          border: 'none',
+                          backgroundColor: analyticsPeriod === p ? 'var(--primary)' : 'transparent',
+                          color: analyticsPeriod === p ? '#fff' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {p === 'today' ? 'Today' : p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : p === '90d' ? '3 Mo' : 'All Time'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                {/* Period Selector */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface-secondary)', borderRadius: '24px', padding: '4px', border: '1px solid var(--border)' }}>
-                  {(['today','7d','30d','90d','all'] as const).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setAnalyticsPeriod(p)}
-                      style={{
-                        padding: '5px 13px',
-                        borderRadius: '20px',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        border: 'none',
-                        backgroundColor: analyticsPeriod === p ? 'var(--primary)' : 'transparent',
-                        color: analyticsPeriod === p ? '#fff' : 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {p === 'today' ? 'Today' : p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : p === '90d' ? '3 Mo' : 'All Time'}
-                    </button>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+                  {[
+                    { label: 'Today', value: analytics?.todayViews ?? '—', color: '#06B6D4', icon: '☀️' },
+                    { label: 'This Week', value: analytics?.weekViews ?? '—', color: '#8B5CF6', icon: '📅' },
+                    { label: 'This Month', value: analytics?.monthViews ?? '—', color: '#10B981', icon: '📆' },
+                    { label: 'All Time', value: analytics?.totalViews ?? '—', color: 'var(--primary)', icon: '🌐' },
+                  ].map(({ label, value, color, icon }) => (
+                    <div key={label} className="card glass" style={{ padding: '18px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', borderTop: `3px solid ${color}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{label}</span>
+                        <span style={{ fontSize: '1rem' }}>{icon}</span>
+                      </div>
+                      <div style={{ fontSize: '2rem', fontWeight: 900, color, lineHeight: 1 }}>
+                        {analyticsLoading ? <Loader size={20} className="animate-spin" /> : value?.toLocaleString?.() ?? value}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
-                {[
-                  { label: 'Today', value: analytics?.todayViews ?? '—', color: '#06B6D4', icon: '☀️' },
-                  { label: 'This Week', value: analytics?.weekViews ?? '—', color: '#8B5CF6', icon: '📅' },
-                  { label: 'This Month', value: analytics?.monthViews ?? '—', color: '#10B981', icon: '📆' },
-                  { label: 'All Time', value: analytics?.totalViews ?? '—', color: 'var(--primary)', icon: '🌐' },
-                ].map(({ label, value, color, icon }) => (
-                  <div key={label} className="card glass" style={{ padding: '18px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', borderTop: `3px solid ${color}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{label}</span>
-                      <span style={{ fontSize: '1rem' }}>{icon}</span>
-                    </div>
-                    <div style={{ fontSize: '2rem', fontWeight: 900, color, lineHeight: 1 }}>
-                      {analyticsLoading ? <Loader size={20} className="animate-spin" /> : value?.toLocaleString?.() ?? value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ── Section: Views Over Time ───────────────────────────────── */}
-            <div>
-              <div style={{ marginBottom: '14px' }}>
-                <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Trend</p>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Views Over Time</h2>
-              </div>
-              <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                {analytics?.viewsOverTime?.length ? (() => {
-                  const total = analytics.viewsOverTime.reduce((s: number, d: any) => s + d.count, 0);
-                  const peak = Math.max(...analytics.viewsOverTime.map((d: any) => d.count));
-                  return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                      <div>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Total Views</div>
-                        <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary)' }}>{total.toLocaleString()}</div>
-                      </div>
-                      <div style={{ width: '1px', height: '32px', background: 'var(--border)' }} />
-                      <div>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Peak Day</div>
-                        <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f59e0b' }}>{peak.toLocaleString()}</div>
-                      </div>
-                    </div>
-                  );
-                })() : null}
-                {analyticsLoading ? (
-                  <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader size={28} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
-                ) : analytics?.viewsOverTime?.length ? (() => {
-                  const visible = analytics.viewsOverTime.slice(-30);
-                  const maxCount = Math.max(...visible.map((d: any) => d.count), 1);
-                  const CHART_H = 180;
-                  const yTicks = [1, 0.75, 0.5, 0.25, 0].map(pct => Math.round(pct * maxCount));
-                  const step = visible.length > 20 ? 5 : visible.length > 10 ? 3 : 1;
-                  return (
-                    <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
-                      <div style={{ display: 'flex', minWidth: `${Math.max(visible.length * 28, 320)}px` }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingRight: '8px', height: `${CHART_H}px`, minWidth: '34px', flexShrink: 0 }}>
-                          {yTicks.map((val) => (
-                            <span key={val} style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'right', lineHeight: 1 }}>{val}</span>
-                          ))}
+              {/* ── Section: Views Over Time ───────────────────────────────── */}
+              <div>
+                <div style={{ marginBottom: '14px' }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Trend</p>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Views Over Time</h2>
+                </div>
+                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                  {analytics?.viewsOverTime?.length ? (() => {
+                    const total = analytics.viewsOverTime.reduce((s: number, d: any) => s + d.count, 0);
+                    const peak = Math.max(...analytics.viewsOverTime.map((d: any) => d.count));
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Total Views</div>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary)' }}>{total.toLocaleString()}</div>
                         </div>
-                        <div style={{ flex: 1, position: 'relative' }}>
-                          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `${CHART_H}px`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none', zIndex: 0 }}>
-                            {yTicks.map((val, i) => (
-                              <div key={val} style={{ borderTop: `1px ${i === 4 ? 'solid' : 'dashed'} var(--border)`, opacity: i === 4 ? 1 : 0.5, width: '100%' }} />
+                        <div style={{ width: '1px', height: '32px', background: 'var(--border)' }} />
+                        <div>
+                          <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Peak Day</div>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f59e0b' }}>{peak.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    );
+                  })() : null}
+                  {analyticsLoading ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader size={28} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
+                  ) : analytics?.viewsOverTime?.length ? (() => {
+                    const visible = analytics.viewsOverTime.slice(-30);
+                    const maxCount = Math.max(...visible.map((d: any) => d.count), 1);
+                    const CHART_H = 180;
+                    const yTicks = [1, 0.75, 0.5, 0.25, 0].map(pct => Math.round(pct * maxCount));
+                    const step = visible.length > 20 ? 5 : visible.length > 10 ? 3 : 1;
+                    return (
+                      <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
+                        <div style={{ display: 'flex', minWidth: `${Math.max(visible.length * 28, 320)}px` }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingRight: '8px', height: `${CHART_H}px`, minWidth: '34px', flexShrink: 0 }}>
+                            {yTicks.map((val) => (
+                              <span key={val} style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'right', lineHeight: 1 }}>{val}</span>
                             ))}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: `${CHART_H}px`, position: 'relative', zIndex: 1 }}>
-                            {visible.map((d: any) => {
-                              const barH = d.count > 0 ? Math.max(4, Math.round((d.count / maxCount) * CHART_H)) : 0;
-                              const isPeak = d.count === maxCount && d.count > 0;
-                              return (
-                                <div key={d.date} title={`${d.date}: ${d.count} view${d.count !== 1 ? 's' : ''}`} style={{ flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', position: 'relative', cursor: 'default' }}>
-                                  {isPeak && (
-                                    <span style={{ position: 'absolute', bottom: `${barH + 4}px`, fontSize: '0.62rem', fontWeight: 800, color: '#f59e0b', whiteSpace: 'nowrap', background: 'var(--bg-surface)', padding: '0 3px', borderRadius: '3px', zIndex: 3, border: '1px solid #f59e0b22' }}>
-                                      {d.count}
+                          <div style={{ flex: 1, position: 'relative' }}>
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `${CHART_H}px`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none', zIndex: 0 }}>
+                              {yTicks.map((val, i) => (
+                                <div key={val} style={{ borderTop: `1px ${i === 4 ? 'solid' : 'dashed'} var(--border)`, opacity: i === 4 ? 1 : 0.5, width: '100%' }} />
+                              ))}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: `${CHART_H}px`, position: 'relative', zIndex: 1 }}>
+                              {visible.map((d: any) => {
+                                const barH = d.count > 0 ? Math.max(4, Math.round((d.count / maxCount) * CHART_H)) : 0;
+                                const isPeak = d.count === maxCount && d.count > 0;
+                                return (
+                                  <div key={d.date} title={`${d.date}: ${d.count} view${d.count !== 1 ? 's' : ''}`} style={{ flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', position: 'relative', cursor: 'default' }}>
+                                    {isPeak && (
+                                      <span style={{ position: 'absolute', bottom: `${barH + 4}px`, fontSize: '0.62rem', fontWeight: 800, color: '#f59e0b', whiteSpace: 'nowrap', background: 'var(--bg-surface)', padding: '0 3px', borderRadius: '3px', zIndex: 3, border: '1px solid #f59e0b22' }}>
+                                        {d.count}
+                                      </span>
+                                    )}
+                                    <div style={{
+                                      width: '100%', borderRadius: '4px 4px 0 0', height: `${barH}px`,
+                                      background: isPeak ? 'linear-gradient(180deg, #fbbf24 0%, #d97706 100%)' : d.count > 0 ? 'linear-gradient(180deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 60%, #000) 100%)' : 'transparent',
+                                      boxShadow: isPeak ? '0 0 10px rgba(245,158,11,0.35)' : undefined,
+                                      transition: 'height 0.4s cubic-bezier(.4,0,.2,1)',
+                                    }} />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div style={{ display: 'flex', gap: '3px', marginTop: '8px', height: '36px' }}>
+                              {visible.map((d: any, i: number) => (
+                                <div key={d.date} style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', overflow: 'visible' }}>
+                                  {(i % step === 0 || i === visible.length - 1) && (
+                                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', transform: 'rotate(-40deg)', whiteSpace: 'nowrap', transformOrigin: 'top center', display: 'block', fontWeight: 600 }}>
+                                      {d.date.slice(5)}
                                     </span>
                                   )}
-                                  <div style={{
-                                    width: '100%', borderRadius: '4px 4px 0 0', height: `${barH}px`,
-                                    background: isPeak ? 'linear-gradient(180deg, #fbbf24 0%, #d97706 100%)' : d.count > 0 ? 'linear-gradient(180deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 60%, #000) 100%)' : 'transparent',
-                                    boxShadow: isPeak ? '0 0 10px rgba(245,158,11,0.35)' : undefined,
-                                    transition: 'height 0.4s cubic-bezier(.4,0,.2,1)',
-                                  }} />
                                 </div>
-                              );
-                            })}
-                          </div>
-                          <div style={{ display: 'flex', gap: '3px', marginTop: '8px', height: '36px' }}>
-                            {visible.map((d: any, i: number) => (
-                              <div key={d.date} style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', overflow: 'visible' }}>
-                                {(i % step === 0 || i === visible.length - 1) && (
-                                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', transform: 'rotate(-40deg)', whiteSpace: 'nowrap', transformOrigin: 'top center', display: 'block', fontWeight: 600 }}>
-                                    {d.date.slice(5)}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })() : (
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No view data for this period.</p>
-                )}
-              </div>
-            </div>
-
-            {/* ── Section: Sources + Top Properties (2-col) ─────────────── */}
-            <div>
-              <div style={{ marginBottom: '14px' }}>
-                <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Breakdown</p>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Traffic Sources & Top Listings</h2>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-
-                {/* Traffic Sources */}
-                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                    <PieChart size={18} style={{ color: 'var(--primary)' }} />
-                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0 }}>Traffic Sources</h3>
-                  </div>
-                  {analyticsLoading ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Loader size={24} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
-                  ) : analytics?.sources?.length ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {analytics.sources.map((s: any) => {
-                        const srcColors: Record<string, string> = {
-                          'TikTok': '#010101', 'Instagram': '#E1306C', 'Facebook': '#1877F2',
-                          'WhatsApp': '#25D366', 'Google': '#4285F4', 'X / Twitter': '#1DA1F2',
-                          'Direct / Unknown': '#94A3B8',
-                        };
-                        const color = srcColors[s.source] || 'var(--primary)';
-                        return (
-                          <div key={s.source}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'block' }} />
-                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{s.source}</span>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
-                                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{s.count}</span>
-                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>{s.percentage}%</span>
-                              </div>
-                            </div>
-                            <div style={{ height: '5px', borderRadius: '99px', backgroundColor: 'var(--border)', overflow: 'hidden' }}>
-                              <div style={{ height: '100%', borderRadius: '99px', backgroundColor: color, width: `${s.percentage}%`, transition: 'width 0.6s cubic-bezier(.4,0,.2,1)' }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6 }}>No source data yet. UTM tracking will populate this as visitors arrive.</p>
-                  )}
-                </div>
-
-                {/* Top Properties */}
-                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                    <Building size={18} style={{ color: 'var(--primary)' }} />
-                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0 }}>Top Viewed Properties</h3>
-                  </div>
-                  {analyticsLoading ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Loader size={24} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
-                  ) : analytics?.topProperties?.length ? (() => {
-                    const maxViews = Math.max(...analytics.topProperties.map((p: any) => p.views), 1);
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {analytics.topProperties.map((p: any, i: number) => (
-                          <div key={p.propertyId}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                              <span style={{
-                                minWidth: '22px', height: '22px', borderRadius: '6px',
-                                background: i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#b45309' : 'var(--bg-surface-secondary)',
-                                color: i < 3 ? '#fff' : 'var(--text-muted)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '0.65rem', fontWeight: 900, flexShrink: 0,
-                              }}>{i + 1}</span>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: '0.82rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{p.title}</div>
-                                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600 }}>ID #{p.propertyId}</div>
-                              </div>
-                              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', flexShrink: 0 }}>{p.views.toLocaleString()} <span style={{ fontWeight: 600, fontSize: '0.7rem', color: 'var(--text-muted)' }}>views</span></span>
-                            </div>
-                            <div style={{ height: '3px', borderRadius: '99px', backgroundColor: 'var(--border)', overflow: 'hidden', marginLeft: '32px' }}>
-                              <div style={{ height: '100%', borderRadius: '99px', background: i === 0 ? '#f59e0b' : 'var(--primary)', width: `${Math.round((p.views / maxViews) * 100)}%`, transition: 'width 0.5s ease' }} />
-                            </div>
-                          </div>
-                        ))}
                       </div>
                     );
                   })() : (
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6 }}>No property view data yet.</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No view data for this period.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Section: Sources + Top Properties (2-col) ─────────────── */}
+              <div>
+                <div style={{ marginBottom: '14px' }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Breakdown</p>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Traffic Sources & Top Listings</h2>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+
+                  {/* Traffic Sources */}
+                  <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                      <PieChart size={18} style={{ color: 'var(--primary)' }} />
+                      <h3 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0 }}>Traffic Sources</h3>
+                    </div>
+                    {analyticsLoading ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Loader size={24} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
+                    ) : analytics?.sources?.length ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        {analytics.sources.map((s: any) => {
+                          const srcColors: Record<string, string> = {
+                            'TikTok': '#010101', 'Instagram': '#E1306C', 'Facebook': '#1877F2',
+                            'WhatsApp': '#25D366', 'Google': '#4285F4', 'X / Twitter': '#1DA1F2',
+                            'Direct / Unknown': '#94A3B8',
+                          };
+                          const color = srcColors[s.source] || 'var(--primary)';
+                          return (
+                            <div key={s.source}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'block' }} />
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{s.source}</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
+                                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{s.count}</span>
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>{s.percentage}%</span>
+                                </div>
+                              </div>
+                              <div style={{ height: '5px', borderRadius: '99px', backgroundColor: 'var(--border)', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', borderRadius: '99px', backgroundColor: color, width: `${s.percentage}%`, transition: 'width 0.6s cubic-bezier(.4,0,.2,1)' }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6 }}>No source data yet. UTM tracking will populate this as visitors arrive.</p>
+                    )}
+                  </div>
+
+                  {/* Top Properties */}
+                  <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                      <Building size={18} style={{ color: 'var(--primary)' }} />
+                      <h3 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0 }}>Top Viewed Properties</h3>
+                    </div>
+                    {analyticsLoading ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Loader size={24} className="animate-spin" style={{ color: 'var(--primary)' }} /></div>
+                    ) : analytics?.topProperties?.length ? (() => {
+                      const maxViews = Math.max(...analytics.topProperties.map((p: any) => p.views), 1);
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {analytics.topProperties.map((p: any, i: number) => (
+                            <div key={p.propertyId}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
+                                <span style={{
+                                  minWidth: '22px', height: '22px', borderRadius: '6px',
+                                  background: i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#b45309' : 'var(--bg-surface-secondary)',
+                                  color: i < 3 ? '#fff' : 'var(--text-muted)',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  fontSize: '0.65rem', fontWeight: 900, flexShrink: 0,
+                                }}>{i + 1}</span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: '0.82rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{p.title}</div>
+                                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600 }}>ID #{p.propertyId}</div>
+                                </div>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', flexShrink: 0 }}>{p.views.toLocaleString()} <span style={{ fontWeight: 600, fontSize: '0.7rem', color: 'var(--text-muted)' }}>views</span></span>
+                              </div>
+                              <div style={{ height: '3px', borderRadius: '99px', backgroundColor: 'var(--border)', overflow: 'hidden', marginLeft: '32px' }}>
+                                <div style={{ height: '100%', borderRadius: '99px', background: i === 0 ? '#f59e0b' : 'var(--primary)', width: `${Math.round((p.views / maxViews) * 100)}%`, transition: 'width 0.5s ease' }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })() : (
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6 }}>No property view data yet.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Section: Campaign Link Generator ───────────────────────── */}
+              <div>
+                <div style={{ marginBottom: '14px' }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Tools</p>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Campaign Link Generator</h2>
+                </div>
+                <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                  <p style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
+                    Generate UTM-tagged links to track which campaign or platform is driving traffic to your listings.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '18px' }}>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Platform</label>
+                      <select value={campPlatform} onChange={e => setCampPlatform(e.target.value)} className="form-control" style={{ backgroundColor: 'var(--bg-surface)', fontSize: '0.85rem' }}>
+                        {['tiktok', 'instagram', 'facebook', 'whatsapp', 'google'].map(p => (
+                          <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Base URL</label>
+                      <input className="form-control" style={{ fontSize: '0.85rem' }} value={campBaseUrl} onChange={e => setCampBaseUrl(e.target.value)} placeholder="https://horentals.com" />
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Campaign Name</label>
+                      <input className="form-control" style={{ fontSize: '0.85rem' }} value={campCampaign} onChange={e => setCampCampaign(e.target.value)} placeholder="e.g. august_launch" />
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Content / Ad Label</label>
+                      <input className="form-control" style={{ fontSize: '0.85rem' }} value={campContent} onChange={e => setCampContent(e.target.value)} placeholder="e.g. video_1" />
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    style={{ padding: '10px 24px', fontWeight: 700, fontSize: '0.88rem' }}
+                    onClick={() => {
+                      try {
+                        let base = (campBaseUrl || '').trim();
+                        if (!base) base = 'https://horentals.com';
+                        if (!base.startsWith('http://') && !base.startsWith('https://')) {
+                          base = `https://${base}`;
+                        }
+                        const url = buildTrackingUrl(base, campPlatform, 'social', campCampaign, campContent);
+                        setCampGenerated(url);
+                        setCampCopied(false);
+                      } catch {
+                        setCampGenerated('Invalid base URL.');
+                      }
+                    }}
+                  >
+                    <Link2 size={15} style={{ marginRight: '6px' }} />
+                    Generate Link
+                  </button>
+                  {campGenerated && (
+                    <div style={{ marginTop: '16px', padding: '14px 16px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '8px' }}>Generated URL</div>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <code style={{ flex: 1, fontSize: '0.78rem', wordBreak: 'break-all', color: 'var(--primary)', lineHeight: 1.5 }}>{campGenerated}</code>
+                        <button
+                          className="btn btn-outline"
+                          style={{ padding: '6px 14px', fontSize: '0.8rem', flexShrink: 0, fontWeight: 700 }}
+                          onClick={() => { navigator.clipboard.writeText(campGenerated); setCampCopied(true); setTimeout(() => setCampCopied(false), 2000); }}
+                        >
+                          {campCopied ? <><Check size={13} style={{ marginRight: '4px' }} /> Copied!</> : <><Copy size={13} style={{ marginRight: '4px' }} /> Copy</>}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
             </div>
-
-            {/* ── Section: Campaign Link Generator ───────────────────────── */}
-            <div>
-              <div style={{ marginBottom: '14px' }}>
-                <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '2px' }}>Tools</p>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Campaign Link Generator</h2>
-              </div>
-              <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                <p style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
-                  Generate UTM-tagged links to track which campaign or platform is driving traffic to your listings.
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '18px' }}>
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Platform</label>
-                    <select value={campPlatform} onChange={e => setCampPlatform(e.target.value)} className="form-control" style={{ backgroundColor: 'var(--bg-surface)', fontSize: '0.85rem' }}>
-                      {['tiktok','instagram','facebook','whatsapp','google'].map(p => (
-                        <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Base URL</label>
-                    <input className="form-control" style={{ fontSize: '0.85rem' }} value={campBaseUrl} onChange={e => setCampBaseUrl(e.target.value)} placeholder="https://horentals.com" />
-                  </div>
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Campaign Name</label>
-                    <input className="form-control" style={{ fontSize: '0.85rem' }} value={campCampaign} onChange={e => setCampCampaign(e.target.value)} placeholder="e.g. august_launch" />
-                  </div>
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Content / Ad Label</label>
-                    <input className="form-control" style={{ fontSize: '0.85rem' }} value={campContent} onChange={e => setCampContent(e.target.value)} placeholder="e.g. video_1" />
-                  </div>
-                </div>
-                <button
-                  className="btn btn-primary"
-                  style={{ padding: '10px 24px', fontWeight: 700, fontSize: '0.88rem' }}
-                  onClick={() => {
-                    try {
-                      let base = (campBaseUrl || '').trim();
-                      if (!base) base = 'https://horentals.com';
-                      if (!base.startsWith('http://') && !base.startsWith('https://')) {
-                        base = `https://${base}`;
-                      }
-                      const url = buildTrackingUrl(base, campPlatform, 'social', campCampaign, campContent);
-                      setCampGenerated(url);
-                      setCampCopied(false);
-                    } catch {
-                      setCampGenerated('Invalid base URL.');
-                    }
-                  }}
-                >
-                  <Link2 size={15} style={{ marginRight: '6px' }} />
-                  Generate Link
-                </button>
-                {campGenerated && (
-                  <div style={{ marginTop: '16px', padding: '14px 16px', backgroundColor: 'var(--bg-surface-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '8px' }}>Generated URL</div>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <code style={{ flex: 1, fontSize: '0.78rem', wordBreak: 'break-all', color: 'var(--primary)', lineHeight: 1.5 }}>{campGenerated}</code>
-                      <button
-                        className="btn btn-outline"
-                        style={{ padding: '6px 14px', fontSize: '0.8rem', flexShrink: 0, fontWeight: 700 }}
-                        onClick={() => { navigator.clipboard.writeText(campGenerated); setCampCopied(true); setTimeout(() => setCampCopied(false), 2000); }}
-                      >
-                        {campCopied ? <><Check size={13} style={{ marginRight: '4px' }} /> Copied!</> : <><Copy size={13} style={{ marginRight: '4px' }} /> Copy</>}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
           ) : null}
 
           {/* SMS BROADCAST & DIRECT MESSAGING STUDIO */}
           {activeTab === 'sms' && (
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              
+
               {/* Premium Brand Header Banner (Solid Vibrant HO Rentals Red) */}
               <div style={{
                 padding: '28px 32px',
@@ -4173,7 +4198,7 @@ function AdminPageContent() {
                   background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%)',
                   pointerEvents: 'none'
                 }} />
-                
+
                 <div style={{ position: 'relative', zIndex: 1, maxWidth: '640px' }}>
                   <div style={{
                     display: 'inline-flex',
@@ -4266,7 +4291,7 @@ function AdminPageContent() {
 
               {/* Top Row: Metric Stats Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                
+
                 {/* Stat 1: Total Phone Numbers */}
                 <div className="card glass" style={{ padding: '18px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -4323,7 +4348,7 @@ function AdminPageContent() {
 
               {/* Studio Workspace: 3-Column Layout (Audience / Composer / Live Phone Simulator) */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', alignItems: 'start' }}>
-                
+
                 {/* Column 1: Audience & Targeting */}
                 <div className="card glass" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
@@ -4786,12 +4811,12 @@ function AdminPageContent() {
                         {smsTargetType === 'single'
                           ? (smsCustomPhone.trim() || '1 direct recipient')
                           : `${smsTargetRole === 'all'
-                              ? users.filter(u => u.phone).length
-                              : smsTargetRole === 'verified_agents'
-                                ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
-                                : smsTargetRole === 'agents'
-                                  ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
-                                  : users.filter(u => u.role === 'user' && u.phone).length} recipients`}
+                            ? users.filter(u => u.phone).length
+                            : smsTargetRole === 'verified_agents'
+                              ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
+                              : smsTargetRole === 'agents'
+                                ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
+                                : users.filter(u => u.role === 'user' && u.phone).length} recipients`}
                       </strong>
                     </div>
 
@@ -4828,15 +4853,14 @@ function AdminPageContent() {
                         <>
                           <Send size={19} />
                           <span>
-                            {smsTargetType === 'single' ? '🚀 Send Direct SMS' : `🚀 Broadcast Bulk SMS (${
-                              smsTargetRole === 'all'
-                                ? users.filter(u => u.phone).length
-                                : smsTargetRole === 'verified_agents'
-                                  ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
-                                  : smsTargetRole === 'agents'
-                                    ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
-                                    : users.filter(u => u.role === 'user' && u.phone).length
-                            } Recipients)`}
+                            {smsTargetType === 'single' ? '🚀 Send Direct SMS' : `🚀 Broadcast Bulk SMS (${smsTargetRole === 'all'
+                              ? users.filter(u => u.phone).length
+                              : smsTargetRole === 'verified_agents'
+                                ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
+                                : smsTargetRole === 'agents'
+                                  ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
+                                  : users.filter(u => u.role === 'user' && u.phone).length
+                              } Recipients)`}
                           </span>
                         </>
                       )}
@@ -4851,42 +4875,42 @@ function AdminPageContent() {
           )}
 
           {activeTab === 'yuyu_rides' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ padding: '24px', backgroundColor: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                  <h1 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Car size={24} style={{ color: '#F59E0B' }} />
+                  <h1 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.4rem' }}>
+                    <Car size={26} style={{ color: '#F59E0B' }} />
                     <span>Yuyu Rides Referral Logs</span>
                   </h1>
-                  <p className={styles.sectionSubtitle}>
+                  <p className={styles.sectionSubtitle} style={{ marginTop: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                     Track every tenant who clicked to book an inspection ride with Yuyu Rides.
                   </p>
                 </div>
                 <button
                   onClick={loadRideReferrals}
                   className="btn btn-outline"
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.85rem' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', fontSize: '0.88rem', borderRadius: '8px' }}
                 >
-                  <RefreshCw size={14} /> Refresh Logs
+                  <RefreshCw size={15} /> Refresh Logs
                 </button>
               </div>
 
-              {/* Stats Bar (Minimal & Compact) */}
-              <div className={styles.statsGrid} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: '20px', gap: '12px' }}>
-                <div className={styles.statCard} style={{ padding: '16px 20px', minHeight: 'auto' }}>
+              {/* Stats Bar (Spacious Cards) */}
+              <div className={styles.statsGrid} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '28px', gap: '16px' }}>
+                <div className={styles.statCard} style={{ padding: '20px 24px', borderRadius: '12px', minHeight: 'auto' }}>
                   <div className={styles.statHeader}>
-                    <span className={styles.statTitle} style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Total Requests</span>
-                    <Car size={18} style={{ color: '#F59E0B' }} />
+                    <span className={styles.statTitle} style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total Requests</span>
+                    <Car size={20} style={{ color: '#F59E0B' }} />
                   </div>
-                  <div className={styles.statValue} style={{ fontSize: '1.6rem', marginTop: '4px' }}>{totalRideReferralsCount || rideReferrals.length}</div>
+                  <div className={styles.statValue} style={{ fontSize: '1.8rem', marginTop: '6px', fontWeight: 800 }}>{totalRideReferralsCount || rideReferrals.length}</div>
                 </div>
 
-                <div className={styles.statCard} style={{ padding: '16px 20px', minHeight: 'auto' }}>
+                <div className={styles.statCard} style={{ padding: '20px 24px', borderRadius: '12px', minHeight: 'auto' }}>
                   <div className={styles.statHeader}>
-                    <span className={styles.statTitle} style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Today</span>
-                    <Clock size={18} style={{ color: 'var(--primary)' }} />
+                    <span className={styles.statTitle} style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Today</span>
+                    <Clock size={20} style={{ color: 'var(--primary)' }} />
                   </div>
-                  <div className={styles.statValue} style={{ fontSize: '1.6rem', marginTop: '4px' }}>
+                  <div className={styles.statValue} style={{ fontSize: '1.8rem', marginTop: '6px', fontWeight: 800 }}>
                     {rideReferrals.filter(r => {
                       const today = new Date().toISOString().split('T')[0];
                       return r.createdAt?.split('T')[0] === today;
@@ -4894,88 +4918,116 @@ function AdminPageContent() {
                   </div>
                 </div>
 
-                <div className={styles.statCard} style={{ padding: '16px 20px', minHeight: 'auto' }}>
+                <div className={styles.statCard} style={{ padding: '20px 24px', borderRadius: '12px', minHeight: 'auto' }}>
                   <div className={styles.statHeader}>
-                    <span className={styles.statTitle} style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Properties</span>
-                    <Building size={18} style={{ color: '#10B981' }} />
+                    <span className={styles.statTitle} style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Properties</span>
+                    <Building size={20} style={{ color: '#10B981' }} />
                   </div>
-                  <div className={styles.statValue} style={{ fontSize: '1.6rem', marginTop: '4px' }}>
+                  <div className={styles.statValue} style={{ fontSize: '1.8rem', marginTop: '6px', fontWeight: 800 }}>
                     {new Set(rideReferrals.map(r => r.propertyId)).size}
                   </div>
                 </div>
 
-                <div className={styles.statCard} style={{ padding: '16px 20px', minHeight: 'auto', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+                <div className={styles.statCard} style={{ padding: '20px 24px', borderRadius: '12px', minHeight: 'auto', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
                   <div className={styles.statHeader}>
-                    <span className={styles.statTitle} style={{ fontSize: '0.75rem', color: '#047857', fontWeight: 800 }}>Est. Revenue</span>
-                    <TrendingUp size={18} style={{ color: '#059669' }} />
+                    <span className={styles.statTitle} style={{ fontSize: '0.8rem', color: '#047857', fontWeight: 800 }}>Est. Revenue</span>
+                    <TrendingUp size={20} style={{ color: '#059669' }} />
                   </div>
-                  <div className={styles.statValue} style={{ fontSize: '1.5rem', marginTop: '4px', color: '#047857', fontWeight: 900 }}>
+                  <div className={styles.statValue} style={{ fontSize: '1.7rem', marginTop: '6px', color: '#047857', fontWeight: 900 }}>
                     GH₵ {(rideReferrals.reduce((sum, r) => sum + (r.commissionAmt || 5.0), 0)).toFixed(2)}
                   </div>
                 </div>
               </div>
 
-              {/* Referrals Minimal Table */}
-              <div className={styles.tableCard}>
+              {/* Referrals Table with Spacing */}
+              <div className={styles.tableCard} style={{ borderRadius: '12px', padding: '16px' }}>
                 {rideReferrals.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--text-secondary)' }}>
-                    <Car size={36} style={{ color: '#F59E0B', opacity: 0.5, marginBottom: '10px' }} />
-                    <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>No Yuyu Ride referrals recorded yet.</p>
-                    <p style={{ fontSize: '0.8rem', opacity: 0.8 }}>When tenants click &quot;Request Ride with Yuyu Rides&quot;, logs will appear here.</p>
+                  <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-secondary)' }}>
+                    <Car size={42} style={{ color: '#F59E0B', opacity: 0.5, marginBottom: '14px' }} />
+                    <p style={{ fontWeight: 700, fontSize: '0.95rem' }}>No Yuyu Ride referrals recorded yet.</p>
+                    <p style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '4px' }}>When tenants click &quot;Request Ride with Yuyu Rides&quot;, logs will appear here.</p>
                   </div>
                 ) : (
                   <div className={styles.tableResponsive}>
-                    <table className={styles.dataTable} style={{ fontSize: '0.85rem' }}>
+                    <table className={styles.dataTable} style={{ fontSize: '0.88rem' }}>
                       <thead>
                         <tr>
-                          <th style={{ padding: '10px 12px' }}>Date</th>
-                          <th style={{ padding: '10px 12px' }}>Ref Code</th>
-                          <th style={{ padding: '10px 12px' }}>Property</th>
-                          <th style={{ padding: '10px 12px' }}>Tenant</th>
-                          <th style={{ padding: '10px 12px' }}>Revenue</th>
-                          <th style={{ padding: '10px 12px' }}>Status</th>
-                          <th style={{ padding: '10px 12px' }}>Action</th>
+                          <th style={{ padding: '14px 16px' }}>Date</th>
+                          <th style={{ padding: '14px 16px' }}>Ref Code</th>
+                          <th style={{ padding: '14px 16px' }}>Property</th>
+                          <th style={{ padding: '14px 16px' }}>Tenant</th>
+                          <th style={{ padding: '14px 16px' }}>Revenue</th>
+                          <th style={{ padding: '14px 16px' }}>Status</th>
+                          <th style={{ padding: '14px 16px' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {rideReferrals.map((item: RideReferralItem) => (
                           <tr key={item.id}>
-                            <td style={{ padding: '10px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
+                            <td style={{ padding: '14px 16px', fontSize: '0.82rem', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
                               {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </td>
-                            <td style={{ padding: '10px 12px' }}>
-                              <span style={{ fontWeight: 800, fontFamily: 'monospace', backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#D97706', padding: '2px 6px', borderRadius: '4px', fontSize: '0.78rem' }}>
+                            <td style={{ padding: '14px 16px' }}>
+                              <span style={{ fontWeight: 800, fontFamily: 'monospace', backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#D97706', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem' }}>
                                 {item.refCode}
                               </span>
                             </td>
-                            <td style={{ padding: '10px 12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '14px 16px', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               <span style={{ fontWeight: 600 }}>{item.property?.title || `#${item.propertyId}`}</span>
-                              {item.property?.location && <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginLeft: '6px' }}>({item.property.location})</span>}
+                              {item.property?.location && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginLeft: '6px' }}>({item.property.location})</span>}
                             </td>
-                            <td style={{ padding: '10px 12px', fontSize: '0.82rem' }}>
+                            <td style={{ padding: '14px 16px', fontSize: '0.85rem' }}>
                               {item.tenantName || item.user?.name ? (
-                                <span><strong>{item.tenantName || item.user?.name}</strong> {item.tenantPhone || item.user?.phone ? <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>({item.tenantPhone || item.user?.phone})</span> : ''}</span>
+                                <span><strong>{item.tenantName || item.user?.name}</strong> {item.tenantPhone || item.user?.phone ? <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>({item.tenantPhone || item.user?.phone})</span> : ''}</span>
                               ) : (
                                 <span style={{ color: 'var(--text-muted)' }}>Guest</span>
                               )}
                             </td>
-                            <td style={{ padding: '10px 12px', fontWeight: 800, color: '#059669', fontSize: '0.82rem' }}>
+                            <td style={{ padding: '14px 16px', fontWeight: 800, color: '#059669', fontSize: '0.85rem' }}>
                               GH₵ {(item.commissionAmt || 5.0).toFixed(2)}
                             </td>
-                            <td style={{ padding: '10px 12px' }}>
-                              <span style={{ backgroundColor: '#FEF3C7', color: '#B45309', padding: '2px 6px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'capitalize' }}>
+                            <td style={{ padding: '14px 16px' }}>
+                              <span style={{ backgroundColor: '#FEF3C7', color: '#B45309', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'capitalize' }}>
                                 {item.status}
                               </span>
                             </td>
-                            <td style={{ padding: '10px 12px' }}>
-                              <Link
-                                href={`/properties/${item.propertyId}`}
-                                target="_blank"
-                                className="btn btn-outline"
-                                style={{ padding: '3px 8px', fontSize: '0.75rem', borderRadius: '4px' }}
-                              >
-                                View
-                              </Link>
+                            <td style={{ padding: '14px 16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Link
+                                  href={`/properties/${item.propertyId}`}
+                                  target="_blank"
+                                  className="btn btn-outline"
+                                  style={{ padding: '5px 12px', fontSize: '0.78rem', borderRadius: '6px', textDecoration: 'none' }}
+                                >
+                                  View
+                                </Link>
+                                <button
+                                  onClick={() => handleDeleteRideReferral(item.id)}
+                                  disabled={deletingReferralId === item.id}
+                                  style={{
+                                    padding: '5px 12px',
+                                    fontSize: '0.78rem',
+                                    borderRadius: '6px',
+                                    color: '#DC2626',
+                                    border: '1px solid #FCA5A5',
+                                    backgroundColor: '#FEF2F2',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    fontWeight: 600,
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  title="Delete Referral Record"
+                                >
+                                  {deletingReferralId === item.id ? (
+                                    <Loader size={13} className="animate-spin" />
+                                  ) : (
+                                    <Trash2 size={13} />
+                                  )}
+                                  Delete
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -4996,9 +5048,9 @@ function AdminPageContent() {
               <h2>Landlord Details: {selectedLandlord.name}</h2>
               <button onClick={() => setSelectedLandlord(null)} className={styles.modalCloseBtn}>&times;</button>
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '70vh', overflowY: 'auto', paddingRight: '4px' }}>
-              
+
               {/* Personal Details */}
               <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                 <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '12px' }}>
@@ -5095,7 +5147,7 @@ function AdminPageContent() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-              <a 
+              <a
                 href={`/upload?landlordName=${encodeURIComponent(selectedLandlord.name)}&contact=${encodeURIComponent(selectedLandlord.phone1)}&city=${encodeURIComponent(selectedLandlord.city || '')}&gps=${encodeURIComponent(selectedLandlord.propGps || '')}&landmark=${encodeURIComponent(selectedLandlord.propLandmark || '')}`}
                 className="btn btn-primary"
                 style={{ backgroundColor: '#3B82F6', borderColor: '#3B82F6', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
@@ -5103,9 +5155,9 @@ function AdminPageContent() {
                 <Plus size={15} /> Add Another Listing
               </a>
               {selectedLandlord.status !== 'Verified' ? (
-                <button 
-                  type="button" 
-                  onClick={() => { handlePublishLandlord(selectedLandlord.id); setSelectedLandlord(null); }} 
+                <button
+                  type="button"
+                  onClick={() => { handlePublishLandlord(selectedLandlord.id); setSelectedLandlord(null); }}
                   className="btn btn-primary"
                   style={{ backgroundColor: '#10B981', borderColor: '#10B981', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   disabled={actionLoading}
@@ -5113,9 +5165,9 @@ function AdminPageContent() {
                   <UploadCloud size={15} /> Approve & Publish Listing
                 </button>
               ) : (
-                <button 
-                  type="button" 
-                  onClick={() => { handlePublishLandlord(selectedLandlord.id); }} 
+                <button
+                  type="button"
+                  onClick={() => { handlePublishLandlord(selectedLandlord.id); }}
                   className="btn btn-outline"
                   style={{ color: '#10B981', borderColor: '#10B981', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   disabled={actionLoading}
@@ -5123,9 +5175,9 @@ function AdminPageContent() {
                   <RefreshCw size={14} /> Republish Listing
                 </button>
               )}
-              <button 
-                type="button" 
-                onClick={() => setSelectedLandlord(null)} 
+              <button
+                type="button"
+                onClick={() => setSelectedLandlord(null)}
                 className="btn btn-outline"
               >
                 Close
@@ -5180,10 +5232,10 @@ function AdminPageContent() {
                   <div>
                     <strong>WhatsApp Line:</strong> {selectedAgent.agentWhatsapp || selectedAgent.phone || '—'}{' '}
                     {(selectedAgent.agentWhatsapp || selectedAgent.phone) && (
-                      <a 
-                        href={`https://wa.me/${(selectedAgent.agentWhatsapp || selectedAgent.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '233')}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
+                      <a
+                        href={`https://wa.me/${(selectedAgent.agentWhatsapp || selectedAgent.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '233')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{ color: '#25D366', fontWeight: 700, marginLeft: '4px', fontSize: '0.8rem' }}
                       >
                         💬 Chat
@@ -5292,17 +5344,17 @@ function AdminPageContent() {
               </h2>
               <button onClick={() => setIsQrModalOpen(false)} className={styles.modalCloseBtn}>&times;</button>
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '10px 0' }}>
               <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: '0' }}>
                 Scan or download this code to share the <strong>{qrModalTitle}</strong>.
               </p>
 
-              <div style={{ 
-                position: 'relative', 
-                backgroundColor: '#ffffff', 
-                padding: '12px', 
-                borderRadius: 'var(--radius-md)', 
+              <div style={{
+                position: 'relative',
+                backgroundColor: '#ffffff',
+                padding: '12px',
+                borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border)',
                 boxShadow: 'var(--shadow-sm)',
                 display: 'flex',
@@ -5310,9 +5362,9 @@ function AdminPageContent() {
                 justifyContent: 'center'
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrModalUrl)}&color=c1121f&ecc=H`} 
-                  alt="QR Code" 
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrModalUrl)}&color=c1121f&ecc=H`}
+                  alt="QR Code"
                   style={{ display: 'block', borderRadius: 'var(--radius-sm)' }}
                   width={220}
                   height={220}
@@ -5336,20 +5388,20 @@ function AdminPageContent() {
                   overflow: 'hidden'
                 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src="/logo.png" 
-                    alt="Ho Rentals Logo" 
+                  <img
+                    src="/logo.png"
+                    alt="Ho Rentals Logo"
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 </div>
               </div>
 
-              <div style={{ 
-                fontSize: '0.78rem', 
-                fontFamily: 'monospace', 
-                color: 'var(--text-muted)', 
-                backgroundColor: 'var(--bg-surface-secondary)', 
-                padding: '6px 12px', 
+              <div style={{
+                fontSize: '0.78rem',
+                fontFamily: 'monospace',
+                color: 'var(--text-muted)',
+                backgroundColor: 'var(--bg-surface-secondary)',
+                padding: '6px 12px',
                 borderRadius: 'var(--radius-sm)',
                 border: '1px solid var(--border)',
                 wordBreak: 'break-all',
@@ -5360,16 +5412,16 @@ function AdminPageContent() {
               </div>
 
               <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-                <button 
+                <button
                   onClick={async () => {
                     try {
                       setDownloadingQr(true);
                       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrModalUrl)}&color=c1121f&ecc=H`;
-                      
+
                       const qrImage = new Image();
                       qrImage.crossOrigin = 'anonymous';
                       qrImage.src = qrUrl;
-                      
+
                       await new Promise((resolve, reject) => {
                         qrImage.onload = resolve;
                         qrImage.onerror = reject;
@@ -5393,7 +5445,7 @@ function AdminPageContent() {
                       const logoSize = 60;
                       const logoX = (300 - logoSize) / 2;
                       const logoY = (300 - logoSize) / 2;
-                      
+
                       ctx.fillStyle = '#ffffff';
                       ctx.beginPath();
                       if (typeof ctx.roundRect === 'function') {
@@ -5427,7 +5479,7 @@ function AdminPageContent() {
                   <span>{downloadingQr ? 'Downloading...' : 'Download'}</span>
                 </button>
 
-                <button 
+                <button
                   onClick={() => {
                     navigator.clipboard.writeText(qrModalUrl);
                     alert('Copied link: ' + qrModalUrl);

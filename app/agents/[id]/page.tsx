@@ -420,7 +420,7 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
                       GH₵ {p.price.toLocaleString()}
                     </span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {getPricePeriodLabel(p.type)}
+                      {getPricePeriodLabel(p.description, true)}
                     </span>
                   </div>
                 </div>

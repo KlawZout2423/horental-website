@@ -199,28 +199,30 @@ export default function UploadPage({
 
       let desc = initialData.description || '';
 
-      const pricePeriodMatch = desc.match(/PricePeriod:\s*per\s*([^\n]+)/i);
+      const pricePeriodMatch = desc.match(/PricePeriod:\s*(?:per\s*)?([^\n|]+)/i);
       if (pricePeriodMatch) {
-        setPricePeriod(pricePeriodMatch[1].trim());
-        desc = desc.replace(/PricePeriod:\s*per\s*[^\n]+/i, '').trim();
+        let matched = pricePeriodMatch[1].trim().toLowerCase();
+        if (matched.startsWith('per ')) matched = matched.replace(/^per\s+/i, '');
+        setPricePeriod(matched);
+        desc = desc.replace(/PricePeriod:\s*(?:per\s*)?[^\n|]+/gi, '').trim();
       }
 
-      const roomsMatch = desc.match(/Rooms Available:\s*([^\n]+)/i);
+      const roomsMatch = desc.match(/(?:Rooms Available|Rooms):\s*([^\n|]+)/i);
       if (roomsMatch) {
         setRooms(roomsMatch[1].trim());
-        desc = desc.replace(/Rooms Available:\s*[^\n]+/i, '').trim();
+        desc = desc.replace(/(?:Rooms Available|Rooms):\s*[^\n|]+\.?,?/gi, '').trim();
       }
 
-      const advanceMatch = desc.match(/Advance Required:\s*([^\n]+)/i);
+      const advanceMatch = desc.match(/(?:Advance Required|Advance period|Advance Payment):\s*([^\n|]+)/i);
       if (advanceMatch) {
         setAdvance(advanceMatch[1].trim());
-        desc = desc.replace(/Advance Required:\s*[^\n]+/i, '').trim();
+        desc = desc.replace(/(?:Advance Required|Advance period|Advance Payment):\s*[^\n|]+\.?,?/gi, '').trim();
       }
 
-      const availableFromMatch = desc.match(/Available From:\s*([^\n]+)/i);
+      const availableFromMatch = desc.match(/(?:Available From|Available from):\s*([^\n|]+)/i);
       if (availableFromMatch) {
         setAvailableFrom(availableFromMatch[1].trim());
-        desc = desc.replace(/Available From:\s*[^\n]+/i, '').trim();
+        desc = desc.replace(/(?:Available From|Available from):\s*[^\n|]+\.?,?/gi, '').trim();
       }
 
       const featuresIdx = desc.indexOf('Features:');
@@ -496,15 +498,26 @@ export default function UploadPage({
         }
       }
 
-      if (amenitiesList.length > 0) {
-        finalDescription += `\n\nFeatures: ${amenitiesList.join(' | ')}`;
+      let cleanBaseDesc = description.trim();
+      cleanBaseDesc = cleanBaseDesc
+        .replace(/PricePeriod:\s*(?:per\s*)?[^\n|]+/gi, '')
+        .replace(/(?:Rooms Available|Rooms):\s*[^\n|]+\.?,?/gi, '')
+        .replace(/(?:Advance Required|Advance period|Advance Payment):\s*[^\n|]+\.?,?/gi, '')
+        .replace(/(?:Available From|Available from):\s*[^\n|]+\.?,?/gi, '')
+        .replace(/Features:\s*[^\n]+/gi, '')
+        .trim();
+
+      const featureParts: string[] = [];
+      if (rooms) featureParts.push(`Rooms Available: ${rooms}`);
+      if (advance) featureParts.push(`Advance Required: ${advance}`);
+      if (availableFrom) featureParts.push(`Available From: ${availableFrom}`);
+      if (pricePeriod) featureParts.push(`PricePeriod: per ${pricePeriod}`);
+      if (amenitiesList.length > 0) featureParts.push(...amenitiesList);
+
+      finalDescription = cleanBaseDesc;
+      if (featureParts.length > 0) {
+        finalDescription += `\n\nFeatures: ${featureParts.join(' | ')}`;
       }
-
-      if (rooms) finalDescription += `\n\nRooms Available: ${rooms}`;
-      if (advance) finalDescription += `\nAdvance Required: ${advance}`;
-      if (availableFrom) finalDescription += `\nAvailable From: ${availableFrom}`;
-
-      finalDescription += `\n\nPricePeriod: per ${pricePeriod}`;
 
       const input = {
         title,

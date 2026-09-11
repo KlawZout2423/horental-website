@@ -184,28 +184,67 @@ export function stripIdFromBio(bio?: string | null): string {
 }
 export function getPricePeriodLabel(desc?: string, short: boolean = true): string {
   if (!desc) return short ? '/sem' : '/ semester';
+  
+  // 1. Explicit PricePeriod tag matching (highest priority)
+  const pricePeriodMatch = desc.match(/PricePeriod:\s*(?:per\s*)?([^\n|]+)/i);
+  if (pricePeriodMatch) {
+    const period = pricePeriodMatch[1].trim().toLowerCase();
+    if (period.includes('academic year') || period.includes('acad year')) {
+      return short ? '/acad year' : '/ academic year';
+    }
+    if (period.includes('year') || period.includes('yr')) {
+      return short ? '/year' : '/ year';
+    }
+    if (period.includes('day') || period.includes('night')) {
+      return short ? '/day' : '/ day';
+    }
+    if (period.includes('month') || period.includes('mth')) {
+      return short ? '/month' : '/ month';
+    }
+    if (period.includes('semester') || period.includes('sem')) {
+      return short ? '/sem' : '/ semester';
+    }
+    if (period.includes('plot')) {
+      return short ? '/plot' : '/ plot';
+    }
+    if (period.includes('acre')) {
+      return short ? '/acre' : '/ acre';
+    }
+    if (period.includes('outright sale') || period.includes('sale')) {
+      return short ? '' : ' (outright sale)';
+    }
+    if (period.includes('item')) {
+      return short ? '/item' : '/ item';
+    }
+  }
+
+  // 2. Generic fallback matching (check specific/multi-word periods first, then year, day, plot, acre, and month)
   const lower = desc.toLowerCase();
-  if (lower.includes('priceperiod: per academic year') || lower.includes('per academic year') || lower.includes('academic year')) {
+  if (lower.includes('priceperiod: per academic year') || lower.includes('per academic year')) {
     return short ? '/acad year' : '/ academic year';
   }
-  if (lower.includes('priceperiod: per plot') || lower.includes('per plot')) {
-    return short ? '/plot' : '/ plot';
-  }
-  if (lower.includes('priceperiod: per acre') || lower.includes('per acre') || lower.includes('per achre')) {
-    return short ? '/acre' : '/ acre';
-  }
-  if (lower.includes('priceperiod: per outright sale') || lower.includes('outright sale')) {
-    return short ? '' : ' (outright sale)';
-  }
-  if (lower.includes('priceperiod: per month') || lower.includes('priceperiod: month') || lower.includes('per month')) {
-    return short ? '/month' : '/ month';
-  }
-  if (lower.includes('priceperiod: per year') || lower.includes('priceperiod: year') || lower.includes('per year')) {
+  if (lower.includes('priceperiod: per year') || lower.includes('priceperiod: year') || lower.includes('per year') || lower.includes('/year')) {
     return short ? '/year' : '/ year';
   }
-  if (lower.includes('priceperiod: per day') || lower.includes('per day') || lower.includes('priceperiod: day')) {
+  if (lower.includes('priceperiod: per day') || lower.includes('priceperiod: day') || lower.includes('per day') || lower.includes('/day') || lower.includes('per night')) {
     return short ? '/day' : '/ day';
   }
+  if (lower.includes('priceperiod: per plot') || lower.includes('per plot') || lower.includes('/plot')) {
+    return short ? '/plot' : '/ plot';
+  }
+  if (lower.includes('priceperiod: per acre') || lower.includes('per acre') || lower.includes('/acre')) {
+    return short ? '/acre' : '/ acre';
+  }
+  if (lower.includes('outright sale')) {
+    return short ? '' : ' (outright sale)';
+  }
+  if (lower.includes('priceperiod: per month') || lower.includes('priceperiod: month') || lower.includes('per month') || lower.includes('/month')) {
+    return short ? '/month' : '/ month';
+  }
+  if (lower.includes('per semester') || lower.includes('semester') || lower.includes('/sem')) {
+    return short ? '/sem' : '/ semester';
+  }
+
   return short ? '/sem' : '/ semester';
 }
 

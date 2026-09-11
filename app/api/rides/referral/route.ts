@@ -3,6 +3,7 @@ import prisma from "../../../../lib/prisma";
 import { sendRideReferralAlertSMS } from "../../../../lib/sms";
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function POST(req: Request) {
   try {
@@ -75,12 +76,21 @@ export async function POST(req: Request) {
     const whatsappUrl = `https://wa.me/${yuyuNumber}?text=${encodeURIComponent(text)}`;
     const whatsappAppUrl = `whatsapp://send?phone=${yuyuNumber}&text=${encodeURIComponent(text)}`;
 
-    return NextResponse.json({
-      success: true,
-      refCode: referral.refCode,
-      whatsappUrl,
-      whatsappAppUrl,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        refCode: referral.refCode,
+        whatsappUrl,
+        whatsappAppUrl,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
   } catch (error: unknown) {
     console.error("Error creating ride referral:", error);
     return NextResponse.json(
@@ -94,7 +104,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const page = Number(searchParams.get("page")) || 1;
-    const limit = Number(searchParams.get("limit")) || 50;
+    const limit = Number(searchParams.get("limit")) || 200;
     const skip = (page - 1) * limit;
 
     const [referrals, total] = await Promise.all([
@@ -114,21 +124,74 @@ export async function GET(req: Request) {
       prisma.rideReferral.count(),
     ]);
 
-    return NextResponse.json({
-      success: true,
-      referrals,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        referrals,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
   } catch (error: unknown) {
-    console.warn("Notice: Failed to fetch ride referrals from database (table may be syncing):", error);
-    return NextResponse.json({
-      success: true,
-      referrals: [],
-      total: 0,
-      page: 1,
-      totalPages: 1,
-    });
+    console.error("Error fetching ride referrals from database:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch ride referrals" },
+      { status: 500 }
+    );
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Referral ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const referralId = parseInt(id, 10);
+    if (isNaN(referralId) || referralId <= 0) {
+      return NextResponse.json(
+        { error: "Invalid referral ID" },
+        { status: 400 }
+      );
+    }
+
+    await prisma.rideReferral.delete({
+      where: { id: referralId },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Yuyu Ride referral record deleted successfully",
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
+  } catch (error: unknown) {
+    console.error("Error deleting Yuyu ride referral:", error);
+    return NextResponse.json(
+      { error: "Failed to delete Yuyu ride referral log" },
+      { status: 500 }
+    );
+  }
+}
+

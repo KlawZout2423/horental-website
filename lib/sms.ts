@@ -199,6 +199,7 @@ export async function sendRideReferralAlertSMS({
     process.env.ADMIN_NOTIFICATION_PHONE,
     process.env.NEXT_PUBLIC_SUPPORT_PHONE,
     '0204940602',
+    '0557922593',
   ].filter(Boolean) as string[];
 
   const cleanCustomerName = (customerName || 'Tenant').trim();
