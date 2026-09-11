@@ -865,16 +865,16 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                             gap: '8px',
                             width: '100%',
                             justifyContent: 'center',
-                            background: 'linear-gradient(135deg, #34D399 0%, #10B981 50%, #C1121F 100%)',
+                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                             color: '#FFFFFF',
                             border: 'none',
                             borderRadius: 'var(--radius-sm)',
                             cursor: 'pointer',
-                            boxShadow: '0 3px 12px rgba(16, 185, 129, 0.3)',
+                            boxShadow: '0 3px 10px rgba(16, 185, 129, 0.25)',
                           }}
                         >
                           {isBookingRide ? <Loader size={16} className="animate-spin" /> : <Car size={16} />}
-                          🚗 Request Inspection Ride with Yuyu Rides
+                          Request Yuyu Ride
                         </button>
                       </div>
                     </div>

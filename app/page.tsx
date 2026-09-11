@@ -62,7 +62,7 @@ const POPULAR_AREAS = [
 const BANNER_SLIDES = [
   {
     id: 'main-hero',
-    bg: 'linear-gradient(135deg, #C1121F 0%, #8B0B14 100%)',
+    bg: 'linear-gradient(135deg, #C1121F 0%, #7A0910 100%)',
     pill: 'PROMOTION',
     headline: 'Find Verified Properties in Ghana',
     sub: 'Student hostels, apartments, single rooms, commercial spaces & more.',
@@ -72,7 +72,7 @@ const BANNER_SLIDES = [
   },
   {
     id: 'yuyu-partnership',
-    bg: 'linear-gradient(135deg, #047857 0%, #064E3B 100%)',
+    bg: 'linear-gradient(135deg, #059669 0%, #064E3B 100%)',
     pill: '🤝 OFFICIAL PARTNERSHIP',
     headline: 'HO Rentals × Yuyu Rides',
     sub: 'Book instant keke rides to view properties in Ho.',
@@ -82,7 +82,7 @@ const BANNER_SLIDES = [
   },
   {
     id: 'verified',
-    bg: 'linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%)',
+    bg: 'linear-gradient(135deg, #1D4ED8 0%, #1E3A8A 100%)',
     pill: '100% VERIFIED',
     headline: 'Zero Scams. Real Hostels.',
     sub: 'Every listing is physically inspected by our team in Ho.',
@@ -92,7 +92,7 @@ const BANNER_SLIDES = [
   },
   {
     id: 'agents',
-    bg: 'linear-gradient(135deg, #047857 0%, #064E3B 100%)',
+    bg: 'linear-gradient(135deg, #4F46E5 0%, #312E81 100%)',
     pill: '🤝 VERIFIED AGENTS',
     headline: 'Talk to a Local Agent',
     sub: 'Connect directly with top verified rental agents in Ho, HTU & UHAS.',
@@ -102,7 +102,7 @@ const BANNER_SLIDES = [
   },
   {
     id: 'furniture',
-    bg: 'linear-gradient(135deg, #92400E 0%, #B45309 100%)',
+    bg: 'linear-gradient(135deg, #B45309 0%, #78350F 100%)',
     pill: '🪑 FURNITURE & FITTINGS',
     headline: 'Furnitures & Home Fittings',
     sub: 'Quality beds, study desks, wardrobes & home essentials in Ghana.',

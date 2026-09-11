@@ -680,11 +680,16 @@ export const resolvers = {
         const user = await prisma.user.create({
           data: {
             name: sanitizedName,
-            email: input.email,
+            email: input.email ? input.email.toLowerCase().trim() : null,
             password: hashed,
             phone: formattedPhone,
             role: targetRole,
             verificationStatus: 'unverified',
+            bio: input.bio ? sanitizeInput(input.bio) : null,
+            agentLocation: input.agentLocation ? sanitizeInput(input.agentLocation) : null,
+            agencyName: input.agencyName ? sanitizeInput(input.agencyName) : null,
+            agentWhatsapp: input.agentWhatsapp ? formatGhanaPhone(input.agentWhatsapp) : null,
+            profileImage: input.profileImage ? sanitizeInput(input.profileImage) : null,
           },
           select: USER_SAFE_SELECT,
         });
@@ -772,7 +777,14 @@ export const resolvers = {
       if (!payload || !payload.email) throw new Error('Invalid Google Token');
 
       const { email, name, picture } = payload;
-      let rawUser = await prisma.user.findUnique({ where: { email } });
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Case-insensitive query to find existing user or agent account registered via form
+      let rawUser = await prisma.user.findFirst({
+        where: {
+          email: { equals: normalizedEmail, mode: 'insensitive' }
+        }
+      });
 
       if (!rawUser) {
         const crypto = require('crypto');
@@ -781,11 +793,17 @@ export const resolvers = {
         rawUser = await prisma.user.create({
           data: {
             name: name || 'Google User',
-            email,
+            email: normalizedEmail,
             password: hashed,
-            profileImage: picture,
+            profileImage: picture || null,
           }
         });
+      } else if (!rawUser.profileImage && picture) {
+        // If user/agent exists from form registration without a profile picture, sync Google avatar
+        await prisma.user.update({
+          where: { id: rawUser.id },
+          data: { profileImage: picture },
+        }).catch(err => console.error('[GoogleAuth] Failed to sync profile image:', err));
       }
 
       // Update last login timestamp
@@ -1302,7 +1320,54 @@ export const resolvers = {
       const defaultCompany = await prisma.company.findFirst({ where: { isOwnCompany: true } });
       if (!defaultCompany) throw new Error('Default company not found');
 
-      // 3. Construct description & title with clean primary property type
+      // 3. Find or create Landlord User account
+      const landlordPhone = r.phone1 ? formatGhanaPhone(r.phone1) : null;
+      const landlordEmail = r.email ? r.email.toLowerCase().trim() : null;
+
+      let landlordUser = null;
+      const searchOr: any[] = [];
+      if (landlordEmail) searchOr.push({ email: landlordEmail });
+      if (landlordPhone) {
+        searchOr.push({ phone: landlordPhone });
+        searchOr.push({ email: `${landlordPhone}@horentals.com` });
+      }
+
+      if (searchOr.length > 0) {
+        landlordUser = await prisma.user.findFirst({
+          where: { OR: searchOr }
+        });
+      }
+
+      if (landlordUser) {
+        landlordUser = await prisma.user.update({
+          where: { id: landlordUser.id },
+          data: {
+            role: landlordUser.role === 'user' ? 'landlord' : landlordUser.role,
+            verificationStatus: 'verified',
+            ...(landlordUser.email || landlordPhone ? { email: landlordUser.email || `${landlordPhone}@horentals.com` } : {}),
+          }
+        });
+      } else {
+        const crypto = require('crypto');
+        const tempPass = crypto.randomBytes(8).toString('hex');
+        const hashed = await bcrypt.hash(tempPass, 10);
+        const userEmail = landlordEmail || (landlordPhone ? `${landlordPhone}@horentals.com` : `${uuidv4().slice(0, 8)}@horentals.com`);
+
+        landlordUser = await prisma.user.create({
+          data: {
+            name: sanitizeInput(r.name),
+            email: userEmail,
+            phone: landlordPhone,
+            password: hashed,
+            role: 'landlord',
+            verificationStatus: 'verified',
+            isProfileComplete: true,
+            mustChangePassword: true,
+          }
+        });
+      }
+
+      // 4. Construct description & title with clean primary property type
       const primaryType = (r.propType || 'Single Room Self Contain').split(',')[0].trim();
       const title = `${primaryType} in ${r.city}`;
       const baseDesc = `Beautiful ${primaryType} located in ${r.city}.${r.propLandmark ? ` Landmark: ${r.propLandmark}.` : ''}`;
@@ -1316,7 +1381,7 @@ export const resolvers = {
         ? `${baseDesc}\n\nFeatures: ${featureParts.join(' | ')}`
         : baseDesc;
 
-      // 4. Create property in database
+      // 5. Create property in database linked to landlordUser
       const property = await prisma.property.create({
         data: {
           title: sanitizeInput(title),
@@ -1331,7 +1396,8 @@ export const resolvers = {
           status: 'available',
           imageUrl: r.photos[0] || '',
           isFeatured: r.plan === 'Premium',
-          ownerId: user.id,
+          ownerId: landlordUser ? landlordUser.id : user.id,
+          landlordId: landlordUser ? landlordUser.id : null,
           companyId: defaultCompany.id,
           images: {
             create: r.photos.map((src, index) => ({
@@ -1344,7 +1410,7 @@ export const resolvers = {
         include: { owner: true, company: true, images: { orderBy: { order: 'asc' } } },
       });
 
-      // 5. Update status of the landlord registration to "Verified"
+      // 6. Update status of the landlord registration to "Verified"
       await prisma.landlordRegistration.update({
         where: { id: parsedId },
         data: { status: 'Verified' }
@@ -1617,17 +1683,16 @@ export const resolvers = {
         data: { status, reviewerNotes }
       });
 
-      if (status === 'verified') {
-        const verifiedUser = await prisma.user.update({
-          where: { id: updatedReq.userId },
-          data: { verificationStatus: 'verified' }
-        });
-        if (verifiedUser?.phone) {
-          sendAgentVerifiedSMS({
-            agentPhone: verifiedUser.phone,
-            agentName: verifiedUser.name,
-          }).catch(err => console.error('Agent verified SMS error:', err));
-        }
+      const updatedUser = await prisma.user.update({
+        where: { id: updatedReq.userId },
+        data: { verificationStatus: status }
+      });
+
+      if (status === 'verified' && updatedUser?.phone) {
+        sendAgentVerifiedSMS({
+          agentPhone: updatedUser.phone,
+          agentName: updatedUser.name,
+        }).catch(err => console.error('Agent verified SMS error:', err));
       }
 
       createAuditLog('VERIFICATION_REVIEWED', `Admin reviewed request ${reqId} with status ${status}`, adminUser.email);

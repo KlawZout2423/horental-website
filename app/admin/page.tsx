@@ -130,6 +130,21 @@ interface EditGalleryItem {
 type AdminTab = 'analytics' | 'properties' | 'users' | 'agents' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic' | 'sms' | 'yuyu_rides';
 const VALID_ADMIN_TABS: AdminTab[] = ['analytics', 'properties', 'users', 'agents', 'moderation', 'audits', 'reports', 'upload', 'landlords', 'traffic', 'sms', 'yuyu_rides'];
 
+interface AdminSessionCache {
+  stats: DashboardStats | null;
+  users: User[];
+  properties: Property[];
+  contactLogs: ContactLogItem[];
+  reports: ReportItem[];
+  landlordRegistrations: LandlordRegistration[];
+  rideReferrals: RideReferralItem[];
+  totalRideReferralsCount: number;
+  loadedTabs: Set<AdminTab>;
+  lastFetchedAt: number;
+}
+
+let adminSessionCache: AdminSessionCache | null = null;
+
 function AdminPageContent() {
   const { user, loading: authLoading, logout } = useAuth();
   const router = useRouter();
@@ -177,13 +192,17 @@ function AdminPageContent() {
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [rideReferrals, setRideReferrals] = useState<RideReferralItem[]>([]);
+  const [totalRideReferralsCount, setTotalRideReferralsCount] = useState<number>(0);
 
   const loadRideReferrals = async () => {
     try {
-      const res = await fetch('/api/rides/referral');
+      const res = await fetch('/api/rides/referral?limit=200');
       const data = await res.json();
       if (data.referrals) {
         setRideReferrals(data.referrals);
+      }
+      if (typeof data.total === 'number') {
+        setTotalRideReferralsCount(data.total);
       }
     } catch (err) {
       console.error('Failed to fetch Yuyu ride referrals:', err);
@@ -342,7 +361,7 @@ function AdminPageContent() {
   // Filter Helper lists
   const approvedProperties = properties.filter((p) => p.status !== 'pending_approval');
   const pendingProperties = properties.filter((p) => p.status === 'pending_approval');
-  const standardUsers = users.filter((u) => u.role !== 'agent' && u.role !== 'landlord');
+  const standardUsers = users.filter((u) => (u.role !== 'agent' && u.role !== 'landlord') || u.verificationStatus === 'verified');
   const agentUsers = users.filter((u) => u.role === 'agent' || u.role === 'landlord');
 
   const filteredStandardUsers = standardUsers
@@ -379,10 +398,29 @@ function AdminPageContent() {
     }
   }, [user, authLoading, router]);
 
-  // Load initial data (stats + properties + users) immediately on mount
+  // Load initial data immediately on mount with Stale-While-Revalidate caching
   useEffect(() => {
     if (!authLoading && user && user.role === 'admin') {
-      loadInitialData();
+      if (adminSessionCache) {
+        // Render instantly from session cache (0ms delay, no loader spinner!)
+        setStats(adminSessionCache.stats);
+        setUsers(adminSessionCache.users);
+        setProperties(adminSessionCache.properties);
+        setContactLogs(adminSessionCache.contactLogs);
+        setReports(adminSessionCache.reports);
+        setLandlordRegistrations(adminSessionCache.landlordRegistrations);
+        setRideReferrals(adminSessionCache.rideReferrals);
+        setTotalRideReferralsCount(adminSessionCache.totalRideReferralsCount);
+        setLoadedTabs(adminSessionCache.loadedTabs);
+        setLoadingData(false);
+
+        // Silent revalidation in the background if cache is older than 5 seconds
+        if (Date.now() - adminSessionCache.lastFetchedAt > 5000) {
+          loadInitialData({ silent: true });
+        }
+      } else {
+        loadInitialData({ silent: false });
+      }
     } else if (!authLoading) {
       setLoadingData(false);
     }
@@ -409,9 +447,10 @@ function AdminPageContent() {
     setIsQrModalOpen(true);
   };
 
-  async function loadInitialData() {
-    setLoadingData(true);
+  async function loadInitialData({ silent = false }: { silent?: boolean } = {}) {
+    if (!silent) setLoadingData(true);
     try {
+      loadRideReferrals();
       const [statsData, usersData, propertiesData, logsData, reportsData, landlordData] = await Promise.all([
         graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS),
         graphqlRequest<{ users: User[] }>(GET_USERS),
@@ -420,18 +459,43 @@ function AdminPageContent() {
         graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] })),
         graphqlRequest<{ landlordRegistrations: LandlordRegistration[] }>(GET_LANDLORD_REGISTRATIONS).catch(() => ({ landlordRegistrations: [] }))
       ]);
-      if (statsData) setStats(statsData.dashboardStats);
-      if (usersData) setUsers(usersData.users);
-      if (propertiesData) setProperties(propertiesData.properties);
-      if (logsData) setContactLogs(logsData.contactLogs);
-      if (reportsData) setReports(reportsData.reports || []);
-      if (landlordData) setLandlordRegistrations(landlordData.landlordRegistrations || []);
-      setLoadedTabs(prev => new Set([...prev, 'analytics', 'properties', 'users', 'moderation', 'reports', 'landlords']));
+      
+      const newStats = statsData?.dashboardStats || null;
+      const newUsers = usersData?.users || [];
+      const newProps = propertiesData?.properties || [];
+      const newLogs = logsData?.contactLogs || [];
+      const newReports = reportsData?.reports || [];
+      const newLandlords = landlordData?.landlordRegistrations || [];
+      const newTabs = new Set([...loadedTabs, 'analytics', 'properties', 'users', 'moderation', 'reports', 'landlords', 'yuyu_rides'] as AdminTab[]);
+
+      if (statsData) setStats(newStats);
+      if (usersData) setUsers(newUsers);
+      if (propertiesData) setProperties(newProps);
+      if (logsData) setContactLogs(newLogs);
+      if (reportsData) setReports(newReports);
+      if (landlordData) setLandlordRegistrations(newLandlords);
+      setLoadedTabs(newTabs);
+
+      // Save into in-memory session cache for instant subsequent renders
+      adminSessionCache = {
+        stats: newStats,
+        users: newUsers,
+        properties: newProps,
+        contactLogs: newLogs,
+        reports: newReports,
+        landlordRegistrations: newLandlords,
+        rideReferrals,
+        totalRideReferralsCount,
+        loadedTabs: newTabs,
+        lastFetchedAt: Date.now(),
+      };
     } catch (err: any) {
       console.error('Error loading admin data:', err);
-      setMessage({ text: getFriendlyErrorMessage(err, 'Failed to fetch dashboard data.'), isError: true });
+      if (!silent) {
+        setMessage({ text: getFriendlyErrorMessage(err, 'Failed to fetch dashboard data.'), isError: true });
+      }
     } finally {
-      setLoadingData(false);
+      if (!silent) setLoadingData(false);
     }
   }
 
@@ -1097,7 +1161,7 @@ function AdminPageContent() {
               <Car size={16} style={{ color: '#10B981' }} />
               <span>Yuyu Ride Logs</span>
               <span className={styles.navCountBadge} style={{ backgroundColor: '#10B981', color: '#FFFFFF' }}>
-                {rideReferrals.length}
+                {totalRideReferralsCount || rideReferrals.length}
               </span>
             </button>
 
@@ -1279,7 +1343,7 @@ function AdminPageContent() {
                     onClick={() => { setActiveTab('yuyu_rides'); setIsMobileDrawerOpen(false); }}
                     className={`${styles.navItem} ${activeTab === 'yuyu_rides' ? styles.activeNavItem : ''}`}
                   >
-                    <Car size={16} style={{ color: '#10B981' }} /> Yuyu Ride Logs ({rideReferrals.length})
+                    <Car size={16} style={{ color: '#10B981' }} /> Yuyu Ride Logs ({totalRideReferralsCount || rideReferrals.length})
                   </button>
                   <button
                     onClick={() => { setActiveTab('sms'); setIsMobileDrawerOpen(false); }}
@@ -2265,7 +2329,7 @@ function AdminPageContent() {
                     {filteredStandardUsers.length === 0 ? (
                       <tr>
                         <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                          {userSearch ? 'No users matching your search.' : 'No standard users found in the database. (Agents and Landlords are managed in the Agents / Landlords DB tab)'}
+                          {userSearch ? 'No users matching your search.' : 'No users found. (Agents and Landlords appear here automatically once approved & verified)'}
                         </td>
                       </tr>
                     ) : (
@@ -2278,7 +2342,18 @@ function AdminPageContent() {
                             {u.lastLoginAt ? new Date(isNaN(Number(u.lastLoginAt)) ? u.lastLoginAt : Number(u.lastLoginAt)).toLocaleString() : 'Never logged in'}
                           </td>
                           <td>
-                            <span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-available'}`} style={{ fontSize: '0.65rem' }}>
+                            <span
+                              style={{
+                                padding: '3px 10px',
+                                borderRadius: '12px',
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                textTransform: 'capitalize',
+                                backgroundColor: u.role === 'admin' ? 'rgba(239, 68, 68, 0.15)' : u.role === 'agent' ? 'rgba(99, 102, 241, 0.15)' : u.role === 'landlord' ? 'rgba(217, 119, 6, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                color: u.role === 'admin' ? '#EF4444' : u.role === 'agent' ? '#6366F1' : u.role === 'landlord' ? '#D97706' : '#10B981',
+                                border: `1px solid ${u.role === 'admin' ? 'rgba(239, 68, 68, 0.3)' : u.role === 'agent' ? 'rgba(99, 102, 241, 0.3)' : u.role === 'landlord' ? 'rgba(217, 119, 6, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`
+                              }}
+                            >
                               {u.role}
                             </span>
                           </td>
@@ -2337,7 +2412,18 @@ function AdminPageContent() {
                             Last Active: {u.lastLoginAt ? new Date(isNaN(Number(u.lastLoginAt)) ? u.lastLoginAt : Number(u.lastLoginAt)).toLocaleDateString() : 'Never'}
                           </span>
                         </div>
-                        <span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-available'}`} style={{ fontSize: '0.68rem' }}>
+                        <span
+                          style={{
+                            padding: '3px 10px',
+                            borderRadius: '12px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            textTransform: 'capitalize',
+                            backgroundColor: u.role === 'admin' ? 'rgba(239, 68, 68, 0.15)' : u.role === 'agent' ? 'rgba(99, 102, 241, 0.15)' : u.role === 'landlord' ? 'rgba(217, 119, 6, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                            color: u.role === 'admin' ? '#EF4444' : u.role === 'agent' ? '#6366F1' : u.role === 'landlord' ? '#D97706' : '#10B981',
+                            border: `1px solid ${u.role === 'admin' ? 'rgba(239, 68, 68, 0.3)' : u.role === 'agent' ? 'rgba(99, 102, 241, 0.3)' : u.role === 'landlord' ? 'rgba(217, 119, 6, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`
+                          }}
+                        >
                           {u.role}
                         </span>
                       </div>
@@ -4785,121 +4871,110 @@ function AdminPageContent() {
                 </button>
               </div>
 
-              {/* Stats Bar */}
-              <div className={styles.statsGrid} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '24px' }}>
-                <div className={styles.statCard}>
+              {/* Stats Bar (Minimal & Compact) */}
+              <div className={styles.statsGrid} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: '20px', gap: '12px' }}>
+                <div className={styles.statCard} style={{ padding: '16px 20px', minHeight: 'auto' }}>
                   <div className={styles.statHeader}>
-                    <span className={styles.statTitle}>Total Ride Requests</span>
-                    <Car size={20} style={{ color: '#F59E0B' }} />
+                    <span className={styles.statTitle} style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Total Requests</span>
+                    <Car size={18} style={{ color: '#F59E0B' }} />
                   </div>
-                  <div className={styles.statValue}>{rideReferrals.length}</div>
-                  <span className={styles.statSubtext}>Click referrals recorded</span>
+                  <div className={styles.statValue} style={{ fontSize: '1.6rem', marginTop: '4px' }}>{totalRideReferralsCount || rideReferrals.length}</div>
                 </div>
 
-                <div className={styles.statCard}>
+                <div className={styles.statCard} style={{ padding: '16px 20px', minHeight: 'auto' }}>
                   <div className={styles.statHeader}>
-                    <span className={styles.statTitle}>Today&apos;s Requests</span>
-                    <Clock size={20} style={{ color: 'var(--primary)' }} />
+                    <span className={styles.statTitle} style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Today</span>
+                    <Clock size={18} style={{ color: 'var(--primary)' }} />
                   </div>
-                  <div className={styles.statValue}>
+                  <div className={styles.statValue} style={{ fontSize: '1.6rem', marginTop: '4px' }}>
                     {rideReferrals.filter(r => {
                       const today = new Date().toISOString().split('T')[0];
                       return r.createdAt?.split('T')[0] === today;
                     }).length}
                   </div>
-                  <span className={styles.statSubtext}>Rides requested today</span>
                 </div>
 
-                <div className={styles.statCard}>
+                <div className={styles.statCard} style={{ padding: '16px 20px', minHeight: 'auto' }}>
                   <div className={styles.statHeader}>
-                    <span className={styles.statTitle}>Properties Interested</span>
-                    <Building size={20} style={{ color: '#10B981' }} />
+                    <span className={styles.statTitle} style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Properties</span>
+                    <Building size={18} style={{ color: '#10B981' }} />
                   </div>
-                  <div className={styles.statValue}>
+                  <div className={styles.statValue} style={{ fontSize: '1.6rem', marginTop: '4px' }}>
                     {new Set(rideReferrals.map(r => r.propertyId)).size}
                   </div>
-                  <span className={styles.statSubtext}>Unique properties with ride requests</span>
                 </div>
 
-                <div className={styles.statCard} style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.15) 100%)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                <div className={styles.statCard} style={{ padding: '16px 20px', minHeight: 'auto', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
                   <div className={styles.statHeader}>
-                    <span className={styles.statTitle} style={{ color: '#047857', fontWeight: 800 }}>Est. Total Commission</span>
-                    <TrendingUp size={20} style={{ color: '#059669' }} />
+                    <span className={styles.statTitle} style={{ fontSize: '0.75rem', color: '#047857', fontWeight: 800 }}>Est. Revenue</span>
+                    <TrendingUp size={18} style={{ color: '#059669' }} />
                   </div>
-                  <div className={styles.statValue} style={{ color: '#047857', fontWeight: 900 }}>
+                  <div className={styles.statValue} style={{ fontSize: '1.5rem', marginTop: '4px', color: '#047857', fontWeight: 900 }}>
                     GH₵ {(rideReferrals.reduce((sum, r) => sum + (r.commissionAmt || 5.0), 0)).toFixed(2)}
                   </div>
-                  <span className={styles.statSubtext} style={{ color: '#059669', fontWeight: 700 }}>GH₵ 5.00 earned per ride</span>
                 </div>
               </div>
 
-              {/* Referrals Table */}
+              {/* Referrals Minimal Table */}
               <div className={styles.tableCard}>
                 {rideReferrals.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
-                    <Car size={40} style={{ color: '#F59E0B', opacity: 0.5, marginBottom: '12px' }} />
-                    <p style={{ fontWeight: 600 }}>No Yuyu Ride referrals recorded yet.</p>
-                    <p style={{ fontSize: '0.85rem' }}>When tenants click &quot;Request Ride with Yuyu Rides&quot;, logs will appear here.</p>
+                  <div style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--text-secondary)' }}>
+                    <Car size={36} style={{ color: '#F59E0B', opacity: 0.5, marginBottom: '10px' }} />
+                    <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>No Yuyu Ride referrals recorded yet.</p>
+                    <p style={{ fontSize: '0.8rem', opacity: 0.8 }}>When tenants click &quot;Request Ride with Yuyu Rides&quot;, logs will appear here.</p>
                   </div>
                 ) : (
                   <div className={styles.tableResponsive}>
-                    <table className={styles.dataTable}>
+                    <table className={styles.dataTable} style={{ fontSize: '0.85rem' }}>
                       <thead>
                         <tr>
-                          <th>Date &amp; Time</th>
-                          <th>Ref Code</th>
-                          <th>Property Title</th>
-                          <th>Location</th>
-                          <th>Tenant Info</th>
-                          <th>Est. Commission</th>
-                          <th>Status</th>
-                          <th>Actions</th>
+                          <th style={{ padding: '10px 12px' }}>Date</th>
+                          <th style={{ padding: '10px 12px' }}>Ref Code</th>
+                          <th style={{ padding: '10px 12px' }}>Property</th>
+                          <th style={{ padding: '10px 12px' }}>Tenant</th>
+                          <th style={{ padding: '10px 12px' }}>Revenue</th>
+                          <th style={{ padding: '10px 12px' }}>Status</th>
+                          <th style={{ padding: '10px 12px' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {rideReferrals.map((item: RideReferralItem) => (
                           <tr key={item.id}>
-                            <td style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                              {new Date(item.createdAt).toLocaleString()}
+                            <td style={{ padding: '10px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
+                              {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </td>
-                            <td>
-                              <span style={{ fontWeight: 800, fontFamily: 'monospace', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#D97706', padding: '3px 8px', borderRadius: '4px' }}>
+                            <td style={{ padding: '10px 12px' }}>
+                              <span style={{ fontWeight: 800, fontFamily: 'monospace', backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#D97706', padding: '2px 6px', borderRadius: '4px', fontSize: '0.78rem' }}>
                                 {item.refCode}
                               </span>
                             </td>
-                            <td>
-                              <strong>{item.property?.title || `Property #${item.propertyId}`}</strong>
+                            <td style={{ padding: '10px 12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <span style={{ fontWeight: 600 }}>{item.property?.title || `#${item.propertyId}`}</span>
+                              {item.property?.location && <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginLeft: '6px' }}>({item.property.location})</span>}
                             </td>
-                            <td style={{ fontSize: '0.85rem' }}>
-                              {item.property?.location || '—'}
-                            </td>
-                            <td style={{ fontSize: '0.85rem' }}>
+                            <td style={{ padding: '10px 12px', fontSize: '0.82rem' }}>
                               {item.tenantName || item.user?.name ? (
-                                <div>
-                                  <strong>{item.tenantName || item.user?.name}</strong>
-                                  <br />
-                                  <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{item.tenantPhone || item.user?.phone || 'Guest'}</span>
-                                </div>
+                                <span><strong>{item.tenantName || item.user?.name}</strong> {item.tenantPhone || item.user?.phone ? <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>({item.tenantPhone || item.user?.phone})</span> : ''}</span>
                               ) : (
-                                <span style={{ color: 'var(--text-muted)' }}>Guest Prospect</span>
+                                <span style={{ color: 'var(--text-muted)' }}>Guest</span>
                               )}
                             </td>
-                            <td style={{ fontWeight: 800, color: '#059669', fontSize: '0.88rem' }}>
+                            <td style={{ padding: '10px 12px', fontWeight: 800, color: '#059669', fontSize: '0.82rem' }}>
                               GH₵ {(item.commissionAmt || 5.0).toFixed(2)}
                             </td>
-                            <td>
-                              <span style={{ backgroundColor: '#FEF3C7', color: '#B45309', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'capitalize' }}>
+                            <td style={{ padding: '10px 12px' }}>
+                              <span style={{ backgroundColor: '#FEF3C7', color: '#B45309', padding: '2px 6px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'capitalize' }}>
                                 {item.status}
                               </span>
                             </td>
-                            <td>
+                            <td style={{ padding: '10px 12px' }}>
                               <Link
                                 href={`/properties/${item.propertyId}`}
                                 target="_blank"
                                 className="btn btn-outline"
-                                style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                                style={{ padding: '3px 8px', fontSize: '0.75rem', borderRadius: '4px' }}
                               >
-                                View Property
+                                View
                               </Link>
                             </td>
                           </tr>

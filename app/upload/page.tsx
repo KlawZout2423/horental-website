@@ -57,6 +57,7 @@ export default function UploadPage({
 }) {
   const { user, loading: authLoading, updateUser } = useAuth();
   const router = useRouter();
+  const isAgent = user?.role === 'agent';
 
   // Form states
   const [title, setTitle] = useState('');
@@ -1310,17 +1311,19 @@ export default function UploadPage({
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="digitalAddress">Ghana Post Digital Address (Optional)</label>
-              <input
-                id="digitalAddress"
-                type="text"
-                placeholder="e.g. VH-0123-4567"
-                value={digitalAddress}
-                onChange={(e) => setDigitalAddress(e.target.value)}
-                className="form-control"
-              />
-            </div>
+            {!isAgent && (
+              <div className="form-group">
+                <label htmlFor="digitalAddress">Ghana Post Digital Address (Optional)</label>
+                <input
+                  id="digitalAddress"
+                  type="text"
+                  placeholder="e.g. VH-0123-4567"
+                  value={digitalAddress}
+                  onChange={(e) => setDigitalAddress(e.target.value)}
+                  className="form-control"
+                />
+              </div>
+            )}
 
             <div className={styles.fullWidth}>
               <div className="form-group">
@@ -1336,86 +1339,88 @@ export default function UploadPage({
               </div>
             </div>
 
-            <div className={styles.fullWidth}>
-              <div style={{
-                backgroundColor: latitude && longitude ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-surface-secondary)',
-                padding: '14px 16px',
-                borderRadius: 'var(--radius-md)',
-                border: latitude && longitude ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                  <div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      📍 Property On-Site GPS Location
+            {!isAgent && (
+              <div className={styles.fullWidth}>
+                <div style={{
+                  backgroundColor: latitude && longitude ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-surface-secondary)',
+                  padding: '14px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: latitude && longitude ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        📍 Property On-Site GPS Location
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {latitude && longitude
+                          ? `Coordinates: Lat ${latitude.toFixed(5)}, Lng ${longitude.toFixed(5)}`
+                          : 'No GPS coordinates saved yet (defaults to selected area centroid)'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      {latitude && longitude
-                        ? `Coordinates: Lat ${latitude.toFixed(5)}, Lng ${longitude.toFixed(5)}`
-                        : 'No GPS coordinates saved yet (defaults to selected area centroid)'}
-                    </div>
-                  </div>
 
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    {latitude && longitude && (
-                      <>
-                        <a
-                          href={`https://www.google.com/maps?q=${latitude},${longitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn btn-outline"
-                          style={{ padding: '6px 12px', fontSize: '0.78rem', gap: '4px', borderColor: '#10B981', color: '#10B981', fontWeight: 700 }}
-                        >
-                          🗺️ Open in Google Maps
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setLatitude(null);
-                            setLongitude(null);
-                            setGpsStatusMsg(null);
-                          }}
-                          style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600 }}
-                        >
-                          Clear
-                        </button>
-                      </>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={handleGetGpsLocation}
-                      disabled={isDetectingGps}
-                      className="btn btn-primary"
-                      style={{ padding: '8px 14px', fontSize: '0.82rem', fontWeight: 800, gap: '6px', display: 'inline-flex', alignItems: 'center' }}
-                    >
-                      {isDetectingGps ? (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      {latitude && longitude && (
                         <>
-                          <Loader size={14} className="animate-spin" /> Detecting GPS...
+                          <a
+                            href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-outline"
+                            style={{ padding: '6px 12px', fontSize: '0.78rem', gap: '4px', borderColor: '#10B981', color: '#10B981', fontWeight: 700 }}
+                          >
+                            🗺️ Open in Google Maps
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLatitude(null);
+                              setLongitude(null);
+                              setGpsStatusMsg(null);
+                            }}
+                            style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600 }}
+                          >
+                            Clear
+                          </button>
                         </>
-                      ) : (
-                        '📍 Detect Live On-Site GPS'
                       )}
-                    </button>
-                  </div>
-                </div>
 
-                {gpsStatusMsg && (
-                  <div style={{
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    backgroundColor: gpsStatusMsg.includes('✅') ? 'rgba(16, 185, 129, 0.15)' : gpsStatusMsg.includes('⚠️') ? 'rgba(239, 68, 68, 0.12)' : 'rgba(59, 130, 246, 0.12)',
-                    color: gpsStatusMsg.includes('✅') ? '#047857' : gpsStatusMsg.includes('⚠️') ? '#DC2626' : '#1D4ED8',
-                  }}>
-                    {gpsStatusMsg}
+                      <button
+                        type="button"
+                        onClick={handleGetGpsLocation}
+                        disabled={isDetectingGps}
+                        className="btn btn-primary"
+                        style={{ padding: '8px 14px', fontSize: '0.82rem', fontWeight: 800, gap: '6px', display: 'inline-flex', alignItems: 'center' }}
+                      >
+                        {isDetectingGps ? (
+                          <>
+                            <Loader size={14} className="animate-spin" /> Detecting GPS...
+                          </>
+                        ) : (
+                          '📍 Detect Live On-Site GPS'
+                        )}
+                      </button>
+                    </div>
                   </div>
-                )}
+
+                  {gpsStatusMsg && (
+                    <div style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      backgroundColor: gpsStatusMsg.includes('✅') ? 'rgba(16, 185, 129, 0.15)' : gpsStatusMsg.includes('⚠️') ? 'rgba(239, 68, 68, 0.12)' : 'rgba(59, 130, 246, 0.12)',
+                      color: gpsStatusMsg.includes('✅') ? '#047857' : gpsStatusMsg.includes('⚠️') ? '#DC2626' : '#1D4ED8',
+                    }}>
+                      {gpsStatusMsg}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="form-group">
               <label htmlFor="price">Price & Duration</label>
@@ -1514,17 +1519,19 @@ export default function UploadPage({
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="landlordName">Landlord Name (Optional)</label>
-              <input
-                id="landlordName"
-                type="text"
-                placeholder="e.g. Mr. John Doe"
-                value={landlordName}
-                onChange={(e) => setLandlordName(e.target.value)}
-                className="form-control"
-              />
-            </div>
+            {!isAgent && (
+              <div className="form-group">
+                <label htmlFor="landlordName">Landlord Name (Optional)</label>
+                <input
+                  id="landlordName"
+                  type="text"
+                  placeholder="e.g. Mr. John Doe"
+                  value={landlordName}
+                  onChange={(e) => setLandlordName(e.target.value)}
+                  className="form-control"
+                />
+              </div>
+            )}
 
             {/* Rooms, Advance, Available From — only for room/accommodation types */}
             {type !== 'Lands' && type !== 'Furnitures' && (
