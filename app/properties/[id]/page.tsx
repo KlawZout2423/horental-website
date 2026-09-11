@@ -163,34 +163,54 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
   const handleYuyuRideClick = async () => {
     if (!property?.id) return;
 
-    if (!user) {
-      setShowAuthPrompt(true);
-      return;
+    setIsBookingRide(true);
+
+    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}`);
+    const fallbackUrl = `https://wa.me/233557922593?text=${fallbackText}`;
+
+    // Pre-open window synchronously on desktop to bypass browser popup blockers
+    let win: Window | null = null;
+    if (!isMobile && typeof window !== 'undefined') {
+      try {
+        win = window.open('about:blank', '_blank');
+      } catch {
+        // Popup blocked
+      }
     }
 
-    setIsBookingRide(true);
     try {
       const res = await fetch('/api/rides/referral', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           propertyId: parseInt(property.id, 10),
-          tenantName: user?.name,
-          tenantPhone: user?.phone,
+          tenantName: user?.name || 'Guest Tenant',
+          tenantPhone: user?.phone || '',
           userId: user?.id ? parseInt(user.id, 10) : undefined,
         }),
       });
-      const data = await res.json();
-      if (data.whatsappUrl) {
-        window.open(data.whatsappUrl, '_blank');
+
+      let targetUrl = fallbackUrl;
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.whatsappUrl) {
+          targetUrl = data.whatsappUrl;
+        }
+      }
+
+      if (win && !win.closed) {
+        win.location.href = targetUrl;
       } else {
-        const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}`);
-        window.open(`https://wa.me/233557922593?text=${fallbackText}`, '_blank');
+        window.location.href = targetUrl;
       }
     } catch (err) {
       console.error('Failed to log Yuyu ride referral:', err);
-      const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}`);
-      window.open(`https://wa.me/233557922593?text=${fallbackText}`, '_blank');
+      if (win && !win.closed) {
+        win.location.href = fallbackUrl;
+      } else {
+        window.location.href = fallbackUrl;
+      }
     } finally {
       setIsBookingRide(false);
     }

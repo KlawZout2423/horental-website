@@ -9,15 +9,19 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { propertyId, tenantName, tenantPhone, userId, pickupLocation } = body;
 
-    if (!propertyId) {
+    const parsedPropId = parseInt(String(propertyId), 10);
+    if (!propertyId || isNaN(parsedPropId) || parsedPropId <= 0) {
       return NextResponse.json(
-        { error: "Property ID is required" },
+        { error: "Valid Property ID is required" },
         { status: 400 }
       );
     }
 
+    const parsedUserId = userId ? parseInt(String(userId), 10) : undefined;
+    const validUserId = parsedUserId && !isNaN(parsedUserId) ? parsedUserId : null;
+
     const property = await prisma.property.findUnique({
-      where: { id: Number(propertyId) },
+      where: { id: parsedPropId },
       select: { id: true, title: true, location: true },
     });
 
@@ -36,11 +40,11 @@ export async function POST(req: Request) {
     const referral = await prisma.rideReferral.create({
       data: {
         refCode,
-        propertyId: Number(propertyId),
-        userId: userId ? Number(userId) : null,
-        tenantName: tenantName || null,
-        tenantPhone: tenantPhone || null,
-        pickupLocation: pickupLocation || null,
+        propertyId: parsedPropId,
+        userId: validUserId,
+        tenantName: tenantName ? String(tenantName).trim() : null,
+        tenantPhone: tenantPhone ? String(tenantPhone).trim() : null,
+        pickupLocation: pickupLocation ? String(pickupLocation).trim() : null,
         status: "redirected",
         commissionAmt: 5.0,
       },
