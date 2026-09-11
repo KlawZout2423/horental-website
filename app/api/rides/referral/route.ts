@@ -62,7 +62,14 @@ export async function POST(req: Request) {
     // Default Yuyu Rides WhatsApp contact (can be overridden via env variable YUYU_WHATSAPP_NUMBER)
     const yuyuNumber = process.env.YUYU_WHATSAPP_NUMBER || "233557922593";
 
-    const text = `Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}\n📌 Ref Code: ${refCode}`;
+    const cleanPickup = pickupLocation ? String(pickupLocation).trim() : '';
+    let text = `Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}`;
+
+    if (cleanPickup) {
+      text += `\n📍 Pickup / Live Location: ${cleanPickup}`;
+    }
+
+    text += `\n📌 Ref Code: ${refCode}`;
 
     const whatsappUrl = `https://wa.me/${yuyuNumber}?text=${encodeURIComponent(text)}`;
 

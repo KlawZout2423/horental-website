@@ -160,14 +160,29 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
   const [isBookingRide, setIsBookingRide] = useState(false);
 
+  const getUserLiveLocation = (): Promise<string | null> => {
+    return new Promise((resolve) => {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        return resolve(null);
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude.toFixed(6);
+          const lng = pos.coords.longitude.toFixed(6);
+          resolve(`https://maps.google.com/?q=${lat},${lng}`);
+        },
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 3500, maximumAge: 60000 }
+      );
+    });
+  };
+
   const handleYuyuRideClick = async () => {
     if (!property?.id) return;
 
     setIsBookingRide(true);
 
     const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}`);
-    const fallbackUrl = `https://wa.me/233557922593?text=${fallbackText}`;
 
     // Pre-open window synchronously on desktop to bypass browser popup blockers
     let win: Window | null = null;
@@ -180,6 +195,11 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
     }
 
     try {
+      // Attempt to retrieve user's live GPS coordinates (3.5s timeout fallback)
+      const livePickup = await getUserLiveLocation();
+      const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}${livePickup ? `\n📍 Pickup / Live Location: ${livePickup}` : ''}`);
+      const fallbackUrl = `https://wa.me/233557922593?text=${fallbackText}`;
+
       const res = await fetch('/api/rides/referral', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,6 +208,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
           tenantName: user?.name || 'Guest Tenant',
           tenantPhone: user?.phone || '',
           userId: user?.id ? parseInt(user.id, 10) : undefined,
+          pickupLocation: livePickup || undefined,
         }),
       });
 
@@ -206,6 +227,8 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
       }
     } catch (err) {
       console.error('Failed to log Yuyu ride referral:', err);
+      const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Location: ${property.location}`);
+      const fallbackUrl = `https://wa.me/233557922593?text=${fallbackText}`;
       if (win && !win.closed) {
         win.location.href = fallbackUrl;
       } else {
