@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
 import { graphqlRequest, CREATE_PROPERTY, UPDATE_PROPERTY, UPDATE_AGENT_PROFILE, GET_AGENT_PROPERTIES, GET_VERIFICATION_REQUESTS, GET_PROPERTY_BY_ID } from '../../lib/graphql';
@@ -46,15 +46,17 @@ function RejectionNotesBox({ userId }: { userId: number }) {
 }
 
 
-export default function UploadPage({
-  isEmbedded = false,
-  initialData,
-  onSuccess
-}: {
+interface UploadPageProps {
   isEmbedded?: boolean;
   initialData?: Property | null;
   onSuccess?: () => void;
-}) {
+}
+
+function UploadPageContent({
+  isEmbedded = false,
+  initialData,
+  onSuccess
+}: UploadPageProps) {
   const { user, loading: authLoading, updateUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1929,4 +1931,12 @@ export default function UploadPage({
         />
       </div>
     );
+}
+
+export default function UploadPage(props: UploadPageProps) {
+  return (
+    <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>}>
+      <UploadPageContent {...props} />
+    </Suspense>
+  );
 }

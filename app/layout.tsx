@@ -81,10 +81,10 @@ export default function RootLayout({
         )}
 
         {/* Google AdSense Meta Verification & Script */}
-        <meta name="google-adsense-account" content="ca-pub-4874960067589615" />
+        <meta name="google-adsense-account" content={process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-8918210886432706"} />
         <script
           async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4874960067589615"
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-8918210886432706"}`}
           crossOrigin="anonymous"
         />
       </head>
