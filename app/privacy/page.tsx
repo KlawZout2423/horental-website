@@ -142,18 +142,30 @@ Ho Rentals — Transparent. Direct. Trusted.`;
           </p>
         </section>
 
-        {/* Section 5 */}
+        {/* Section 5 - Google AdSense & Cookies */}
         <section className={styles.sectionCard}>
-          <h2 className={styles.sectionTitle}>5. Data Security &amp; Ghana Act 843 Compliance</h2>
+          <h2 className={styles.sectionTitle}>5. Third-Party Advertising &amp; Google AdSense Cookies</h2>
+          <p className={styles.text}>
+            We use Google AdSense to serve advertisements on our platform. Third-party vendors, including Google, use cookies to serve ads based on a user&apos;s prior visits to our website or other websites on the internet.
+          </p>
+          <ul className={styles.bulletList}>
+            <li>Google&apos;s use of advertising cookies enables it and its partners to serve ads to users based on their visit to HO Rentals and/or other sites on the Internet.</li>
+            <li>Users may opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Google Ads Settings</a> or <a href="https://www.aboutads.info" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>www.aboutads.info</a>.</li>
+          </ul>
+        </section>
+
+        {/* Section 6 */}
+        <section className={styles.sectionCard}>
+          <h2 className={styles.sectionTitle}>6. Data Security &amp; Ghana Act 843 Compliance</h2>
           <p className={styles.text}>
             We implement strict security measures in full compliance with the <strong>Data Protection Act, 2012 (Act 843) of Ghana</strong> to ensure your data is kept confidential and protected against loss, theft, or unauthorized access.
           </p>
         </section>
 
-        {/* Section 6 */}
+        {/* Section 7 */}
         <section className={styles.sectionCard}>
           <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Eye size={20} style={{ color: 'var(--primary)' }} /> 6. Your Rights &amp; Data Deletion
+            <Eye size={20} style={{ color: 'var(--primary)' }} /> 7. Your Rights &amp; Data Deletion
           </h2>
           <p className={styles.text}>Under Ghanaian data protection law, you have full control over your data:</p>
           <ul className={styles.bulletList}>
@@ -166,9 +178,9 @@ Ho Rentals — Transparent. Direct. Trusted.`;
           </p>
         </section>
 
-        {/* Section 7 */}
+        {/* Section 8 */}
         <section className={styles.sectionCard}>
-          <h2 className={styles.sectionTitle}>7. Governing Law</h2>
+          <h2 className={styles.sectionTitle}>8. Governing Law</h2>
           <p className={styles.text}>
             This Privacy Policy is governed by and construed in accordance with the laws of the <strong>Republic of Ghana</strong>.
           </p>
