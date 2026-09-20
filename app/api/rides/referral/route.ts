@@ -61,10 +61,22 @@ export async function POST(req: Request) {
     }).catch((err) => console.warn("Failed to dispatch ride SMS alert:", err));
 
     // Default Yuyu Rides WhatsApp contact (can be overridden via env variable YUYU_WHATSAPP_NUMBER)
-    const yuyuNumber = process.env.YUYU_WHATSAPP_NUMBER || "233557922593";
+    const yuyuNumber = process.env.YUYU_WHATSAPP_NUMBER || "233538792644";
+
+    const orderTimeStr = new Date().toLocaleString("en-GB", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "GMT",
+    });
+    const passengerName = tenantName ? String(tenantName).trim() : (validUserId ? "Registered Tenant" : "Guest Passenger");
+    const passengerPhone = tenantPhone ? String(tenantPhone).trim() : "";
 
     const cleanPickup = pickupLocation ? String(pickupLocation).trim() : '';
-    let text = `Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}`;
+    let text = `Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n`;
+    text += `👤 Passenger: ${passengerName}${passengerPhone ? ` (${passengerPhone})` : ''}\n`;
+    text += `🕒 Order Time: ${orderTimeStr}\n`;
+    text += `🏠 Property: ${property.title}\n`;
+    text += `📍 Property Location: ${property.location}`;
 
     if (cleanPickup) {
       text += `\n📍 Pickup / GPS: ${cleanPickup}`;

@@ -199,14 +199,15 @@ export async function sendRideReferralAlertSMS({
     process.env.ADMIN_NOTIFICATION_PHONE,
     process.env.NEXT_PUBLIC_SUPPORT_PHONE,
     '0204940602',
-    '0557922593',
+    '0538792644',
   ].filter(Boolean) as string[];
 
   const cleanCustomerName = (customerName || 'Tenant').trim();
   const cleanCustomerPhone = customerPhone ? formatGhanaPhone(customerPhone) : 'Web App';
   const shortTitle = propertyTitle.length > 25 ? `${propertyTitle.slice(0, 22)}...` : propertyTitle;
+  const orderTimeStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'GMT' });
 
-  const message = `HO RENTALS RIDE ALERT: ${cleanCustomerName} (${cleanCustomerPhone}) requested a Yuyu Ride for "${shortTitle}" (${propertyLocation || 'Ho'}). Ref: ${referralCode}. Est Comm: GHc5.00`;
+  const message = `HO RENTALS RIDE ALERT [${orderTimeStr}]: ${cleanCustomerName} (${cleanCustomerPhone}) requested a Yuyu Ride for "${shortTitle}" (${propertyLocation || 'Ho'}). Ref: ${referralCode}`;
 
   return sendSMS({
     to: adminPhones,

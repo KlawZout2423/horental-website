@@ -185,7 +185,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
     setIsBookingRide(true);
 
     const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const yuyuNumber = '233557922593';
+    const yuyuNumber = '233538792644';
 
     // Pre-open blank tab on desktop to bypass browser popup blockers
     let win: Window | null = null;
@@ -219,8 +219,12 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         targetUrl = isMobile && data?.whatsappAppUrl ? data.whatsappAppUrl : (data?.whatsappUrl || '');
       }
 
+      const passengerName = user?.name || 'Guest Passenger';
+      const passengerPhone = user?.phone || '';
+      const orderTimeStr = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "GMT" });
+
       if (!targetUrl) {
-        const msgText = `Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}${livePickup ? `\n📍 Pickup / GPS: ${livePickup}` : ''}\n📍 I will add my live location now`;
+        const msgText = `Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n👤 Passenger: ${passengerName}${passengerPhone ? ` (${passengerPhone})` : ''}\n🕒 Order Time: ${orderTimeStr}\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}${livePickup ? `\n📍 Pickup / GPS: ${livePickup}` : ''}\n📍 I will add my live location now`;
         const encoded = encodeURIComponent(msgText);
         targetUrl = isMobile ? `whatsapp://send?phone=${yuyuNumber}&text=${encoded}` : `https://wa.me/${yuyuNumber}?text=${encoded}`;
       }
@@ -234,7 +238,10 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
       }
     } catch (err) {
       console.error('Failed to log Yuyu ride referral:', err);
-      const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}\n📍 I will add my live location now`);
+      const passengerName = user?.name || 'Guest Passenger';
+      const passengerPhone = user?.phone || '';
+      const orderTimeStr = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "GMT" });
+      const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n👤 Passenger: ${passengerName}${passengerPhone ? ` (${passengerPhone})` : ''}\n🕒 Order Time: ${orderTimeStr}\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}\n📍 I will add my live location now`);
       const targetUrl = isMobile ? `whatsapp://send?phone=${yuyuNumber}&text=${fallbackText}` : `https://wa.me/${yuyuNumber}?text=${fallbackText}`;
       if (isMobile) {
         window.location.href = targetUrl;
