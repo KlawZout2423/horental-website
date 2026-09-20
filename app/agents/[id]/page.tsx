@@ -3,11 +3,12 @@
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Phone, MessageCircle, ShieldCheck, MapPin, Building, PlusCircle, ChevronDown, ChevronUp, Heart, Check } from 'lucide-react';
+import { ArrowLeft, Phone, MessageCircle, ShieldCheck, MapPin, Building, PlusCircle, ChevronDown, ChevronUp, Heart, Check, Edit, X } from 'lucide-react';
 import { useAuth } from '../../../lib/auth';
 import { graphqlRequest, GET_AGENT, GET_AGENT_PROPERTIES } from '../../../lib/graphql';
 import { Property, getPricePeriodLabel, getOptimizedImageUrl, getStatusLabel, stripIdFromBio } from '../../../lib/types';
 import VerifiedAgentModal from '../../../components/VerifiedAgentModal';
+import UploadPage from '../../upload/page';
 import styles from './agent.module.css';
 import propStyles from '../../properties/properties.module.css';
 
@@ -38,6 +39,7 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
   const [profileExpanded, setProfileExpanded] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
 
   // Load saved bookmarks from localStorage on mount
   useEffect(() => {
@@ -80,45 +82,45 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
     });
   };
 
-  useEffect(() => {
-    async function loadAgentData() {
-      try {
-        setLoading(true);
-        const parsedId = parseInt(agentId, 10);
-        if (isNaN(parsedId)) {
-          setError('Invalid agent identifier.');
-          return;
-        }
-
-        const [agentRes, propsRes] = await Promise.all([
-          graphqlRequest<{ user: AgentData | null }>(GET_AGENT, { id: parsedId }),
-          graphqlRequest<{ agentProperties: Property[] }>(GET_AGENT_PROPERTIES, {
-            userId: parsedId,
-            includePrivate: Boolean(user && String(user.id) === String(agentId)),
-          })
-        ]);
-
-        if (!agentRes || !agentRes.user) {
-          setError('Agent profile not found.');
-          return;
-        }
-
-        const isAuthorizedViewer = user && (user.role === 'admin' || String(user.id) === String(agentId));
-        if (agentRes.user.verificationStatus !== 'verified' && !isAuthorizedViewer) {
-          setError('This agent account is currently pending verification and is not publicly visible.');
-          return;
-        }
-
-        setAgent(agentRes.user);
-        setProperties(propsRes?.agentProperties || []);
-      } catch (err: any) {
-        console.error('Error fetching agent data:', err);
-        setError(err.message || 'Failed to load agent profile.');
-      } finally {
-        setLoading(false);
+  const loadAgentData = async () => {
+    try {
+      setLoading(true);
+      const parsedId = parseInt(agentId, 10);
+      if (isNaN(parsedId)) {
+        setError('Invalid agent identifier.');
+        return;
       }
-    }
 
+      const [agentRes, propsRes] = await Promise.all([
+        graphqlRequest<{ user: AgentData | null }>(GET_AGENT, { id: parsedId }),
+        graphqlRequest<{ agentProperties: Property[] }>(GET_AGENT_PROPERTIES, {
+          userId: parsedId,
+          includePrivate: Boolean(user && String(user.id) === String(agentId)),
+        })
+      ]);
+
+      if (!agentRes || !agentRes.user) {
+        setError('Agent profile not found.');
+        return;
+      }
+
+      const isAuthorizedViewer = user && (user.role === 'admin' || String(user.id) === String(agentId));
+      if (agentRes.user.verificationStatus !== 'verified' && !isAuthorizedViewer) {
+        setError('This agent account is currently pending verification and is not publicly visible.');
+        return;
+      }
+
+      setAgent(agentRes.user);
+      setProperties(propsRes?.agentProperties || []);
+    } catch (err: any) {
+      console.error('Error fetching agent data:', err);
+      setError(err.message || 'Failed to load agent profile.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (agentId) {
       loadAgentData();
     }
@@ -390,13 +392,30 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
                 </div>
 
                 <div className={propStyles.cardContent}>
-                  <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span className={`badge badge-${p.status === 'available' ? 'available' : p.status === 'rented' || p.status === 'occupied' ? 'rented' : 'pending'}`} style={{ padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px', fontWeight: 700 }}>
-                      {getStatusLabel(p.status, p.type)}
-                    </span>
-                    <span className="badge" style={{ backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600, padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px' }}>
-                      {p.type}
-                    </span>
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span className={`badge badge-${p.status === 'available' ? 'available' : p.status === 'rented' || p.status === 'occupied' ? 'rented' : 'pending'}`} style={{ padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px', fontWeight: 700 }}>
+                        {getStatusLabel(p.status, p.type)}
+                      </span>
+                      <span className="badge" style={{ backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600, padding: '3px 9px', fontSize: '0.72rem', borderRadius: '12px' }}>
+                        {p.type}
+                      </span>
+                    </div>
+
+                    {(isOwnProfile || (user && (user.role === 'admin' || String(user.id) === String(p.owner?.id)))) && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setEditingProperty(p);
+                        }}
+                        className="btn btn-outline"
+                        style={{ padding: '3px 10px', fontSize: '0.74rem', height: '26px', borderRadius: '12px', gap: '4px', color: 'var(--primary)', borderColor: 'var(--primary-light)', backgroundColor: 'var(--bg-surface)', fontWeight: 700 }}
+                        title="Edit this property listing"
+                      >
+                        <Edit size={12} /> Edit Listing
+                      </button>
+                    )}
                   </div>
 
                   <h3 className={propStyles.cardTitle} style={{ marginTop: '2px', marginBottom: '6px', fontSize: '1.05rem', fontWeight: 700, textTransform: 'capitalize' }}>
@@ -431,6 +450,31 @@ export default function AgentProfilePage({ params }: { params: Promise<{ id: str
       )}
       </main>
       </div>
+
+      {editingProperty && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}>
+          <div style={{ backgroundColor: 'var(--bg-surface)', borderRadius: '16px', maxWidth: '900px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative', border: '1px solid var(--border)', padding: '24px', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
+            <button
+              onClick={() => setEditingProperty(null)}
+              style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', background: 'var(--bg-surface-secondary)', color: 'var(--text-primary)', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', zIndex: 10 }}
+              aria-label="Close edit property modal"
+            >
+              <X size={16} />
+            </button>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '20px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Edit size={18} style={{ color: 'var(--primary)' }} /> Edit Listing: {editingProperty.title}
+            </h3>
+            <UploadPage
+              isEmbedded={true}
+              initialData={editingProperty}
+              onSuccess={() => {
+                setEditingProperty(null);
+                loadAgentData();
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <VerifiedAgentModal
         isOpen={showVerifyModal}

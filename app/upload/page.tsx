@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
-import { graphqlRequest, CREATE_PROPERTY, UPDATE_PROPERTY, UPDATE_AGENT_PROFILE, GET_AGENT_PROPERTIES, GET_VERIFICATION_REQUESTS } from '../../lib/graphql';
+import { graphqlRequest, CREATE_PROPERTY, UPDATE_PROPERTY, UPDATE_AGENT_PROFILE, GET_AGENT_PROPERTIES, GET_VERIFICATION_REQUESTS, GET_PROPERTY_BY_ID } from '../../lib/graphql';
 import { UploadCloud, Image as ImageIcon, Sparkles, Loader, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, parsePropertyDescription, Property, User, stripIdFromBio } from '../../lib/types';
 import VerifiedAgentModal from '../../components/VerifiedAgentModal';
@@ -57,7 +57,25 @@ export default function UploadPage({
 }) {
   const { user, loading: authLoading, updateUser } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams ? searchParams.get('edit') || searchParams.get('id') : null;
+  const [fetchedInitialData, setFetchedInitialData] = useState<Property | null>(null);
   const isAgent = user?.role === 'agent';
+
+  useEffect(() => {
+    if (!initialData && editId) {
+      const pId = parseInt(editId, 10);
+      if (!isNaN(pId)) {
+        graphqlRequest<{ property: Property | null }>(GET_PROPERTY_BY_ID, { id: pId })
+          .then((data) => {
+            if (data?.property) setFetchedInitialData(data.property);
+          })
+          .catch((err) => console.error('Error fetching property to edit:', err));
+      }
+    }
+  }, [initialData, editId]);
+
+  const activeInitialData = initialData || fetchedInitialData;
 
   // Form states
   const [title, setTitle] = useState('');
@@ -172,32 +190,32 @@ export default function UploadPage({
     }
   };
 
-  // Pre-fill state when editing an existing property via initialData
+  // Pre-fill state when editing an existing property via activeInitialData
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
-    if (initialData) {
-      setTitle(initialData.title || '');
-      setLocation(initialData.location || '');
-      setPrice(initialData.price !== undefined ? String(initialData.price) : '');
-      setType(initialData.type || 'Student Hostel');
-      setStatus(initialData.status || 'available');
-      setContact(initialData.contact || '');
-      setDigitalAddress(initialData.digitalAddress || '');
-      setLandmarks(initialData.landmarks || '');
-      setLatitude(initialData.latitude ?? null);
-      setLongitude(initialData.longitude ?? null);
-      setLandlordName(initialData.landlordName || '');
+    if (activeInitialData) {
+      setTitle(activeInitialData.title || '');
+      setLocation(activeInitialData.location || '');
+      setPrice(activeInitialData.price !== undefined ? String(activeInitialData.price) : '');
+      setType(activeInitialData.type || 'Student Hostel');
+      setStatus(activeInitialData.status || 'available');
+      setContact(activeInitialData.contact || '');
+      setDigitalAddress(activeInitialData.digitalAddress || '');
+      setLandmarks(activeInitialData.landmarks || '');
+      setLatitude(activeInitialData.latitude ?? null);
+      setLongitude(activeInitialData.longitude ?? null);
+      setLandlordName(activeInitialData.landlordName || '');
 
-      if (initialData.gallery && initialData.gallery.length > 0) {
-        setImagePreviews(initialData.gallery.map((g) => g.url));
-      } else if (initialData.imageUrl) {
-        setImagePreviews([initialData.imageUrl]);
+      if (activeInitialData.gallery && activeInitialData.gallery.length > 0) {
+        setImagePreviews(activeInitialData.gallery.map((g) => g.url));
+      } else if (activeInitialData.imageUrl) {
+        setImagePreviews([activeInitialData.imageUrl]);
       } else {
         setImagePreviews([]);
       }
       setImageFiles([]);
 
-      let desc = initialData.description || '';
+      let desc = activeInitialData.description || '';
 
       const pricePeriodMatch = desc.match(/PricePeriod:\s*(?:per\s*)?([^\n|]+)/i);
       if (pricePeriodMatch) {
@@ -286,7 +304,7 @@ export default function UploadPage({
       if (lGps) setDigitalAddress(lGps);
       if (lLandmark) setLandmarks(lLandmark);
     }
-  }, [initialData]);
+  }, [activeInitialData]);
 
   // Check login status and role privileges
   useEffect(() => {
@@ -540,8 +558,8 @@ export default function UploadPage({
         landlordName: landlordName.trim() || undefined,
       };
 
-      if (initialData && initialData.id) {
-        const idInt = typeof initialData.id === 'number' ? initialData.id : parseInt(String(initialData.id), 10);
+      if (activeInitialData && activeInitialData.id) {
+        const idInt = typeof activeInitialData.id === 'number' ? activeInitialData.id : parseInt(String(activeInitialData.id), 10);
         await graphqlRequest(UPDATE_PROPERTY, { id: idInt, input });
       } else {
         await graphqlRequest(CREATE_PROPERTY, { input });

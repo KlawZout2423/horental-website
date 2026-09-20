@@ -4,12 +4,13 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth';
-import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2, Maximize2, Navigation, Car } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2, Maximize2, Navigation, Car, Edit } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTY_BY_ID, UPDATE_PROPERTY, CREATE_REPORT } from '../../../lib/graphql';
 import { trackVisit } from '../../../lib/trackVisit';
 import styles from './detail.module.css';
 import AuthPromptModal from '../../../components/AuthPromptModal';
 import Toast from '../../../components/Toast';
+import UploadPage from '../../upload/page';
 import { getPricePeriodLabel, formatGhanaPhone, isValidGhanaPhone, sanitizeInput, getOptimizedImageUrl, parsePropertyDescription } from '../../../lib/types';
 
 interface GalleryItem {
@@ -54,6 +55,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   
   // Gallery slider state
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -429,18 +431,29 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className={`${styles.container} animate-fade-in`}>
-      {/* Back Button & Share */}
+      {/* Back Button & Share / Edit */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
         <Link href="/properties" className={styles.backButton} style={{ marginBottom: 0 }}>
           <ArrowLeft size={16} /> Back to Listings
         </Link>
-        <button
-          onClick={handleShare}
-          className="btn btn-outline"
-          style={{ padding: '6px 14px', fontSize: '0.85rem', fontWeight: 600, gap: '6px' }}
-        >
-          <Share2 size={14} /> Share Listing
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {user && (user.role === 'admin' || String(user.id) === String(property.owner?.id)) && (
+            <button
+              onClick={() => setEditingProperty(property)}
+              className="btn"
+              style={{ padding: '6px 14px', fontSize: '0.85rem', fontWeight: 700, gap: '6px', backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              <Edit size={14} /> Edit Listing
+            </button>
+          )}
+          <button
+            onClick={handleShare}
+            className="btn btn-outline"
+            style={{ padding: '6px 14px', fontSize: '0.85rem', fontWeight: 600, gap: '6px' }}
+          >
+            <Share2 size={14} /> Share Listing
+          </button>
+        </div>
       </div>
 
       <div className={styles.layout}>
@@ -1219,6 +1232,32 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {editingProperty && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}>
+          <div style={{ backgroundColor: 'var(--bg-surface)', borderRadius: '16px', maxWidth: '900px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative', border: '1px solid var(--border)', padding: '24px', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
+            <button
+              onClick={() => setEditingProperty(null)}
+              style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', background: 'var(--bg-surface-secondary)', color: 'var(--text-primary)', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', zIndex: 10 }}
+              aria-label="Close edit property modal"
+            >
+              <X size={16} />
+            </button>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '20px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Edit size={18} style={{ color: 'var(--primary)' }} /> Edit Listing: {editingProperty.title}
+            </h3>
+            <UploadPage
+              isEmbedded={true}
+              initialData={editingProperty}
+              onSuccess={() => {
+                setEditingProperty(null);
+                graphqlRequest<{ property: Property | null }>(GET_PROPERTY_BY_ID, { id: parseInt(id, 10) })
+                  .then(data => { if (data?.property) setProperty(data.property); });
+              }}
+            />
           </div>
         </div>
       )}

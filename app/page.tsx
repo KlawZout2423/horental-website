@@ -303,8 +303,24 @@ export default function Home() {
       result = result.filter((p) => {
         if (p.owner?.role === 'agent') return false;
         const pType = (p.type || '').toLowerCase().trim();
+        if (targetType === 'single room') {
+          return (pType === 'single room' || pType === 'single-room') &&
+            !pType.includes('sc') && !pType.includes('self contained') && !pType.includes('self-contained') && !pType.includes('self contain');
+        }
+        if (targetType === 'single room sc' || targetType === 'single room self contain') {
+          return (pType.includes('single room') || pType.includes('single-room')) &&
+            (pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained') || pType.includes('self contain'));
+        }
+        if (targetType === 'chamber & hall' || targetType === 'chamber and hall') {
+          return (pType.includes('chamber') && pType.includes('hall')) &&
+            !pType.includes('sc') && !pType.includes('self contained') && !pType.includes('self-contained') && !pType.includes('self contain');
+        }
+        if (targetType === 'chamber and hall sc' || targetType === 'chamber & hall sc') {
+          return (pType.includes('chamber') && pType.includes('hall')) &&
+            (pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained') || pType.includes('self contain'));
+        }
         if (targetType === 'self-contained') {
-          return pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained');
+          return pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained') || pType.includes('self contain');
         }
         return pType === targetType || pType.includes(targetType) || targetType.includes(pType);
       });
@@ -630,14 +646,34 @@ export default function Home() {
             ) : (
               <div className={styles.agentGridCards}>
                 {agents.map((agent, index) => {
-                  const agentProps = properties.filter(
-                    (p) =>
-                      agent.id &&
-                      p.owner?.id &&
-                      String(p.owner.id) === String(agent.id) &&
-                      (p.status === 'available' || p.status === 'rented') &&
-                      (p.verificationStatus === 'verified' || !p.verificationStatus)
-                  );
+                  const agentProps = properties.filter((p) => {
+                    if (!agent.id) return false;
+                    const matchesOwnerId =
+                      (p.owner?.id && String(p.owner.id) === String(agent.id)) ||
+                      ((p as any).ownerId && String((p as any).ownerId) === String(agent.id));
+
+                    const cleanAgentPhone = (agent.phone || agent.agentWhatsapp || '').replace(/[^0-9]/g, '');
+                    const cleanPropPhone = (p.contact || '').replace(/[^0-9]/g, '');
+                    const matchesPhone = Boolean(
+                      cleanAgentPhone &&
+                      cleanPropPhone &&
+                      (cleanPropPhone.endsWith(cleanAgentPhone.slice(-9)) || cleanAgentPhone.endsWith(cleanPropPhone.slice(-9)))
+                    );
+
+                    const matchesName = Boolean(
+                      p.landlordName &&
+                      agent.name &&
+                      p.landlordName.toLowerCase().trim() === agent.name.toLowerCase().trim()
+                    );
+
+                    const belongsToAgent = matchesOwnerId || matchesPhone || matchesName;
+                    const isApproved =
+                      p.status !== 'pending_approval' &&
+                      p.status !== 'pending_verification' &&
+                      p.status !== 'draft';
+
+                    return belongsToAgent && isApproved;
+                  });
                   const count = agentProps.length;
 
                   return (
