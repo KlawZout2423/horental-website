@@ -72,21 +72,23 @@ export async function POST(req: Request) {
     const passengerPhone = tenantPhone ? String(tenantPhone).trim() : "";
 
     const cleanPickup = pickupLocation ? String(pickupLocation).trim() : '';
-    let text = `Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n`;
-    text += `👤 Passenger: ${passengerName}${passengerPhone ? ` (${passengerPhone})` : ''}\n`;
-    text += `🕒 Order Time: ${orderTimeStr}\n`;
-    text += `🏠 Property: ${property.title}\n`;
-    text += `📍 Property Location: ${property.location}`;
+    let text = `🚗 *YUYU RIDE REQUEST*\n\n`;
+    text += `👤 *Passenger:* ${passengerName}${passengerPhone ? ` (${passengerPhone})` : ''}\n`;
+    text += `🕒 *Order Time:* ${orderTimeStr}\n`;
+    text += `🏠 *Property:* ${property.title}\n`;
+    text += `📍 *Property Location:* ${property.location}\n`;
 
     if (cleanPickup) {
-      text += `\n📍 Pickup / GPS: ${cleanPickup}`;
+      text += `📍 *Pickup Location:* ${cleanPickup}\n`;
+    } else {
+      text += `📍 *Pickup Location:* Live GPS attached below\n`;
     }
 
-    text += `\n📍 I will add my live location now`;
-    text += `\n📌 Ref Code: ${refCode}`;
+    text += `📌 *Ref Code:* ${refCode}`;
 
-    const whatsappUrl = `https://wa.me/${yuyuNumber}?text=${encodeURIComponent(text)}`;
-    const whatsappAppUrl = `whatsapp://send?phone=${yuyuNumber}&text=${encodeURIComponent(text)}`;
+    const encodedText = encodeURIComponent(text);
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${yuyuNumber}&text=${encodedText}`;
+    const whatsappAppUrl = `https://wa.me/${yuyuNumber}?text=${encodedText}`;
 
     return NextResponse.json(
       {

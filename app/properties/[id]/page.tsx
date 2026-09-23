@@ -4,7 +4,7 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth';
-import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2, Maximize2, Navigation, Car, Edit } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, ArrowLeft, Phone, Mail, MessageSquare, Loader, CheckCircle2, Calendar, Clock, FileText, Flag, X, Share2, Maximize2, Navigation, Car, Edit, AlertTriangle } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTY_BY_ID, UPDATE_PROPERTY, CREATE_REPORT } from '../../../lib/graphql';
 import { trackVisit } from '../../../lib/trackVisit';
 import styles from './detail.module.css';
@@ -161,95 +161,137 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
   };
 
   const [isBookingRide, setIsBookingRide] = useState(false);
+  const [showRideModal, setShowRideModal] = useState(false);
+  const [ridePassengerName, setRidePassengerName] = useState('');
+  const [ridePassengerPhone, setRidePassengerPhone] = useState('');
+  const [ridePickupLocation, setRidePickupLocation] = useState('');
+  const [rideGpsLink, setRideGpsLink] = useState('');
+  const [isFetchingGps, setIsFetchingGps] = useState(false);
+  const [gpsStatusText, setGpsStatusText] = useState('');
 
-  const getUserLiveLocation = (): Promise<string | null> => {
-    return new Promise((resolve) => {
-      if (typeof navigator === 'undefined' || !navigator.geolocation) {
-        return resolve(null);
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude.toFixed(6);
-          const lng = pos.coords.longitude.toFixed(6);
-          resolve(`https://maps.google.com/?q=${lat},${lng}`);
-        },
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 3500, maximumAge: 60000 }
-      );
-    });
+  const detectUserGpsLocation = async () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setGpsStatusText('⚠️ Geolocation is not supported by your browser.');
+      return;
+    }
+    setIsFetchingGps(true);
+    setGpsStatusText('📍 Requesting location permission...');
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        const link = `https://maps.google.com/?q=${lat},${lng}`;
+        setRideGpsLink(link);
+
+        let area = '';
+        try {
+          const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+          if (res.ok) {
+            const data = await res.json();
+            const sub = data.localityInfo?.informative?.find((i: any) => i.description?.toLowerCase().includes('suburb') || i.order <= 6)?.name || data.locality || data.city || '';
+            const city = data.city || data.locality || 'Ho';
+            if (sub && sub !== city) area = `${sub}, ${city}`;
+            else if (city) area = city;
+          }
+        } catch { }
+
+        if (area) {
+          setRidePickupLocation(area);
+          setGpsStatusText(`✅ GPS detected: ${area}`);
+        } else {
+          setGpsStatusText(`✅ GPS location detected`);
+        }
+        setIsFetchingGps(false);
+      },
+      (err) => {
+        console.warn('GPS location error:', err);
+        setGpsStatusText('⚠️ Location permission denied or timed out. Enter landmark below.');
+        setIsFetchingGps(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
   };
 
-  const handleYuyuRideClick = async () => {
-    if (!property?.id) return;
+  const openYuyuRideModal = () => {
+    setRidePassengerName(user?.name || '');
+    setRidePassengerPhone(user?.phone || '');
+    setRidePickupLocation('');
+    setRideGpsLink('');
+    setShowRideModal(true);
+    detectUserGpsLocation();
+  };
 
+  const confirmAndSubmitYuyuRide = async () => {
+    if (!property?.id) return;
     setIsBookingRide(true);
 
-    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const yuyuNumber = '233538792644';
+    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-    // Pre-open blank tab on desktop to bypass browser popup blockers
-    let win: Window | null = null;
-    if (!isMobile && typeof window !== 'undefined') {
-      try {
-        win = window.open('about:blank', '_blank');
-      } catch {
-        // Popup blocked
-      }
+    const passengerName = ridePassengerName.trim() || user?.name || 'Guest Passenger';
+    const passengerPhone = ridePassengerPhone.trim() || user?.phone || '';
+
+    let fullPickup = ridePickupLocation.trim();
+    if (rideGpsLink) {
+      fullPickup = fullPickup ? `${fullPickup} (${rideGpsLink})` : `GPS: ${rideGpsLink}`;
     }
 
     try {
-      // Attempt to retrieve user's live GPS coordinates (3.5s timeout fallback)
-      const livePickup = await getUserLiveLocation();
-      
       const res = await fetch('/api/rides/referral', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           propertyId: parseInt(property.id, 10),
-          tenantName: user?.name || 'Guest Tenant',
-          tenantPhone: user?.phone || '',
+          tenantName: passengerName,
+          tenantPhone: passengerPhone,
           userId: user?.id ? parseInt(user.id, 10) : undefined,
-          pickupLocation: livePickup || undefined,
+          pickupLocation: fullPickup || undefined,
         }),
       });
 
       let targetUrl = '';
       if (res.ok) {
         const data = await res.json();
-        targetUrl = isMobile && data?.whatsappAppUrl ? data.whatsappAppUrl : (data?.whatsappUrl || '');
+        targetUrl = data?.whatsappUrl || data?.whatsappAppUrl || '';
       }
-
-      const passengerName = user?.name || 'Guest Passenger';
-      const passengerPhone = user?.phone || '';
-      const orderTimeStr = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "GMT" });
 
       if (!targetUrl) {
-        const msgText = `Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n👤 Passenger: ${passengerName}${passengerPhone ? ` (${passengerPhone})` : ''}\n🕒 Order Time: ${orderTimeStr}\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}${livePickup ? `\n📍 Pickup / GPS: ${livePickup}` : ''}\n📍 I will add my live location now`;
+        const orderTimeStr = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "GMT" });
+        let msgText = `🚗 *YUYU RIDE REQUEST*\n\n`;
+        msgText += `👤 *Passenger:* ${passengerName}${passengerPhone ? ` (${passengerPhone})` : ''}\n`;
+        msgText += `🕒 *Order Time:* ${orderTimeStr}\n`;
+        msgText += `🏠 *Property:* ${property.title}\n`;
+        msgText += `📍 *Property Location:* ${property.location}\n`;
+        if (fullPickup) {
+          msgText += `📍 *Pickup Location:* ${fullPickup}\n`;
+        }
+        msgText += `📌 *Ref Code:* HOR-YY-4921`;
+
         const encoded = encodeURIComponent(msgText);
-        targetUrl = isMobile ? `whatsapp://send?phone=${yuyuNumber}&text=${encoded}` : `https://wa.me/${yuyuNumber}?text=${encoded}`;
+        targetUrl = `https://api.whatsapp.com/send?phone=${yuyuNumber}&text=${encoded}`;
       }
 
+      setShowRideModal(false);
       if (isMobile) {
         window.location.href = targetUrl;
-      } else if (win && !win.closed) {
-        win.location.href = targetUrl;
       } else {
         window.open(targetUrl, '_blank');
       }
     } catch (err) {
       console.error('Failed to log Yuyu ride referral:', err);
-      const passengerName = user?.name || 'Guest Passenger';
-      const passengerPhone = user?.phone || '';
       const orderTimeStr = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "GMT" });
-      const fallbackText = encodeURIComponent(`Hi Yuyu Rides! 🚗 I'd like to request a ride to inspect a property listed on HO Rentals:\n\n👤 Passenger: ${passengerName}${passengerPhone ? ` (${passengerPhone})` : ''}\n🕒 Order Time: ${orderTimeStr}\n🏠 Property: ${property.title}\n📍 Property Location: ${property.location}\n📍 I will add my live location now`);
-      const targetUrl = isMobile ? `whatsapp://send?phone=${yuyuNumber}&text=${fallbackText}` : `https://wa.me/${yuyuNumber}?text=${fallbackText}`;
-      if (isMobile) {
-        window.location.href = targetUrl;
-      } else if (win && !win.closed) {
-        win.location.href = targetUrl;
-      } else {
-        window.open(targetUrl, '_blank');
+      let msgText = `🚗 *YUYU RIDE REQUEST*\n\n`;
+      msgText += `👤 *Passenger:* ${passengerName}${passengerPhone ? ` (${passengerPhone})` : ''}\n`;
+      msgText += `🕒 *Order Time:* ${orderTimeStr}\n`;
+      msgText += `🏠 *Property:* ${property.title}\n`;
+      msgText += `📍 *Property Location:* ${property.location}\n`;
+      if (fullPickup) {
+        msgText += `📍 *Pickup Location:* ${fullPickup}\n`;
       }
+      const targetUrl = `https://api.whatsapp.com/send?phone=${yuyuNumber}&text=${encodeURIComponent(msgText)}`;
+      setShowRideModal(false);
+      window.open(targetUrl, '_blank');
     } finally {
       setIsBookingRide(false);
     }
@@ -888,7 +930,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
                         {property.owner?.role !== 'agent' && (
                           <button
-                            onClick={handleYuyuRideClick}
+                            onClick={openYuyuRideModal}
                             disabled={isBookingRide}
                             className="btn"
                             style={{
@@ -1017,7 +1059,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
                   {property.owner?.role !== 'agent' && (
                     <button
-                      onClick={handleYuyuRideClick}
+                      onClick={openYuyuRideModal}
                       disabled={isBookingRide}
                       className="btn"
                       style={{
@@ -1265,6 +1307,94 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                   .then(data => { if (data?.property) setProperty(data.property); });
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {showRideModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}>
+          <div style={{ backgroundColor: 'var(--bg-surface)', borderRadius: '20px', maxWidth: '480px', width: '100%', padding: '28px', position: 'relative', border: '1px solid var(--border)', boxShadow: '0 20px 50px rgba(0,0,0,0.4)' }}>
+            <button
+              onClick={() => setShowRideModal(false)}
+              style={{ position: 'absolute', top: '18px', right: '18px', border: 'none', background: 'var(--bg-surface-secondary)', color: 'var(--text-primary)', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}
+              aria-label="Close modal"
+            >
+              <X size={16} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+                <Car size={22} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>Request Yuyu Ride 🚗</h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Inspect &quot;{property?.title}&quot;</p>
+              </div>
+            </div>
+
+            {/* GPS Status Banner */}
+            <div style={{ backgroundColor: isFetchingGps ? 'rgba(59, 130, 246, 0.12)' : rideGpsLink ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)', border: `1px solid ${isFetchingGps ? '#3B82F6' : rideGpsLink ? '#10B981' : '#F59E0B'}`, padding: '10px 14px', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isFetchingGps && <Loader size={15} className="animate-spin" style={{ color: '#3B82F6' }} />}
+                {!isFetchingGps && rideGpsLink && <CheckCircle2 size={15} style={{ color: '#10B981' }} />}
+                {!isFetchingGps && !rideGpsLink && <AlertTriangle size={15} style={{ color: '#F59E0B' }} />}
+                {gpsStatusText || 'Detecting your location...'}
+              </span>
+              {!isFetchingGps && (
+                <button
+                  type="button"
+                  onClick={detectUserGpsLocation}
+                  style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Retry GPS
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px' }}>Your Name</label>
+                <input
+                  type="text"
+                  value={ridePassengerName}
+                  onChange={(e) => setRidePassengerName(e.target.value)}
+                  placeholder="e.g. Kwame Mensah"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px' }}>Phone Number (For Driver)</label>
+                <input
+                  type="tel"
+                  value={ridePassengerPhone}
+                  onChange={(e) => setRidePassengerPhone(e.target.value)}
+                  placeholder="e.g. 024XXXXXXX"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px' }}>Pickup Area / Landmark</label>
+                <input
+                  type="text"
+                  value={ridePickupLocation}
+                  onChange={(e) => setRidePickupLocation(e.target.value)}
+                  placeholder="e.g. Ho Poly Gate / Bankoe Post Office"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-surface-secondary)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={confirmAndSubmitYuyuRide}
+              disabled={isBookingRide}
+              className="btn"
+              style={{ width: '100%', marginTop: '22px', padding: '14px', background: 'linear-gradient(135deg, #10B981, #059669)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)' }}
+            >
+              {isBookingRide ? <Loader size={18} className="animate-spin" /> : <Car size={18} />}
+              Confirm &amp; Open WhatsApp 🚗
+            </button>
           </div>
         </div>
       )}

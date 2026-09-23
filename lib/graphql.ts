@@ -764,9 +764,21 @@ export const GET_AGENT_PROPERTIES = `
       price
       location
       digitalAddress
+      landmarks
+      description
+      contact
+      landlordName
+      latitude
+      longitude
       imageUrl
       isFeatured
       createdAt
+      gallery {
+        id
+        url
+        caption
+        order
+      }
       owner {
         id
         name

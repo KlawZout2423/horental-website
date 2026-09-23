@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../lib/auth';
-import { Home, Search, PlusCircle, Shield, LogOut, Menu, X, User, Heart, Sun, Moon, Info } from 'lucide-react';
+import { Home, Search, PlusCircle, Shield, LogOut, Menu, X, User, Heart, Sun, Moon, Info, Briefcase } from 'lucide-react';
 import styles from './Navbar.module.css';
 
 import NotificationBell from './NotificationBell';
@@ -175,6 +175,7 @@ export default function Navbar() {
             <div className={styles.navLinks}>
               <Link href="/" className={isActive('/')}>Home</Link>
               <Link href="/properties" className={isActive('/properties')}>Search Rentals</Link>
+              <Link href="/services" className={isActive('/services')}>Services</Link>
               <Link href="/about" className={isActive('/about')}>About Us</Link>
               <Link href="/favorites" className={isActive('/favorites')}>Favorites</Link>
               {user && (user.role === 'admin' || user.role === 'agent' || user.role === 'landlord') && (
@@ -295,6 +296,9 @@ export default function Navbar() {
           </Link>
           <Link href="/properties" className={isActive('/properties')} onClick={toggleMobileMenu}>
             <Search size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Search Rentals
+          </Link>
+          <Link href="/services" className={isActive('/services')} onClick={toggleMobileMenu}>
+            <Briefcase size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> Services
           </Link>
           <Link href="/about" className={isActive('/about')} onClick={toggleMobileMenu}>
             <Info size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} /> About Us
