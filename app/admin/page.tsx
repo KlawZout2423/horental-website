@@ -345,9 +345,9 @@ function AdminPageContent() {
       : (smsTargetRole === 'all'
         ? users.filter(u => u.phone).length
         : smsTargetRole === 'verified_agents'
-          ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
+          ? users.filter(u => (u.role === 'agent') && u.verificationStatus === 'verified' && u.phone).length
           : smsTargetRole === 'agents'
-            ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
+            ? users.filter(u => (u.role === 'agent') && u.phone).length
             : users.filter(u => u.role === 'user' && u.phone).length);
 
     if (recipientCount === 0) {
@@ -397,8 +397,8 @@ function AdminPageContent() {
   // Filter Helper lists
   const approvedProperties = properties.filter((p) => p.status !== 'pending_approval');
   const pendingProperties = properties.filter((p) => p.status === 'pending_approval');
-  const standardUsers = users.filter((u) => (u.role !== 'agent' && u.role !== 'landlord') || u.verificationStatus === 'verified');
-  const agentUsers = users.filter((u) => u.role === 'agent' || u.role === 'landlord');
+  const standardUsers = users.filter((u) => u.role !== 'agent' || u.verificationStatus === 'verified');
+  const agentUsers = users.filter((u) => u.role === 'agent');
 
   const filteredStandardUsers = standardUsers
     .filter((u) => {
@@ -4368,7 +4368,7 @@ function AdminPageContent() {
                   <div>
                     <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Verified Agents</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#10B981', marginTop: '2px' }}>
-                      {users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length}
+                      {users.filter(u => (u.role === 'agent') && u.verificationStatus === 'verified' && u.phone).length}
                     </div>
                   </div>
                 </div>
@@ -4381,7 +4381,7 @@ function AdminPageContent() {
                   <div>
                     <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Landlords &amp; Agents</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: '2px' }}>
-                      {users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length}
+                      {users.filter(u => (u.role === 'agent') && u.phone).length}
                     </div>
                   </div>
                 </div>
@@ -4621,7 +4621,7 @@ function AdminPageContent() {
                           fontSize: '0.78rem',
                           fontWeight: 800
                         }}>
-                          {users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length}
+                          {users.filter(u => (u.role === 'agent') && u.verificationStatus === 'verified' && u.phone).length}
                         </span>
                       </div>
 
@@ -4659,7 +4659,7 @@ function AdminPageContent() {
                           fontSize: '0.78rem',
                           fontWeight: 800
                         }}>
-                          {users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length}
+                          {users.filter(u => (u.role === 'agent') && u.phone).length}
                         </span>
                       </div>
 
@@ -4868,9 +4868,9 @@ function AdminPageContent() {
                           : `${smsTargetRole === 'all'
                             ? users.filter(u => u.phone).length
                             : smsTargetRole === 'verified_agents'
-                              ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
+                              ? users.filter(u => (u.role === 'agent') && u.verificationStatus === 'verified' && u.phone).length
                               : smsTargetRole === 'agents'
-                                ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
+                                ? users.filter(u => (u.role === 'agent') && u.phone).length
                                 : users.filter(u => u.role === 'user' && u.phone).length} recipients`}
                       </strong>
                     </div>
@@ -4911,9 +4911,9 @@ function AdminPageContent() {
                             {smsTargetType === 'single' ? '🚀 Send Direct SMS' : `🚀 Broadcast Bulk SMS (${smsTargetRole === 'all'
                               ? users.filter(u => u.phone).length
                               : smsTargetRole === 'verified_agents'
-                                ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.verificationStatus === 'verified' && u.phone).length
+                                ? users.filter(u => (u.role === 'agent') && u.verificationStatus === 'verified' && u.phone).length
                                 : smsTargetRole === 'agents'
-                                  ? users.filter(u => (u.role === 'agent' || u.role === 'landlord') && u.phone).length
+                                  ? users.filter(u => (u.role === 'agent') && u.phone).length
                                   : users.filter(u => u.role === 'user' && u.phone).length
                               } Recipients)`}
                           </span>
