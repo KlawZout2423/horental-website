@@ -4261,7 +4261,7 @@ function AdminPageContent() {
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
               {/* Premium Brand Header Banner (Solid Vibrant HO Rentals Red) */}
-              <div style={{
+              <div className={styles.desktopOnlyTable} style={{
                 padding: '28px 32px',
                 borderRadius: 'var(--radius-lg)',
                 background: 'linear-gradient(135deg, #C1121F 0%, #DC2626 50%, #9E0E18 100%)',
