@@ -1414,6 +1414,12 @@ function AdminPageContent() {
                     <TrendingUp size={16} /> Traffic Analytics
                   </button>
                   <button
+                    onClick={() => { setActiveTab('feedback'); setIsMobileDrawerOpen(false); }}
+                    className={`${styles.navItem} ${activeTab === 'feedback' ? styles.activeNavItem : ''}`}
+                  >
+                    <MessageSquare size={16} /> User Feedback ({feedbacks.length})
+                  </button>
+                  <button
                     onClick={() => { setActiveTab('reports'); setIsMobileDrawerOpen(false); }}
                     className={`${styles.navItem} ${activeTab === 'reports' ? styles.activeNavItem : ''}`}
                   >
