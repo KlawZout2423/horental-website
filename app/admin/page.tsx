@@ -718,7 +718,7 @@ function AdminPageContent() {
 
       // Update registration status to verified locally
       setLandlordRegistrations(prev =>
-        prev.map(r => r.id === id ? { ...r, status: 'Verified' } : r)
+        prev.map(r => String(r.id) === String(id) ? { ...r, status: 'Verified' } : r)
       );
 
       // Reload admin dashboard data to update Listings tab and stats counts
@@ -729,7 +729,7 @@ function AdminPageContent() {
       }
 
       setMessage({ text: '🎉 Landlord details published to property listings successfully!', isError: false });
-      setRepublishModal({ isOpen: false, registrationId: null, existingProperties: [] });
+      setRepublishModal({ isOpen: false, registrationId: null, existingProperties: [], hasExactMatch: false });
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to publish listing.', isError: true });
     } finally {
@@ -739,7 +739,7 @@ function AdminPageContent() {
 
   const handlePublishLandlord = async (id: number | string) => {
     const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
-    const r = landlordRegistrations.find(x => x.id === parsedId);
+    const r = landlordRegistrations.find(x => String(x.id) === String(parsedId));
     
     let existingProperties: Property[] = [];
     let hasExactMatch = false;
@@ -754,8 +754,8 @@ function AdminPageContent() {
          const isMatch = phoneMatch || nameMatch;
 
          if (isMatch) {
-           const titleMatch = p.title.toLowerCase().trim() === (r.companyName || r.name).toLowerCase().trim();
-           const locMatch = p.location.toLowerCase().trim() === (r.location || '').toLowerCase().trim();
+           const titleMatch = p.title.toLowerCase().trim() === r.name.toLowerCase().trim();
+           const locMatch = p.location.toLowerCase().trim() === (r.city || '').toLowerCase().trim();
            if (titleMatch && locMatch) {
              hasExactMatch = true;
            }
@@ -5397,7 +5397,7 @@ function AdminPageContent() {
                 <RefreshCw size={20} style={{ color: 'var(--primary)' }} />
                 <span>{republishModal.existingProperties.length > 0 ? 'Existing Properties Found' : 'Publish Property'}</span>
               </h2>
-              <button onClick={() => setRepublishModal({ isOpen: false, registrationId: null, existingProperties: [] })} className={styles.modalCloseBtn}>&times;</button>
+              <button onClick={() => setRepublishModal({ isOpen: false, registrationId: null, existingProperties: [], hasExactMatch: false })} className={styles.modalCloseBtn}>&times;</button>
             </div>
 
             <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
