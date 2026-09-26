@@ -1990,9 +1990,9 @@ export const resolvers = {
         const whereClause: any = {};
         if (targetRole && targetRole !== 'all') {
           if (targetRole === 'agents') {
-            whereClause.role = { in: ['agent', 'landlord'] };
+            whereClause.role = 'agent';
           } else if (targetRole === 'verified_agents') {
-            whereClause.role = { in: ['agent', 'landlord'] };
+            whereClause.role = 'agent';
             whereClause.verificationStatus = 'verified';
           } else if (targetRole === 'users') {
             whereClause.role = 'user';

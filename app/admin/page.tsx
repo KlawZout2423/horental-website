@@ -292,7 +292,8 @@ function AdminPageContent() {
     isOpen: boolean;
     registrationId: number | null;
     existingProperties: Property[];
-  }>({ isOpen: false, registrationId: null, existingProperties: [] });
+    hasExactMatch: boolean;
+  }>({ isOpen: false, registrationId: null, existingProperties: [], hasExactMatch: false });
   const [republishNotify, setRepublishNotify] = useState(false);
   const [downloadingQr, setDownloadingQr] = useState(false);
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
@@ -741,18 +742,31 @@ function AdminPageContent() {
     const r = landlordRegistrations.find(x => x.id === parsedId);
     
     let existingProperties: Property[] = [];
+    let hasExactMatch = false;
+
     if (r) {
       const cleanPhone = (r.phone1 || '').replace(/[^0-9]/g, '');
       existingProperties = properties.filter(p => {
          const pPhone = (p.contact || '').replace(/[^0-9]/g, '');
          const phoneMatch = cleanPhone && pPhone && pPhone.endsWith(cleanPhone.slice(-9));
          const nameMatch = p.landlordName && p.landlordName.toLowerCase().trim() === r.name.toLowerCase().trim();
-         return phoneMatch || nameMatch;
+         
+         const isMatch = phoneMatch || nameMatch;
+
+         if (isMatch) {
+           const titleMatch = p.title.toLowerCase().trim() === (r.companyName || r.name).toLowerCase().trim();
+           const locMatch = p.location.toLowerCase().trim() === (r.location || '').toLowerCase().trim();
+           if (titleMatch && locMatch) {
+             hasExactMatch = true;
+           }
+         }
+
+         return isMatch;
       });
     }
 
     setRepublishNotify(false);
-    setRepublishModal({ isOpen: true, registrationId: parsedId, existingProperties });
+    setRepublishModal({ isOpen: true, registrationId: parsedId, existingProperties, hasExactMatch });
   };
 
   // Analytics helper variables
@@ -5391,8 +5405,14 @@ function AdminPageContent() {
               
               {republishModal.existingProperties.length > 0 ? (
                 <>
+                  {republishModal.hasExactMatch && (
+                    <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #F87171', color: '#B91C1C', padding: '10px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <span>This exact property is already published! To prevent duplicates, creating a new property is disabled. Please update the existing one below.</span>
+                    </div>
+                  )}
                   <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-                    This landlord already has properties listed in the system. Would you like to update an existing property with these new details, or create a brand new listing?
+                    This landlord already has properties listed in the system. Would you like to update an existing property with these new details{republishModal.hasExactMatch ? '?' : ', or create a brand new listing?'}
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '300px', overflowY: 'auto' }}>
@@ -5431,18 +5451,20 @@ function AdminPageContent() {
                   <span>Notify all users via SMS about this new property</span>
                 </label>
 
-                <div style={{ display: 'flex', justifyContent: republishModal.existingProperties.length > 0 ? 'space-between' : 'flex-end', alignItems: 'center' }}>
-                  {republishModal.existingProperties.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: republishModal.existingProperties.length > 0 && !republishModal.hasExactMatch ? 'space-between' : 'flex-end', alignItems: 'center' }}>
+                  {republishModal.existingProperties.length > 0 && !republishModal.hasExactMatch && (
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>Alternatively:</span>
                   )}
-                  <button
-                    className="btn btn-outline"
-                    style={{ padding: '8px 16px', fontSize: '0.85rem', color: 'var(--primary)', borderColor: 'var(--primary)' }}
-                    onClick={() => republishModal.registrationId && executePublish(republishModal.registrationId)}
-                    disabled={actionLoading}
-                  >
-                    {republishModal.existingProperties.length > 0 ? 'Create New Property' : 'Publish Property'}
-                  </button>
+                  {!republishModal.hasExactMatch && (
+                    <button
+                      className="btn btn-outline"
+                      style={{ padding: '8px 16px', fontSize: '0.85rem', color: 'var(--primary)', borderColor: 'var(--primary)' }}
+                      onClick={() => republishModal.registrationId && executePublish(republishModal.registrationId)}
+                      disabled={actionLoading}
+                    >
+                      {republishModal.existingProperties.length > 0 ? 'Create New Property' : 'Publish Property'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
