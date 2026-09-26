@@ -88,6 +88,12 @@ async function createAuditLog(action: string, details: string, userEmail?: strin
 
 export const resolvers = {
   Query: {
+    getFeedbacks: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (fullUser?.role !== 'admin') throw new Error('Not authorized');
+      return prisma.feedback.findMany({ orderBy: { createdAt: 'desc' } });
+    },
     me: async (_: any, __: any, { user }: { user: { id: number } | null }) => {
       if (!user) return null;
       return prisma.user.findUnique({

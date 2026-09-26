@@ -445,6 +445,8 @@ export const RECORD_PAGE_VISIT = `
   }
 `;
 
+export const GET_FEEDBACKS = `query GetFeedbacks { getFeedbacks { id rating message path createdAt } }`;
+
 export const GET_PAGE_ANALYTICS = `
   query GetPageAnalytics($period: String) {
     pageVisitAnalytics(period: $period) {

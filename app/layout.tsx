@@ -8,6 +8,7 @@ import SupportFAB from "../components/SupportFAB";
 import MustChangePasswordModal from "../components/MustChangePasswordModal";
 import RequirePhoneModal from "../components/RequirePhoneModal";
 import PwaInstallPrompt from "../components/PwaInstallPrompt";
+import FeedbackWidget from "../components/FeedbackWidget";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import "./globals.css";
 
@@ -100,6 +101,7 @@ export default function RootLayout({
               </main>
               <Footer />
               <SupportFAB />
+                <FeedbackWidget />
               <PwaInstallPrompt />
             </div>
           </AuthProvider>

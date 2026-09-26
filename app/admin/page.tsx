@@ -30,6 +30,7 @@ import {
   DELETE_LANDLORD_REGISTRATION,
   PUBLISH_LANDLORD_REGISTRATION,
   GET_PAGE_ANALYTICS,
+  GET_FEEDBACKS,
   VERIFY_AGENT,
   SEND_ADMIN_SMS
 } from '../../lib/graphql';
@@ -127,8 +128,8 @@ interface EditGalleryItem {
   previewUrl: string;
 }
 
-type AdminTab = 'analytics' | 'properties' | 'users' | 'agents' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic' | 'sms' | 'yuyu_rides';
-const VALID_ADMIN_TABS: AdminTab[] = ['analytics', 'properties', 'users', 'agents', 'moderation', 'audits', 'reports', 'upload', 'landlords', 'traffic', 'sms', 'yuyu_rides'];
+type AdminTab = 'analytics' | 'properties' | 'users' | 'agents' | 'moderation' | 'audits' | 'reports' | 'upload' | 'landlords' | 'traffic' | 'sms' | 'yuyu_rides' | 'feedback';
+const VALID_ADMIN_TABS: AdminTab[] = ['analytics', 'properties', 'users', 'agents', 'moderation', 'audits', 'reports', 'upload', 'landlords', 'traffic', 'sms', 'yuyu_rides', 'feedback'];
 
 interface AdminSessionCache {
   stats: DashboardStats | null;
@@ -187,6 +188,7 @@ function AdminPageContent() {
   const [users, setUsers] = useState<User[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [reports, setReports] = useState<ReportItem[]>([]);
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLogItem[]>([]);
@@ -1311,6 +1313,7 @@ function AdminPageContent() {
               {activeTab === 'reports' && 'Flagged Reports'}
               {activeTab === 'landlords' && 'Landlord Submissions'}
               {activeTab === 'sms' && 'SMS Broadcast'}
+              {activeTab === 'feedback' && 'User Feedback'}
               {activeTab === 'upload' && 'Upload Property'}
             </span>
           </div>
@@ -1490,6 +1493,7 @@ function AdminPageContent() {
                 {activeTab === 'agents' && 'Registered & Verified Agents'}
                 {activeTab === 'audits' && 'Contact Inquiry Audits'}
                 {activeTab === 'traffic' && 'Traffic & Campaign Analytics'}
+                {activeTab === 'feedback' && 'User Feedback'}
                 {activeTab === 'reports' && 'Property Reports & Flagged Listings'}
                 {activeTab === 'landlords' && 'Agents & Landlords Database'}
               </h1>
@@ -1501,6 +1505,7 @@ function AdminPageContent() {
                 {activeTab === 'agents' && 'Manage registered independent agents, verification statuses, and billing tiers.'}
                 {activeTab === 'audits' && 'Real-time record of customer call and WhatsApp inquiries to landlords.'}
                 {activeTab === 'traffic' && 'View traffic sources, visit trends, top listings, and generate campaign tracking links.'}
+                {activeTab === 'feedback' && 'View user feedback and satisfaction ratings.'}
                 {activeTab === 'reports' && 'Review user-flagged listings, reported scams, inaccurate photos, and manage property reports.'}
                 {activeTab === 'landlords' && 'View all registered agents, landlord submissions, verification status, and contact details.'}
               </p>
@@ -4223,6 +4228,35 @@ function AdminPageContent() {
           ) : null}
 
           {/* SMS BROADCAST & DIRECT MESSAGING STUDIO */}
+          
+          {activeTab === 'feedback' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+                {feedbacks.length === 0 ? (
+                  <div style={{ padding: '40px', textAlign: 'center', width: '100%', color: 'var(--text-muted)' }}>
+                    No feedback received yet.
+                  </div>
+                ) : (
+                  feedbacks.map((f, i) => (
+                    <div key={i} style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--bg-surface)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <div style={{ color: '#F59E0B', display: 'flex', gap: '2px' }}>
+                          {Array.from({ length: 5 }).map((_, j) => (
+                            <Star key={j} size={16} fill={j < f.rating ? '#F59E0B' : 'transparent'} />
+                          ))}
+                        </div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(parseInt(f.createdAt)).toLocaleDateString()}</span>
+                      </div>
+                      {f.message && <p style={{ fontSize: '0.95rem', margin: '0 0 12px 0' }}>"{f.message}"</p>}
+                      {f.path && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Page: {f.path}</div>}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+
           {activeTab === 'sms' && (
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 

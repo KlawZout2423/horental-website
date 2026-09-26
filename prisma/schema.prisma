@@ -42,6 +42,7 @@ model User {
   notificationReads   NotificationRead[]
   reports             Report[]
   rideReferrals       RideReferral[]
+  feedbacks           Feedback[]
 }
 
 model Company {
@@ -323,3 +324,14 @@ model RideReferral {
   @@index([status])
 }
 
+
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  rating    Int
+  message   String?
+  path      String?
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}

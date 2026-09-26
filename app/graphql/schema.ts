@@ -322,6 +322,7 @@ export const typeDefs = `#graphql
     }
 
     type Query {
+        getFeedbacks: [Feedback!]!
         me: User
         users: [User!]!
         agents: [User!]!
@@ -351,7 +352,15 @@ export const typeDefs = `#graphql
         message: String!
     }
 
-    type Mutation {
+    type Feedback {
+      id: Int!
+      rating: Int!
+      message: String
+      path: String
+      createdAt: String!
+    }
+
+    type Feedback { id: Int! rating: Int! message: String path: String createdAt: String! } type Mutation {
         register(input: RegisterInput!): AuthPayload!
         login(email: String!, password: String!): AuthPayload!
         googleAuth(idToken: String!): AuthPayload!
@@ -371,7 +380,8 @@ export const typeDefs = `#graphql
         updateUserRole(id: Int!, role: String!): User!
         createContactLog(customerName: String!, customerPhone: String!, actionType: String!, propertyId: Int!, landlordPhone: String!): ContactLog!
         recordPageVisit(path: String!, utmSource: String, utmMedium: String, utmCampaign: String, utmContent: String, referrer: String, sessionId: String): Boolean!
-        deleteOldAuditLogs(days: Int!): BasicPayload!
+        submitFeedback(rating: Int!, message: String, path: String): Boolean!
+          deleteOldAuditLogs(days: Int!): BasicPayload!
         deleteAuditLogs(ids: [Int!]!): BasicPayload!
         deleteContactLogs(ids: [Int!]!): BasicPayload!
         createLandlordRegistration(input: LandlordRegistrationInput!): LandlordRegistration!

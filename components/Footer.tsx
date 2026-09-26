@@ -53,7 +53,7 @@ export default function Footer() {
               </span>
             </h4>
             <div className={styles.links}>
-              <Link href="/services" className={styles.link}>All Services</Link>
+
               <a 
                 href="https://wa.me/233538792644?text=Hi%20Yuyu%20Rides!%20%F0%9F%9A%97%20I%20would%20like%20to%20request%20a%20ride%20for%20property%20inspection%20via%20HO%20Rentals." 
                 target="_blank" 
