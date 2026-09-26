@@ -647,6 +647,23 @@ export const resolvers = {
   },
 
   Mutation: {
+    submitFeedback: async (_: any, { rating, message, path }: { rating: number; message?: string; path?: string }, { user }: { user: { id: number } | null }) => {
+      try {
+        await prisma.feedback.create({
+          data: {
+            rating,
+            message: message || null,
+            path: path || null,
+            userId: user?.id || null,
+          },
+        });
+        return true;
+      } catch (err) {
+        console.error('submitFeedback error:', err);
+        return false;
+      }
+    },
+
     register: async (_: any, { input }: { input: any }) => {
       const sanitizedName = sanitizeInput(input.name);
       const formattedPhone = formatGhanaPhone(input.phone);
@@ -2074,3 +2091,4 @@ export const resolvers = {
     }
   }
 };
+
