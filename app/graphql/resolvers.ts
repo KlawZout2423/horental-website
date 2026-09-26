@@ -1448,7 +1448,7 @@ export const resolvers = {
       });
 
       // Send SailUp SMS notification to landlord that listing is live
-      if (r.phone1) {
+      if (r.phone1 && r.status !== 'Verified') {
         sendPropertyPublishedSMS({
           ownerPhone: r.phone1,
           propertyTitle: title,
