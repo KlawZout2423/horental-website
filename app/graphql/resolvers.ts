@@ -217,7 +217,7 @@ export const resolvers = {
     agents: async () => {
       return prisma.user.findMany({
         where: {
-          role: { in: ['agent', 'landlord'] },
+          role: 'agent',
           verificationStatus: 'verified',
         },
         select: {
@@ -1303,7 +1303,7 @@ export const resolvers = {
       return deleted;
     },
 
-    publishLandlordRegistration: async (_: any, { id }: { id: any }, { user }: { user: { id: number } | null }) => {
+    publishLandlordRegistration: async (_: any, { id, targetPropertyId }: { id: any, targetPropertyId?: any }, { user }: { user: { id: number } | null }) => {
       if (!user) throw new Error('Not authenticated');
       const adminUser = await prisma.user.findUnique({ where: { id: user.id } });
       if (adminUser?.role !== 'admin') throw new Error('Not authorized');
@@ -1387,34 +1387,59 @@ export const resolvers = {
         ? `${baseDesc}\n\nFeatures: ${featureParts.join(' | ')}`
         : baseDesc;
 
-      // 5. Create property in database linked to landlordUser
-      const property = await prisma.property.create({
-        data: {
-          title: sanitizeInput(title),
-          location: sanitizeInput(`${r.propAddress}, ${r.city}`),
-          digitalAddress: r.propGps ? sanitizeInput(r.propGps) : null,
-          landmarks: r.propLandmark ? sanitizeInput(r.propLandmark) : null,
-          price: r.rent,
-          description: sanitizeInput(description),
-          contact: formatGhanaPhone(r.phone1),
-          landlordName: sanitizeInput(r.name),
-          type: primaryType,
-          status: 'available',
-          imageUrl: r.photos[0] || '',
-          isFeatured: r.plan === 'Premium',
-          ownerId: landlordUser ? landlordUser.id : user.id,
-          landlordId: landlordUser ? landlordUser.id : null,
-          companyId: defaultCompany.id,
-          images: {
-            create: r.photos.map((src, index) => ({
-              url: src.trim(),
-              caption: 'Property Photo',
-              order: index,
-            })) || [],
+      // 5. Create or Update property in database linked to landlordUser
+      const propertyData = {
+        title: sanitizeInput(title),
+        location: sanitizeInput(`${r.propAddress}, ${r.city}`),
+        digitalAddress: r.propGps ? sanitizeInput(r.propGps) : null,
+        landmarks: r.propLandmark ? sanitizeInput(r.propLandmark) : null,
+        price: r.rent,
+        description: sanitizeInput(description),
+        contact: formatGhanaPhone(r.phone1),
+        landlordName: sanitizeInput(r.name),
+        type: primaryType,
+        status: 'available',
+        imageUrl: r.photos[0] || '',
+        isFeatured: r.plan === 'Premium',
+        ownerId: landlordUser ? landlordUser.id : user.id,
+        landlordId: landlordUser ? landlordUser.id : null,
+        companyId: defaultCompany.id,
+      };
+
+      let property;
+      const parsedTargetPropertyId = targetPropertyId ? (typeof targetPropertyId === 'string' ? parseInt(targetPropertyId, 10) : targetPropertyId) : null;
+
+      if (parsedTargetPropertyId) {
+        await prisma.propertyImage.deleteMany({ where: { propertyId: parsedTargetPropertyId } });
+        property = await prisma.property.update({
+          where: { id: parsedTargetPropertyId },
+          data: {
+            ...propertyData,
+            images: {
+              create: r.photos.map((src, index) => ({
+                url: src.trim(),
+                caption: 'Property Photo',
+                order: index,
+              })) || [],
+            },
           },
-        },
-        include: { owner: true, company: true, images: { orderBy: { order: 'asc' } } },
-      });
+          include: { owner: true, company: true, images: { orderBy: { order: 'asc' } } },
+        });
+      } else {
+        property = await prisma.property.create({
+          data: {
+            ...propertyData,
+            images: {
+              create: r.photos.map((src, index) => ({
+                url: src.trim(),
+                caption: 'Property Photo',
+                order: index,
+              })) || [],
+            },
+          },
+          include: { owner: true, company: true, images: { orderBy: { order: 'asc' } } },
+        });
+      }
 
       // 6. Update status of the landlord registration to "Verified"
       await prisma.landlordRegistration.update({

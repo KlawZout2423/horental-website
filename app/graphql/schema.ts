@@ -377,7 +377,7 @@ export const typeDefs = `#graphql
         createLandlordRegistration(input: LandlordRegistrationInput!): LandlordRegistration!
         updateLandlordRegistrationStatus(id: Int!, status: String!): LandlordRegistration!
         deleteLandlordRegistration(id: Int!): LandlordRegistration!
-        publishLandlordRegistration(id: Int!): Property!
+        publishLandlordRegistration(id: Int!, targetPropertyId: Int): Property!
         updateReportStatus(id: Int!, status: String!): Report!
         deleteReport(id: Int!): Report!
         updateAgentProfile(bio: String, profileImage: String, agentLocation: String, agentWhatsapp: String, agencyName: String, experienceYears: String, licenseNumber: String, subscriptionPlan: String, isProfileComplete: Boolean): User!

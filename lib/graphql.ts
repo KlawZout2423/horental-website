@@ -711,8 +711,8 @@ export const DELETE_LANDLORD_REGISTRATION = `
 `;
 
 export const PUBLISH_LANDLORD_REGISTRATION = `
-  mutation PublishLandlordRegistration($id: Int!) {
-    publishLandlordRegistration(id: $id) {
+  mutation PublishLandlordRegistration($id: Int!, $targetPropertyId: Int) {
+    publishLandlordRegistration(id: $id, targetPropertyId: $targetPropertyId) {
       id
       title
       status

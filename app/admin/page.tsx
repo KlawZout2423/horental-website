@@ -287,6 +287,13 @@ function AdminPageContent() {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrModalUrl, setQrModalUrl] = useState('');
   const [qrModalTitle, setQrModalTitle] = useState('');
+  
+  const [republishModal, setRepublishModal] = useState<{
+    isOpen: boolean;
+    registrationId: number | null;
+    existingProperties: Property[];
+  }>({ isOpen: false, registrationId: null, existingProperties: [] });
+  const [republishNotify, setRepublishNotify] = useState(false);
   const [downloadingQr, setDownloadingQr] = useState(false);
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
@@ -687,12 +694,26 @@ function AdminPageContent() {
     }
   };
 
-  const handlePublishLandlord = async (id: number | string) => {
+  const executePublish = async (id: number, targetPropertyId?: number) => {
     setActionLoading(true);
     setMessage(null);
     try {
-      const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
-      await graphqlRequest(PUBLISH_LANDLORD_REGISTRATION, { id: parsedId });
+      await graphqlRequest(PUBLISH_LANDLORD_REGISTRATION, { id, targetPropertyId });
+
+      if (republishNotify) {
+        try {
+           await fetch('/api/sms', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({
+               phoneNumbers: ['all'],
+               message: `New property uploaded by HO Rentals! Visit horentals.com to check it out.`,
+               senderId: 'HORENTALS',
+               targetRole: 'all'
+             })
+           });
+        } catch(e) { console.error('Failed to send sms', e); }
+      }
 
       // Update registration status to verified locally
       setLandlordRegistrations(prev =>
@@ -707,11 +728,31 @@ function AdminPageContent() {
       }
 
       setMessage({ text: '🎉 Landlord details published to property listings successfully!', isError: false });
+      setRepublishModal({ isOpen: false, registrationId: null, existingProperties: [] });
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to publish listing.', isError: true });
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handlePublishLandlord = async (id: number | string) => {
+    const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+    const r = landlordRegistrations.find(x => x.id === parsedId);
+    
+    let existingProperties: Property[] = [];
+    if (r) {
+      const cleanPhone = (r.phone1 || '').replace(/[^0-9]/g, '');
+      existingProperties = properties.filter(p => {
+         const pPhone = (p.contact || '').replace(/[^0-9]/g, '');
+         const phoneMatch = cleanPhone && pPhone && pPhone.endsWith(cleanPhone.slice(-9));
+         const nameMatch = p.landlordName && p.landlordName.toLowerCase().trim() === r.name.toLowerCase().trim();
+         return phoneMatch || nameMatch;
+      });
+    }
+
+    setRepublishNotify(false);
+    setRepublishModal({ isOpen: true, registrationId: parsedId, existingProperties });
   };
 
   // Analytics helper variables
@@ -5329,6 +5370,81 @@ function AdminPageContent() {
                   loadAdminDashboardData(false);
                 }}
               />
+            </div>
+          </div>
+        </div>
+      )}
+      )}
+
+      {republishModal.isOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent} style={{ maxWidth: '500px' }}>
+            <div className={styles.modalHeader}>
+              <h2 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <RefreshCw size={20} style={{ color: 'var(--primary)' }} />
+                <span>{republishModal.existingProperties.length > 0 ? 'Existing Properties Found' : 'Publish Property'}</span>
+              </h2>
+              <button onClick={() => setRepublishModal({ isOpen: false, registrationId: null, existingProperties: [] })} className={styles.modalCloseBtn}>&times;</button>
+            </div>
+
+            <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {republishModal.existingProperties.length > 0 ? (
+                <>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+                    This landlord already has properties listed in the system. Would you like to update an existing property with these new details, or create a brand new listing?
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '300px', overflowY: 'auto' }}>
+                    {republishModal.existingProperties.map(p => (
+                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{p.title}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{p.location}</div>
+                        </div>
+                        <button
+                          className="btn btn-primary"
+                          style={{ padding: '6px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                          onClick={() => republishModal.registrationId && executePublish(republishModal.registrationId, parseInt(p.id))}
+                          disabled={actionLoading}
+                        >
+                          Update This
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+                  Are you sure you want to approve and publish this landlord's property?
+                </p>
+              )}
+
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={republishNotify}
+                    onChange={(e) => setRepublishNotify(e.target.checked)}
+                    style={{ accentColor: 'var(--primary)', width: '16px', height: '16px' }}
+                  />
+                  <span>Notify all users via SMS about this new property</span>
+                </label>
+
+                <div style={{ display: 'flex', justifyContent: republishModal.existingProperties.length > 0 ? 'space-between' : 'flex-end', alignItems: 'center' }}>
+                  {republishModal.existingProperties.length > 0 && (
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>Alternatively:</span>
+                  )}
+                  <button
+                    className="btn btn-outline"
+                    style={{ padding: '8px 16px', fontSize: '0.85rem', color: 'var(--primary)', borderColor: 'var(--primary)' }}
+                    onClick={() => republishModal.registrationId && executePublish(republishModal.registrationId)}
+                    disabled={actionLoading}
+                  >
+                    {republishModal.existingProperties.length > 0 ? 'Create New Property' : 'Publish Property'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

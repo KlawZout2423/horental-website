@@ -214,6 +214,10 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
   };
 
   const openYuyuRideModal = () => {
+    if (!user) {
+      setShowAuthPrompt(true);
+      return;
+    }
     setRidePassengerName(user?.name || '');
     setRidePassengerPhone(user?.phone || '');
     setRidePickupLocation('');
@@ -1399,7 +1403,6 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         </div>
       )}
 
-      <AuthPromptModal isOpen={showAuthPrompt} onClose={() => setShowAuthPrompt(false)} />
 
       {toastMsg && (
         <Toast message={toastMsg} onClose={() => setToastMsg(null)} />

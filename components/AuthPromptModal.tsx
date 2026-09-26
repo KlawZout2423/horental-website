@@ -40,23 +40,23 @@ export default function AuthPromptModal({ isOpen, onClose, targetPropertyId }: A
           <Lock size={30} />
         </div>
 
-        <h2 className={styles.title}>Account Required to Contact Owner / Landlord</h2>
+        <h2 className={styles.title}>Sign In Required to Contact Landlords & Book Rides</h2>
         <p className={styles.subtitle}>
-          Sign in or create a free account to call, WhatsApp chat, or book physical viewings directly with verified owners and landlords.
+          Please sign in or create a free account to call/message landlords directly and book Yuyu Rides for property viewings.
         </p>
 
         <div className={styles.benefitsList}>
           <div className={styles.benefitItem}>
             <CheckCircle2 size={16} className={styles.benefitIcon} />
-            <span>Direct Call & WhatsApp contacts for owners and landlords</span>
+            <span>Direct Call, SMS & WhatsApp contact for verified landlords</span>
           </div>
           <div className={styles.benefitItem}>
             <CheckCircle2 size={16} className={styles.benefitIcon} />
-            <span>Verified student hostels & apartments</span>
+            <span>Instant Yuyu Ride dispatch to inspect properties in Ho</span>
           </div>
           <div className={styles.benefitItem}>
             <CheckCircle2 size={16} className={styles.benefitIcon} />
-            <span>Save & bookmark your favorite rentals</span>
+            <span>Save favorites & track property inspection requests</span>
           </div>
         </div>
 

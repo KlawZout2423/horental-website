@@ -186,6 +186,12 @@ export default function RegisterForm() {
                 </Link>
               </p>
             )}
+            <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '12px' }}>
+              Are you a Landlord?{' '}
+              <Link href="/landlord-registration" style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                Register your property here &rarr;
+              </Link>
+            </p>
           </div>
 
           <div className="form-group">

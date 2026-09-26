@@ -349,17 +349,21 @@ function UploadPageContent({
   };
 
   const handleGetGpsLocation = () => {
-    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      alert('⚠️ GPS location requires a secure HTTPS connection. Mobile browsers block location access on unencrypted HTTP.');
-      return;
-    }
-
-    if (!('geolocation' in navigator)) {
-      alert('⚠️ Geolocation is not supported by your mobile browser.');
-      return;
-    }
-
     setIsDetectingGps(true);
+    setGpsStatusMsg('📡 Initializing GPS module...');
+
+    if (typeof window !== 'undefined' && window.isSecureContext === false && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      setIsDetectingGps(false);
+      setGpsStatusMsg('⚠️ GPS Error: Requires secure HTTPS connection.');
+      return;
+    }
+
+    if (!navigator || !('geolocation' in navigator)) {
+      setIsDetectingGps(false);
+      setGpsStatusMsg('⚠️ GPS Error: Geolocation is not supported by your mobile browser.');
+      return;
+    }
+
     setGpsStatusMsg('📡 Connecting to phone GPS satellite...');
 
     const handleSuccess = (pos: GeolocationPosition, providerLabel: string) => {
@@ -373,38 +377,35 @@ function UploadPageContent({
 
     const handleError = (err: GeolocationPositionError) => {
       setIsDetectingGps(false);
-      console.error('GPS Detection Error:', err);
-      
       let errorDetail = '';
       switch (err.code) {
         case err.PERMISSION_DENIED:
-          errorDetail = 'Location permission was denied. Please allow location access in your browser settings (tap the lock icon next to the website URL).';
+          errorDetail = 'Permission denied. Please allow location access in your browser settings (tap the aA/lock icon near the URL).';
           break;
         case err.POSITION_UNAVAILABLE:
-          errorDetail = 'GPS location unavailable. Please ensure Location/GPS is turned ON in your phone settings.';
+          errorDetail = 'Location unavailable. Ensure GPS is turned ON in your phone settings.';
           break;
         case err.TIMEOUT:
-          errorDetail = 'GPS request timed out. Please step outdoors or near a window for satellite reception.';
+          errorDetail = 'Request timed out. Step outdoors or near a window for reception.';
           break;
         default:
-          errorDetail = err.message || 'Unknown GPS error occurred.';
+          errorDetail = err.message || 'Unknown error occurred.';
           break;
       }
       setGpsStatusMsg(`⚠️ GPS Error: ${errorDetail}`);
-      alert(`Could not detect GPS location:\n\n${errorDetail}`);
     };
 
-    // Attempt 1: High Accuracy Satellite GPS
     navigator.geolocation.getCurrentPosition(
       (pos) => handleSuccess(pos, 'High-Accuracy Satellite GPS'),
       (err) => {
-        console.warn('High accuracy GPS failed, trying network fallback...', err);
-        setGpsStatusMsg('📡 High-accuracy GPS timed out, trying cellular/network location...');
-        // Attempt 2: Low Accuracy Network/Cellular fallback
+        if (err.code === err.PERMISSION_DENIED) {
+           return handleError(err);
+        }
+        setGpsStatusMsg('📡 High-accuracy GPS failed, trying cellular/network location...');
         navigator.geolocation.getCurrentPosition(
           (pos) => handleSuccess(pos, 'Cellular/Network Location'),
           (finalErr) => handleError(finalErr),
-          { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
+          { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
         );
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
