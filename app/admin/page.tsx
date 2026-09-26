@@ -3591,8 +3591,8 @@ function AdminPageContent() {
                                       cursor: 'pointer'
                                     }}
                                   >
-                                    <option value="verified" style={{ backgroundColor: '#fff', color: '#047857', fontWeight: 700 }}>✓ Verify</option>
-                                    <option value="unverified" style={{ backgroundColor: '#fff', color: '#B45309', fontWeight: 600 }}>Unverify</option>
+                                    <option value="verified" style={{ backgroundColor: '#fff', color: '#047857', fontWeight: 700 }}>✓ Verified</option>
+                                    <option value="unverified" style={{ backgroundColor: '#fff', color: '#B45309', fontWeight: 600 }}>Unverified</option>
                                   </select>
                                 </div>
                               </td>
@@ -5387,7 +5387,6 @@ function AdminPageContent() {
             </div>
           </div>
         </div>
-      )}
       )}
 
       {republishModal.isOpen && (
