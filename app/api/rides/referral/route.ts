@@ -47,7 +47,7 @@ export async function POST(req: Request) {
         tenantPhone: tenantPhone ? String(tenantPhone).trim() : null,
         pickupLocation: pickupLocation ? String(pickupLocation).trim() : null,
         status: "redirected",
-        commissionAmt: 5.0,
+        commissionAmt: 12.5,
       },
     });
 

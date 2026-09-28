@@ -995,6 +995,20 @@
   }
 }
 
+.landlordCardContent {
+  display: grid;
+  grid-template-columns: 1.2fr 2fr 1.2fr;
+  gap: 16px;
+  padding: 20px;
+}
+
+@media (max-width: 900px) {
+  .landlordCardContent {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
 .tableControls {
   display: flex;
   align-items: center;

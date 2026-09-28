@@ -1,7 +1,9 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Star, Send, MessageSquare } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { graphqlRequest } from '../lib/graphql';
+import { useAuth } from '../lib/auth';
 
 const SUBMIT_FEEDBACK = `
   mutation SubmitFeedback($rating: Int!, $message: String, $path: String) {
@@ -10,11 +12,31 @@ const SUBMIT_FEEDBACK = `
 `;
 
 export default function FeedbackWidget() {
-  const [mode, setMode] = useState<'bar' | 'expanded' | 'hidden'>('bar');
+  const pathname = usePathname();
+  const [mode, setMode] = useState<'bar' | 'expanded' | 'collapsed' | 'hidden'>('bar');
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const { user } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Auto-collapse after 12 seconds if not interacted with
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (mode === 'bar' && rating === 0) {
+      timer = setTimeout(() => {
+        setMode('collapsed');
+      }, 12000);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [mode, rating]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -37,27 +59,15 @@ export default function FeedbackWidget() {
     }
   };
 
-  const handleQuickRate = async (star: number) => {
+  const handleQuickRate = (star: number) => {
     setRating(star);
-    if (star <= 3) {
-      setMode('expanded');
-    } else {
-      setStatus('submitting');
-      try {
-        await graphqlRequest(SUBMIT_FEEDBACK, {
-          rating: star,
-          message: '',
-          path: typeof window !== 'undefined' ? window.location.pathname : '',
-        });
-        setStatus('success');
-        setTimeout(() => setMode('hidden'), 2500);
-      } catch {
-        setMode('expanded');
-      }
-    }
+    setMode('expanded');
   };
 
-  if (mode === 'hidden') return null;
+  const HIDE_ROUTES = ['/admin', '/login', '/register', '/forgot-password', '/dashboard', '/landlord-registration', '/register-agent', '/agent', '/upload'];
+  const shouldHide = HIDE_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'));
+
+  if (!mounted || !user || mode === 'hidden' || shouldHide) return null;
 
   const baseStyle: React.CSSProperties = {
     position: 'fixed',
@@ -77,11 +87,29 @@ export default function FeedbackWidget() {
     );
   }
 
+  if (mode === 'collapsed') {
+    return (
+      <div 
+        onMouseEnter={() => setMode('bar')}
+        onClick={() => setMode('bar')}
+        style={{ ...baseStyle, backgroundColor: '#111', color: 'white', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.2)', transition: 'transform 0.2s, background-color 0.2s' }}
+        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        title="Rate us"
+      >
+        <Star size={24} fill="#F59E0B" color="#F59E0B" />
+      </div>
+    );
+  }
+
   if (mode === 'bar') {
     return (
-      <div style={{ ...baseStyle, backgroundColor: 'white', border: '1px solid var(--border, #e5e7eb)', borderRadius: '50px', padding: '8px 14px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151', whiteSpace: 'nowrap' }}>Rate us</span>
-        <div style={{ display: 'flex', gap: '1px' }}>
+      <div 
+        onMouseEnter={() => setMode('bar')} // resets hover intent
+        style={{ ...baseStyle, backgroundColor: '#111', border: '1px solid #333', borderRadius: '50px', padding: '10px 18px', boxShadow: '0 8px 32px rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', gap: '12px' }}
+      >
+        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap' }}>Rate your experience</span>
+        <div style={{ display: 'flex', gap: '2px' }}>
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
@@ -89,17 +117,17 @@ export default function FeedbackWidget() {
               onClick={() => handleQuickRate(star)}
               onMouseEnter={() => setHoverRating(star)}
               onMouseLeave={() => setHoverRating(0)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: star <= (hoverRating || rating) ? '#F59E0B' : '#D1D5DB', transition: 'color 0.15s, transform 0.15s', transform: star <= hoverRating ? 'scale(1.2)' : 'scale(1)', display: 'flex' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: star <= (hoverRating || rating) ? '#F59E0B' : '#4B5563', transition: 'color 0.15s, transform 0.15s', transform: star <= hoverRating ? 'scale(1.2)' : 'scale(1)', display: 'flex' }}
             >
-              <Star size={20} fill={star <= (hoverRating || rating) ? '#F59E0B' : 'transparent'} strokeWidth={1.5} />
+              <Star size={22} fill={star <= (hoverRating || rating) ? '#F59E0B' : 'transparent'} strokeWidth={1.5} />
             </button>
           ))}
         </div>
-        <button onClick={() => setMode('expanded')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '2px', display: 'flex' }} title="Leave a comment">
-          <MessageSquare size={15} />
+        <button onClick={() => setMode('expanded')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '2px', display: 'flex', marginLeft: '4px' }} title="Leave a comment">
+          <MessageSquare size={16} />
         </button>
-        <button onClick={() => setMode('hidden')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '2px', display: 'flex' }} aria-label="Dismiss">
-          <X size={14} />
+        <button onClick={() => setMode('collapsed')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '2px', display: 'flex' }} title="Collapse">
+          <X size={15} />
         </button>
       </div>
     );

@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { MessageSquare, Mail, X } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import styles from './SupportFAB.module.css';
 
 export default function SupportFAB() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -26,8 +28,13 @@ export default function SupportFAB() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Define routes where the FAB should be hidden
+  const HIDE_ROUTES = ['/admin', '/login', '/register', '/forgot-password', '/dashboard', '/landlord-registration', '/register-agent', '/agent', '/upload'];
+  const shouldHide = HIDE_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'));
+
   // Only show floating support button to logged in users after mounting on client
-  if (!mounted || !user) return null;
+  // and when not on excluded routes.
+  if (!mounted || !user || shouldHide) return null;
   return (
     <div className={styles.fabContainer} ref={containerRef}>
       {isOpen && (

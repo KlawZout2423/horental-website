@@ -664,6 +664,20 @@ export const resolvers = {
       }
     },
 
+    deleteFeedback: async (_: any, { id }: { id: number }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (fullUser?.role !== 'admin') throw new Error('Not authorized');
+      
+      try {
+        await prisma.feedback.delete({ where: { id } });
+        return true;
+      } catch (err) {
+        console.error('deleteFeedback error:', err);
+        return false;
+      }
+    },
+
     register: async (_: any, { input }: { input: any }) => {
       const sanitizedName = sanitizeInput(input.name);
       const formattedPhone = formatGhanaPhone(input.phone);

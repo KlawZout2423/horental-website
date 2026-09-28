@@ -31,6 +31,7 @@ import {
   PUBLISH_LANDLORD_REGISTRATION,
   GET_PAGE_ANALYTICS,
   GET_FEEDBACKS,
+  DELETE_FEEDBACK,
   VERIFY_AGENT,
   SEND_ADMIN_SMS
 } from '../../lib/graphql';
@@ -138,6 +139,7 @@ interface AdminSessionCache {
   contactLogs: ContactLogItem[];
   reports: ReportItem[];
   landlordRegistrations: LandlordRegistration[];
+  feedbacks: any[];
   rideReferrals: RideReferralItem[];
   totalRideReferralsCount: number;
   loadedTabs: Set<AdminTab>;
@@ -238,7 +240,35 @@ function AdminPageContent() {
     }
   };
 
+  const [feedbacksSearch, setFeedbacksSearch] = useState('');
+  const [feedbacksSort, setFeedbacksSort] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
 
+  const filteredFeedbacks = feedbacks
+    .filter((f: any) => !feedbacksSearch || f.message?.toLowerCase().includes(feedbacksSearch.toLowerCase()) || f.path?.toLowerCase().includes(feedbacksSearch.toLowerCase()))
+    .sort((a: any, b: any) => {
+      if (feedbacksSort === 'newest') return new Date(isNaN(Number(b.createdAt)) ? b.createdAt : Number(b.createdAt)).getTime() - new Date(isNaN(Number(a.createdAt)) ? a.createdAt : Number(a.createdAt)).getTime();
+      if (feedbacksSort === 'oldest') return new Date(isNaN(Number(a.createdAt)) ? a.createdAt : Number(a.createdAt)).getTime() - new Date(isNaN(Number(b.createdAt)) ? b.createdAt : Number(b.createdAt)).getTime();
+      if (feedbacksSort === 'highest') return b.rating - a.rating;
+      if (feedbacksSort === 'lowest') return a.rating - b.rating;
+      return 0;
+    });
+
+  const handleDeleteFeedback = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this feedback log?')) return;
+    setActionLoading(true);
+    try {
+      await graphqlRequest(DELETE_FEEDBACK, { id });
+      setFeedbacks((prev: any[]) => prev.filter(f => f.id !== id));
+      if (adminSessionCache) {
+        adminSessionCache.feedbacks = adminSessionCache.feedbacks.filter(f => f.id !== id);
+      }
+    } catch (err: any) {
+      console.error('Error deleting feedback:', err);
+      alert('Failed to delete feedback');
+    } finally {
+      setActionLoading(false);
+    }
+  };
   // SMS Broadcast State
   const [smsTargetType, setSmsTargetType] = useState<'single' | 'role' | 'all'>('single');
   const [smsCustomPhone, setSmsCustomPhone] = useState('');
@@ -447,6 +477,7 @@ function AdminPageContent() {
         setContactLogs(adminSessionCache.contactLogs);
         setReports(adminSessionCache.reports);
         setLandlordRegistrations(adminSessionCache.landlordRegistrations);
+        setFeedbacks(adminSessionCache.feedbacks);
         setRideReferrals(adminSessionCache.rideReferrals);
         setTotalRideReferralsCount(adminSessionCache.totalRideReferralsCount);
         setLoadedTabs(adminSessionCache.loadedTabs);
@@ -489,13 +520,14 @@ function AdminPageContent() {
     if (!silent) setLoadingData(true);
     try {
       loadRideReferrals();
-      const [statsData, usersData, propertiesData, logsData, reportsData, landlordData] = await Promise.all([
+      const [statsData, usersData, propertiesData, logsData, reportsData, landlordData, feedbacksData] = await Promise.all([
         graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS),
         graphqlRequest<{ users: User[] }>(GET_USERS),
         graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES),
         graphqlRequest<{ contactLogs: ContactLogItem[] }>(GET_CONTACT_LOGS).catch(() => ({ contactLogs: [] })),
         graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] })),
-        graphqlRequest<{ landlordRegistrations: LandlordRegistration[] }>(GET_LANDLORD_REGISTRATIONS).catch(() => ({ landlordRegistrations: [] }))
+        graphqlRequest<{ landlordRegistrations: LandlordRegistration[] }>(GET_LANDLORD_REGISTRATIONS).catch(() => ({ landlordRegistrations: [] })),
+        graphqlRequest<{ getFeedbacks: any[] }>(GET_FEEDBACKS).catch(() => ({ getFeedbacks: [] }))
       ]);
 
       const newStats = statsData?.dashboardStats || null;
@@ -504,6 +536,7 @@ function AdminPageContent() {
       const newLogs = logsData?.contactLogs || [];
       const newReports = reportsData?.reports || [];
       const newLandlords = landlordData?.landlordRegistrations || [];
+      const newFeedbacks = feedbacksData?.getFeedbacks || [];
       const newTabs = new Set([...loadedTabs, 'analytics', 'properties', 'users', 'moderation', 'reports', 'landlords', 'yuyu_rides'] as AdminTab[]);
 
       if (statsData) setStats(newStats);
@@ -512,6 +545,7 @@ function AdminPageContent() {
       if (logsData) setContactLogs(newLogs);
       if (reportsData) setReports(newReports);
       if (landlordData) setLandlordRegistrations(newLandlords);
+      if (feedbacksData) setFeedbacks(newFeedbacks);
       setLoadedTabs(newTabs);
 
       // Save into in-memory session cache for instant subsequent renders
@@ -522,11 +556,12 @@ function AdminPageContent() {
         contactLogs: newLogs,
         reports: newReports,
         landlordRegistrations: newLandlords,
+        feedbacks: newFeedbacks,
         rideReferrals,
         totalRideReferralsCount,
         loadedTabs: newTabs,
         lastFetchedAt: Date.now(),
-      };
+      } as AdminSessionCache;
     } catch (err: any) {
       console.error('Error loading admin data:', err);
       if (!silent) {
@@ -553,8 +588,12 @@ function AdminPageContent() {
 
   async function loadReportsData() {
     try {
-      const reportsData = await graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] }));
+      const [reportsData, feedbacksData] = await Promise.all([
+        graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] })),
+        graphqlRequest<{ getFeedbacks: any[] }>(GET_FEEDBACKS).catch(() => ({ getFeedbacks: [] }))
+      ]);
       if (reportsData) setReports(reportsData.reports);
+      if (feedbacksData) setFeedbacks(feedbacksData.getFeedbacks);
       setLoadedTabs(prev => new Set([...prev, 'reports']));
     } catch (err: any) {
       console.error('Error loading reports:', err);
@@ -576,14 +615,15 @@ function AdminPageContent() {
       setLoadingData(true);
     }
     try {
-      const [statsData, usersData, propertiesData, logsData, reportsData, auditLogsData, landlordData] = await Promise.all([
+      const [statsData, usersData, propertiesData, logsData, reportsData, auditLogsData, landlordData, feedbacksData] = await Promise.all([
         graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS),
         graphqlRequest<{ users: User[] }>(GET_USERS),
         graphqlRequest<{ properties: Property[] }>(GET_PROPERTIES),
         graphqlRequest<{ contactLogs: ContactLogItem[] }>(GET_CONTACT_LOGS),
         graphqlRequest<{ reports: ReportItem[] }>(GET_REPORTS).catch(() => ({ reports: [] })),
         graphqlRequest<{ auditLogs: AuditLogItem[] }>(GET_AUDIT_LOGS).catch(() => ({ auditLogs: [] })),
-        graphqlRequest<{ landlordRegistrations: LandlordRegistration[] }>(GET_LANDLORD_REGISTRATIONS).catch(() => ({ landlordRegistrations: [] }))
+        graphqlRequest<{ landlordRegistrations: LandlordRegistration[] }>(GET_LANDLORD_REGISTRATIONS).catch(() => ({ landlordRegistrations: [] })),
+        graphqlRequest<{ getFeedbacks: any[] }>(GET_FEEDBACKS).catch(() => ({ getFeedbacks: [] }))
       ]);
 
       if (statsData) setStats(statsData.dashboardStats);
@@ -593,6 +633,7 @@ function AdminPageContent() {
       if (reportsData) setReports(reportsData.reports);
       if (auditLogsData) setAuditLogs(auditLogsData.auditLogs || []);
       if (landlordData) setLandlordRegistrations(landlordData.landlordRegistrations || []);
+      if (feedbacksData) setFeedbacks(feedbacksData.getFeedbacks || []);
     } catch (err: any) {
       console.error('Error loading admin data:', err);
       setMessage({ text: getFriendlyErrorMessage(err, 'Failed to fetch dashboard data.'), isError: true });
@@ -1205,7 +1246,7 @@ function AdminPageContent() {
               }}
             >
               <Flag size={16} style={{ color: reports.some((r) => r.status === 'pending') ? '#EF4444' : undefined }} />
-              <span style={{ fontWeight: reports.some((r) => r.status === 'pending') ? 700 : 500 }}>Property Reports</span>
+              <span style={{ fontWeight: reports.some((r) => r.status === 'pending') ? 700 : 500 }}>Ratings & Reports</span>
               <span
                 className={styles.navCountBadge}
                 style={{
@@ -1310,7 +1351,7 @@ function AdminPageContent() {
               {activeTab === 'agents' && 'Verified Agents'}
               {activeTab === 'audits' && 'Audit Logs'}
               {activeTab === 'traffic' && 'Traffic Analytics'}
-              {activeTab === 'reports' && 'Flagged Reports'}
+              {activeTab === 'reports' && 'Ratings & Reports'}
               {activeTab === 'landlords' && 'Landlord Submissions'}
               {activeTab === 'sms' && 'SMS Broadcast'}
               {activeTab === 'feedback' && 'User Feedback'}
@@ -1500,7 +1541,7 @@ function AdminPageContent() {
                 {activeTab === 'audits' && 'Contact Inquiry Audits'}
                 {activeTab === 'traffic' && 'Traffic & Campaign Analytics'}
                 {activeTab === 'feedback' && 'User Feedback'}
-                {activeTab === 'reports' && 'Property Reports & Flagged Listings'}
+                {activeTab === 'reports' && 'Ratings & Reports'}
                 {activeTab === 'landlords' && 'Agents & Landlords Database'}
               </h1>
               <p className={styles.pageSubtitle}>
@@ -1512,7 +1553,7 @@ function AdminPageContent() {
                 {activeTab === 'audits' && 'Real-time record of customer call and WhatsApp inquiries to landlords.'}
                 {activeTab === 'traffic' && 'View traffic sources, visit trends, top listings, and generate campaign tracking links.'}
                 {activeTab === 'feedback' && 'View user feedback and satisfaction ratings.'}
-                {activeTab === 'reports' && 'Review user-flagged listings, reported scams, inaccurate photos, and manage property reports.'}
+                {activeTab === 'reports' && 'Review user feedback, platform ratings, and flagged property reports.'}
                 {activeTab === 'landlords' && 'View all registered agents, landlord submissions, verification status, and contact details.'}
               </p>
             </>
@@ -3427,6 +3468,124 @@ function AdminPageContent() {
                   ))
                 )}
               </div>
+
+              {/* Feedbacks Section */}
+              <div style={{ marginTop: '40px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>User Ratings & Platform Feedback</h3>
+                  
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: '100%' }}>
+                    <div style={{ position: 'relative', flex: '1 1 200px' }}>
+                      <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                      <input
+                        type="text"
+                        placeholder="Search feedback..."
+                        value={feedbacksSearch}
+                        onChange={(e) => setFeedbacksSearch(e.target.value)}
+                        style={{ width: '100%', padding: '10px 10px 10px 36px', borderRadius: '8px', border: '1px solid var(--border, #e5e7eb)', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <select
+                      value={feedbacksSort}
+                      onChange={(e) => setFeedbacksSort(e.target.value as any)}
+                      style={{ flex: '0 0 auto', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border, #e5e7eb)', backgroundColor: 'var(--bg-surface, #fff)', fontSize: '0.85rem', outline: 'none', cursor: 'pointer', minWidth: '140px' }}
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                      <option value="highest">Highest Rated</option>
+                      <option value="lowest">Lowest Rated</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className={`${styles.tableContainer} ${styles.desktopOnlyTable}`}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Rating</th>
+                        <th>Message</th>
+                        <th>Page Path</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredFeedbacks.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                            No feedback found.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredFeedbacks.map((fb: any) => (
+                          <tr key={fb.id}>
+                            <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
+                              {new Date(isNaN(Number(fb.createdAt)) ? fb.createdAt : Number(fb.createdAt)).toLocaleDateString()}
+                            </td>
+                            <td>
+                              <span style={{ fontWeight: 800, color: fb.rating >= 4 ? '#10B981' : fb.rating === 3 ? '#F59E0B' : '#EF4444' }}>
+                                {fb.rating} / 5 ⭐
+                              </span>
+                            </td>
+                            <td style={{ maxWidth: '300px', fontSize: '0.85rem' }}>
+                              {fb.message || <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No message</span>}
+                            </td>
+                            <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                              {fb.path || 'N/A'}
+                            </td>
+                            <td>
+                              <div className={styles.actionsCell} style={{ justifyContent: 'flex-end' }}>
+                                <button
+                                  onClick={() => handleDeleteFeedback(fb.id)}
+                                  disabled={actionLoading}
+                                  className="btn btn-outline"
+                                  title="Remove feedback log"
+                                  style={{ padding: '4px 8px', height: '28px', width: '28px', color: 'var(--text-muted)' }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Feedbacks */}
+                <div className={styles.mobileCardList}>
+                  {filteredFeedbacks.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0' }}>No feedback found.</p>
+                  ) : (
+                    filteredFeedbacks.map((fb: any) => (
+                      <div key={fb.id} className={styles.adminCardItem}>
+                        <div className={styles.adminCardHeader} style={{ marginBottom: '8px' }}>
+                          <span style={{ fontWeight: 800, color: fb.rating >= 4 ? '#10B981' : fb.rating === 3 ? '#F59E0B' : '#EF4444' }}>
+                            {fb.rating} / 5 ⭐
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            {new Date(isNaN(Number(fb.createdAt)) ? fb.createdAt : Number(fb.createdAt)).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.85rem', marginBottom: '8px' }}>
+                          {fb.message || <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No message provided</span>}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span><strong>Page:</strong> {fb.path || 'N/A'}</span>
+                          <button
+                            onClick={() => handleDeleteFeedback(fb.id)}
+                            disabled={actionLoading}
+                            style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '4px' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </>
           ) : activeTab === 'agents' ? (
             <>
@@ -3714,7 +3873,7 @@ function AdminPageContent() {
 
                       return (
                         <div key={r.id} className={styles.landlordCard} style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: 0, overflow: 'hidden' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr 1.2fr', gap: '16px', padding: '20px' }}>
+                          <div className={styles.landlordCardContent}>
                             {/* Profile side */}
                             <div className={styles.landlordProfileSide}>
                               <div className={styles.landlordAvatarRow}>
@@ -5029,7 +5188,7 @@ function AdminPageContent() {
                     <TrendingUp size={20} style={{ color: '#059669' }} />
                   </div>
                   <div className={styles.statValue} style={{ fontSize: '1.7rem', marginTop: '6px', color: '#047857', fontWeight: 900 }}>
-                    GH₵ {(rideReferrals.reduce((sum, r) => sum + (r.commissionAmt || 5.0), 0)).toFixed(2)}
+                    GH₵ {(rideReferrals.reduce((sum, r) => sum + (r.commissionAmt || 12.5), 0)).toFixed(2)}
                   </div>
                 </div>
               </div>
@@ -5079,7 +5238,7 @@ function AdminPageContent() {
                               )}
                             </td>
                             <td style={{ padding: '14px 16px', fontWeight: 800, color: '#059669', fontSize: '0.85rem' }}>
-                              GH₵ {(item.commissionAmt || 5.0).toFixed(2)}
+                              GH₵ {(item.commissionAmt || 12.5).toFixed(2)}
                             </td>
                             <td style={{ padding: '14px 16px' }}>
                               <span style={{ backgroundColor: '#FEF3C7', color: '#B45309', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'capitalize' }}>
