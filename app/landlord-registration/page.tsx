@@ -702,6 +702,7 @@ export default function LandlordRegistrationPage() {
                       onChange={() => togglePropType(t)}
                       style={{ display: 'none' }}
                     />
+                    {checked && <Check size={14} style={{ marginRight: '6px' }} />}
                     <span>{t}</span>
                   </label>
                 );
@@ -715,6 +716,7 @@ export default function LandlordRegistrationPage() {
                 return (
                   <label key={opt} className={`${styles.chk} ${checked ? styles.checkedChk : ''}`}>
                     <input type="checkbox" checked={checked} onChange={() => toggleAmenity(opt)} style={{ display: 'none' }} />
+                    {checked && <Check size={14} style={{ marginRight: '6px' }} />}
                     <span>{opt}</span>
                   </label>
                 );

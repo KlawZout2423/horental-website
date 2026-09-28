@@ -255,9 +255,12 @@
 }
 
 .checkedChk {
-  border-color: var(--primary);
-  background-color: var(--primary-light);
+  border-color: var(--primary) !important;
+  background-color: var(--primary-light) !important;
   color: var(--primary) !important;
+  border-width: 2px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 0 1px var(--primary);
 }
 
 /* Plan card rows */
