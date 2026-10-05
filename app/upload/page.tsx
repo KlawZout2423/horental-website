@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../lib/auth';
 import { graphqlRequest, CREATE_PROPERTY, UPDATE_PROPERTY, UPDATE_AGENT_PROFILE, GET_AGENT_PROPERTIES, GET_VERIFICATION_REQUESTS, GET_PROPERTY_BY_ID } from '../../lib/graphql';
 import { UploadCloud, Image as ImageIcon, Sparkles, Loader, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, parsePropertyDescription, Property, User, stripIdFromBio } from '../../lib/types';
+import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, parsePropertyDescription, Property, User, stripIdFromBio, formatAdvanceLabel } from '../../lib/types';
 import VerifiedAgentModal from '../../components/VerifiedAgentModal';
 import styles from './upload.module.css';
 
@@ -530,7 +530,7 @@ function UploadPageContent({
 
       const featureParts: string[] = [];
       if (rooms) featureParts.push(`Rooms Available: ${rooms}`);
-      if (advance) featureParts.push(`Advance Required: ${advance}`);
+      if (advance) featureParts.push(`Advance Required: ${formatAdvanceLabel(advance)}`);
       if (availableFrom) featureParts.push(`Available From: ${availableFrom}`);
       if (pricePeriod) featureParts.push(`PricePeriod: per ${pricePeriod}`);
       if (amenitiesList.length > 0) featureParts.push(...amenitiesList);

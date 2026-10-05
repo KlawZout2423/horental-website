@@ -11,7 +11,7 @@ import styles from './detail.module.css';
 import AuthPromptModal from '../../../components/AuthPromptModal';
 import Toast from '../../../components/Toast';
 import UploadPage from '../../upload/page';
-import { getPricePeriodLabel, formatGhanaPhone, isValidGhanaPhone, sanitizeInput, getOptimizedImageUrl, parsePropertyDescription } from '../../../lib/types';
+import { getPricePeriodLabel, formatGhanaPhone, isValidGhanaPhone, sanitizeInput, getOptimizedImageUrl, parsePropertyDescription, formatAdvanceLabel } from '../../../lib/types';
 
 interface GalleryItem {
   id: string;
@@ -786,7 +786,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                           ⏳ Advance Required
                         </span>
                         <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                          {parsedSpecs.advance || '1 Year'}
+                          {formatAdvanceLabel(parsedSpecs.advance)}
                         </span>
                       </div>
 

@@ -259,6 +259,35 @@ export interface ParsedPropertyDetails {
   };
 }
 
+/**
+ * Cleans redundant period text from advance strings (e.g. "1 Year (per year)" -> "1 Year", "1 year advance" -> "1 Year").
+ */
+export function formatAdvanceLabel(advanceStr?: string): string {
+  if (!advanceStr) return '1 Year';
+
+  let cleaned = advanceStr.trim();
+
+  // Strip parenthetical period like (per year), (per month), (per semester)
+  cleaned = cleaned.replace(/\s*\((?:per|for)\s+[^)]+\)/gi, '');
+
+  // Strip trailing "per year", "per month", "per semester", "per academic year"
+  cleaned = cleaned.replace(/\s+per\s+(?:year|month|semester|academic year|day|plot|acre)/gi, '');
+
+  // Strip trailing "advance", "payment", "required" (case-insensitive)
+  cleaned = cleaned.replace(/\s+(?:advance|payment|required)\b/gi, '');
+
+  // Strip duplicate words like "1 Year 1 Year" or "1 Year (1 Year)"
+  const words = cleaned.split(/\s+/);
+  if (words.length >= 4 && words.slice(0, 2).join(' ').toLowerCase() === words.slice(2, 4).join(' ').toLowerCase()) {
+    cleaned = words.slice(0, 2).join(' ');
+  }
+
+  // Capitalize words nicely (e.g. "1 year" -> "1 Year")
+  cleaned = cleaned.replace(/\b([a-z])/g, (m) => m.toUpperCase());
+
+  return cleaned.trim() || advanceStr;
+}
+
 export function parsePropertyDescription(desc?: string): ParsedPropertyDetails {
   let cleanDesc = desc || '';
   const amenities: string[] = [];
@@ -278,7 +307,7 @@ export function parsePropertyDescription(desc?: string): ParsedPropertyDetails {
   // Extract Advance Period / Required
   const advanceMatch = cleanDesc.match(/(?:Advance Required|Advance period|Advance Payment|Advance):\s*([^.\n|]+)/i);
   if (advanceMatch) {
-    specs.advance = advanceMatch[1].trim();
+    specs.advance = formatAdvanceLabel(advanceMatch[1].trim());
     cleanDesc = cleanDesc.replace(/(?:Advance Required|Advance period|Advance Payment|Advance):\s*[^.\n|]+\.?,?/gi, '').trim();
   }
 
@@ -547,12 +576,18 @@ export interface LandlordRegistration {
  * - Shops: "Available" / "Taken"
  * - Everything else: "Available" / "Occupied"
  */
+/**
+ * Returns the correct status label based on property type.
+ * - Lands / Furnitures: "Available" / "Sold"
+ * - Shops: "Available" / "Taken"
+ * - Everything else: "Available" / "Occupied"
+ */
 export function getStatusLabel(status: string, type?: string): string {
   if (status === 'available') return 'Available';
   const t = (type || '').toLowerCase();
-  if (t.includes('land')) return 'Sold';
-  if (t.includes('furniture') || t.includes('furnitures')) return 'Sold';
-  if (t.includes('shop')) return 'Taken';
+  if (t.includes('land') || t.includes('plot')) return 'Sold';
+  if (t.includes('furniture') || t.includes('furnitures') || t.includes('household')) return 'Sold';
+  if (t.includes('shop') || t.includes('store') || t.includes('office') || t.includes('commercial')) return 'Taken';
   return 'Occupied';
 }
 
@@ -562,9 +597,103 @@ export function getStatusLabel(status: string, type?: string): string {
 export function getToggleStatusLabel(currentStatus: string, type?: string): string {
   if (currentStatus === 'available') {
     const t = (type || '').toLowerCase();
-    if (t.includes('land') || t.includes('furniture') || t.includes('furnitures')) return 'Mark Sold';
-    if (t.includes('shop')) return 'Mark Taken';
+    if (t.includes('land') || t.includes('plot') || t.includes('furniture') || t.includes('furnitures') || t.includes('household')) return 'Mark Sold';
+    if (t.includes('shop') || t.includes('store') || t.includes('office') || t.includes('commercial')) return 'Mark Taken';
     return 'Mark Occupied';
   }
   return 'Mark Available';
 }
+
+/**
+ * Utility to match property types against chip filter selections.
+ * Handles variations from landlord registration, direct upload, and database values.
+ */
+export function matchesPropertyType(pTypeRaw: string, targetTypeRaw: string): boolean {
+  if (!targetTypeRaw || targetTypeRaw === 'All') return true;
+
+  const target = targetTypeRaw.toLowerCase().trim();
+  const pType = (pTypeRaw || '').toLowerCase().trim();
+
+  if (!pType) return false;
+
+  // Single Room (Non Self-Contained)
+  if (target === 'single room') {
+    return (pType === 'single room' || pType === 'single-room') &&
+      !pType.includes('sc') && !pType.includes('self contained') && !pType.includes('self-contained') && !pType.includes('self contain');
+  }
+
+  // Single Room Self-Contained
+  if (target === 'single room sc' || target === 'single room self contain') {
+    return (pType.includes('single room') || pType.includes('single-room')) &&
+      (pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained') || pType.includes('self contain'));
+  }
+
+  // Chamber & Hall (Non Self-Contained)
+  if (target === 'chamber & hall' || target === 'chamber and hall') {
+    return (pType.includes('chamber') && pType.includes('hall')) &&
+      !pType.includes('sc') && !pType.includes('self contained') && !pType.includes('self-contained') && !pType.includes('self contain');
+  }
+
+  // Chamber & Hall Self-Contained
+  if (target === 'chamber and hall sc' || target === 'chamber & hall sc' || target === 'chamber & hall self contain') {
+    return (pType.includes('chamber') && pType.includes('hall')) &&
+      (pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained') || pType.includes('self contain'));
+  }
+
+  // Two Bedroom SC / Apartment
+  if (target === 'two bedroom sc' || target === '2-bedroom apartment') {
+    return (pType.includes('two bedroom') || pType.includes('2 bedroom') || pType.includes('2-bedroom')) &&
+      (pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained') || pType.includes('self contain') || pType.includes('apartment'));
+  }
+
+  // Three Bedroom SC / Apartment
+  if (target === 'three bedroom sc' || target === '3-bedroom apartment') {
+    return (pType.includes('three bedroom') || pType.includes('3 bedroom') || pType.includes('3-bedroom')) &&
+      (pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained') || pType.includes('self contain') || pType.includes('apartment'));
+  }
+
+  // Four Bedroom SC / Apartment
+  if (target === 'four bedroom sc' || target === '4-bedroom apartment or more') {
+    return (pType.includes('four bedroom') || pType.includes('4 bedroom') || pType.includes('4-bedroom')) &&
+      (pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained') || pType.includes('self contain') || pType.includes('apartment'));
+  }
+
+  // Main "Self-Contained" Chip
+  if (target === 'self-contained' || target === 'self contained') {
+    return pType.includes('sc') ||
+      pType.includes('self contained') ||
+      pType.includes('self-contained') ||
+      pType.includes('self contain') ||
+      pType.includes('apartment') ||
+      pType.includes('villa') ||
+      pType.includes('full house');
+  }
+
+  // Lands Chip
+  if (target === 'lands' || target === 'land') {
+    return pType.includes('land') || pType.includes('plot');
+  }
+
+  // Shops / Commercial Chip
+  if (target === 'shops' || target === 'shop') {
+    return pType.includes('shop') || pType.includes('store') || pType.includes('office') || pType.includes('commercial') || pType.includes('warehouse') || pType.includes('storage');
+  }
+
+  // Furnitures Chip
+  if (target === 'furnitures' || target === 'furniture') {
+    return pType.includes('furniture') || pType.includes('furnitures') || pType.includes('household');
+  }
+
+  // Short Stay Chip
+  if (target === 'short stay') {
+    return pType.includes('short stay') || pType.includes('airbnb') || pType.includes('hotel');
+  }
+
+  // Student Hostel Chip
+  if (target === 'student hostel') {
+    return pType.includes('hostel') || pType.includes('student');
+  }
+
+  return pType === target || pType.includes(target) || target.includes(pType);
+}
+

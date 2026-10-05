@@ -25,7 +25,7 @@ import {
   Copy
 } from 'lucide-react';
 import { graphqlRequest, CREATE_LANDLORD_REGISTRATION } from '../../lib/graphql';
-import { formatGhanaPhone, isValidGhanaPhone } from '../../lib/types';
+import { formatGhanaPhone, isValidGhanaPhone, formatAdvanceLabel } from '../../lib/types';
 import styles from './landlord-registration.module.css';
 
 interface PhotoItem {
@@ -310,7 +310,7 @@ export default function LandlordRegistrationPage() {
         propRegion: propRegion || undefined,
         propGps: propGps || undefined,
         rent: parseFloat(rent),
-        advance: advance ? `${advance} (${pricePeriod})` : pricePeriod,
+        advance: advance ? formatAdvanceLabel(advance) : pricePeriod,
         rooms: rooms ? parseInt(rooms, 10) : undefined,
         availableFrom: availableFrom || undefined,
         propType: propTypes.join(', '),
@@ -984,7 +984,7 @@ export default function LandlordRegistrationPage() {
 
               <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase' }}>⏳ Advance</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>{advance || '1 Year'}</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>{formatAdvanceLabel(advance) || '1 Year'}</div>
               </div>
 
               <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>

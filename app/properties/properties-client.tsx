@@ -11,7 +11,7 @@ import styles from './properties.module.css';
 import AuthPromptModal from '../../components/AuthPromptModal';
 
 
-import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImageUrl, getStatusLabel, parsePropertyDescription } from '../../lib/types';
+import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImageUrl, getStatusLabel, parsePropertyDescription, matchesPropertyType } from '../../lib/types';
 
 
 
@@ -130,30 +130,9 @@ export default function PropertiesClient() {
     } else if (propertyType.toLowerCase() === 'agents') {
       result = result.filter((p) => p.owner?.role === 'agent');
     } else {
-      const targetType = propertyType.toLowerCase().trim();
       result = result.filter((p) => {
         if (p.owner?.role === 'agent') return false;
-        const pType = (p.type || '').toLowerCase().trim();
-        if (targetType === 'single room') {
-          return (pType === 'single room' || pType === 'single-room') &&
-            !pType.includes('sc') && !pType.includes('self contained') && !pType.includes('self-contained') && !pType.includes('self contain');
-        }
-        if (targetType === 'single room sc' || targetType === 'single room self contain') {
-          return (pType.includes('single room') || pType.includes('single-room')) &&
-            (pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained') || pType.includes('self contain'));
-        }
-        if (targetType === 'chamber & hall' || targetType === 'chamber and hall') {
-          return (pType.includes('chamber') && pType.includes('hall')) &&
-            !pType.includes('sc') && !pType.includes('self contained') && !pType.includes('self-contained') && !pType.includes('self contain');
-        }
-        if (targetType === 'chamber and hall sc' || targetType === 'chamber & hall sc') {
-          return (pType.includes('chamber') && pType.includes('hall')) &&
-            (pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained') || pType.includes('self contain'));
-        }
-        if (targetType === 'self-contained') {
-          return pType.includes('sc') || pType.includes('self contained') || pType.includes('self-contained') || pType.includes('self contain');
-        }
-        return pType === targetType || pType.includes(targetType) || targetType.includes(pType);
+        return matchesPropertyType(p.type, propertyType);
       });
     }
 
@@ -728,9 +707,9 @@ export default function PropertiesClient() {
                         </div>
 
                         {(() => {
-                          const isLand = p.type?.toLowerCase().includes('land');
-                          const isFurniture = p.type?.toLowerCase().includes('furniture');
-                          const isShop = p.type?.toLowerCase().includes('shop');
+                          const isLand = p.type?.toLowerCase().includes('land') || p.type?.toLowerCase().includes('plot');
+                          const isFurniture = p.type?.toLowerCase().includes('furniture') || p.type?.toLowerCase().includes('household');
+                          const isShop = p.type?.toLowerCase().includes('shop') || p.type?.toLowerCase().includes('store') || p.type?.toLowerCase().includes('office') || p.type?.toLowerCase().includes('commercial');
                           const rawDesc = p.description || '';
 
                           if (isLand || isFurniture || isShop) {
