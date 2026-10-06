@@ -9,8 +9,11 @@ export function useSystemStatus() {
   const [isUnderMaintenance, setIsUnderMaintenance] = useState(SITE_CONFIG.isUnderMaintenance);
   const [isBypassed, setIsBypassed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('preview') === 'admin' || sessionStorage.getItem('admin_preview_bypass') === 'true') {
@@ -44,7 +47,7 @@ export function useSystemStatus() {
   };
 
   // Immediate check if logged in user is admin (via Auth state or user_data cookie)
-  const isAdmin = user?.role === 'admin' || (typeof document !== 'undefined' && document.cookie.includes('"role":"admin"'));
+  const isAdmin = mounted && (user?.role === 'admin' || (typeof document !== 'undefined' && document.cookie.includes('"role":"admin"')));
 
   // Regular visitors and non-admin users will see the update info page when maintenance is on
   const shouldShowMaintenance = isUnderMaintenance && !isBypassed && !isAdmin;
@@ -55,5 +58,6 @@ export function useSystemStatus() {
     isAdmin,
     bypass,
     loadingStatus: loading,
+    mounted,
   };
 }

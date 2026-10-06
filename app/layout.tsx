@@ -58,7 +58,7 @@ export default function RootLayout({
   const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#C1121F" />
@@ -91,7 +91,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "519451721356-ilcn2flc6ue3rqj9npgraevm8csg5uhc.apps.googleusercontent.com"}>
           <AuthProvider>
             <MustChangePasswordModal />
