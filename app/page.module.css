@@ -60,12 +60,12 @@
 
 .heroImageContainer {
   position: relative;
-  width: 250px;
-  height: 250px;
-  border-radius: 50%;
-  border: 5px solid rgba(255, 255, 255, 0.15);
+  width: 320px;
+  height: 230px;
+  border-radius: 20px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
   overflow: hidden;
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
   animation: float 6s ease-in-out infinite;
 }
 
@@ -511,6 +511,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
     mask-image: linear-gradient(to right, transparent 0%, black 35%);
     -webkit-mask-image: linear-gradient(to right, transparent 0%, black 35%);
   }
@@ -578,6 +579,39 @@
     opacity: 1;
     width: 22px;
     border-radius: 9999px;
+  }
+}
+
+@media (max-width: 380px) {
+  .heroSlide {
+    height: 150px !important;
+  }
+  .mobileSlideLeft {
+    padding: 10px 12px !important;
+    gap: 4px !important;
+  }
+  .mobileHeroPill {
+    font-size: 0.62rem !important;
+    padding: 2px 8px !important;
+  }
+  .mobileHeroTitle {
+    font-size: 1.12rem !important;
+  }
+  .mobileHeroSub {
+    font-size: 0.68rem !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .heroWrapperDesktop {
+    gap: 20px;
+  }
+  .title {
+    font-size: 2.1rem;
+  }
+  .heroImageContainer {
+    width: 260px;
+    height: 190px;
   }
 }
 

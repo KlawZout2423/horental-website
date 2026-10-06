@@ -7,6 +7,8 @@ import { graphqlRequest, CREATE_PROPERTY, UPDATE_PROPERTY, UPDATE_AGENT_PROFILE,
 import { UploadCloud, Image as ImageIcon, Sparkles, Loader, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, parsePropertyDescription, Property, User, stripIdFromBio, formatAdvanceLabel } from '../../lib/types';
 import VerifiedAgentModal from '../../components/VerifiedAgentModal';
+import UnderUpdateView from '../../components/UnderUpdateView';
+import { useSystemStatus } from '../../lib/useSystemStatus';
 import styles from './upload.module.css';
 
 // ── Inline sub-component: show admin rejection notes to rejected agents ──────
@@ -58,11 +60,16 @@ function UploadPageContent({
   onSuccess
 }: UploadPageProps) {
   const { user, loading: authLoading, updateUser } = useAuth();
+  const { shouldShowMaintenance, bypass } = useSystemStatus();
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams ? searchParams.get('edit') || searchParams.get('id') : null;
   const [fetchedInitialData, setFetchedInitialData] = useState<Property | null>(null);
   const isAgent = user?.role === 'agent';
+
+  if (!isEmbedded && shouldShowMaintenance) {
+    return <UnderUpdateView onBypass={bypass} />;
+  }
 
   useEffect(() => {
     if (!initialData && editId) {

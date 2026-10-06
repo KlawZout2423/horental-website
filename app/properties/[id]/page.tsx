@@ -11,6 +11,8 @@ import styles from './detail.module.css';
 import AuthPromptModal from '../../../components/AuthPromptModal';
 import Toast from '../../../components/Toast';
 import UploadPage from '../../upload/page';
+import UnderUpdateView from '../../../components/UnderUpdateView';
+import { useSystemStatus } from '../../../lib/useSystemStatus';
 import { getPricePeriodLabel, formatGhanaPhone, isValidGhanaPhone, sanitizeInput, getOptimizedImageUrl, parsePropertyDescription, formatAdvanceLabel } from '../../../lib/types';
 
 interface GalleryItem {
@@ -51,6 +53,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
   const { id } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { shouldShowMaintenance, bypass } = useSystemStatus();
   
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
@@ -409,6 +412,10 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
     // Log unique page visit with UTM + referrer (24h cooldown per property)
     trackVisit(`/properties/${id}`, `visit_detail_timestamp_${id}`);
   }, [id]);
+
+  if (shouldShowMaintenance) {
+    return <UnderUpdateView onBypass={bypass} />;
+  }
 
   if (loading) {
     return (

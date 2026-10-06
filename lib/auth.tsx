@@ -45,8 +45,8 @@ function readUserFromCookie(): User | null {
 const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour inactivity timeout
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => readUserFromCookie());
+  const [loading, setLoading] = useState<boolean>(() => !readUserFromCookie());
   const router = useRouter();
 
   useEffect(() => {

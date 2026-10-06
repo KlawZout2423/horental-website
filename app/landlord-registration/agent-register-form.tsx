@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { formatGhanaPhone, isValidGhanaPhone, formatGhanaCard, isValidGhanaCard, sanitizeInput, stripIdFromBio } from '../../lib/types';
 import { graphqlRequest, UPDATE_AGENT_PROFILE, UPDATE_USER_ROLE } from '../../lib/graphql';
+import UnderUpdateView from '../../components/UnderUpdateView';
+import { useSystemStatus } from '../../lib/useSystemStatus';
 import styles from '../login/login.module.css';
 
 const getPasswordStrength = (pwd: string) => {
@@ -48,8 +50,13 @@ const getPasswordStrength = (pwd: string) => {
 
 export default function AgentRegisterForm() {
   const { register, user, updateUser } = useAuth();
+  const { shouldShowMaintenance, bypass } = useSystemStatus();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  if (shouldShowMaintenance) {
+    return <UnderUpdateView onBypass={bypass} />;
+  }
 
   const [currentStep, setCurrentStep] = useState(1);
 

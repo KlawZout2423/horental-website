@@ -10,6 +10,8 @@ import { trackVisit } from '../lib/trackVisit';
 import styles from './page.module.css';
 import AuthPromptModal from '../components/AuthPromptModal';
 import VerifiedAgentModal from '../components/VerifiedAgentModal';
+import UnderUpdateView from '../components/UnderUpdateView';
+import { useSystemStatus } from '../lib/useSystemStatus';
 
 import { Property, getPricePeriodLabel, getOptimizedImageUrl, getStatusLabel, matchesPropertyType } from '../lib/types';
 
@@ -68,7 +70,7 @@ const BANNER_SLIDES = [
     sub: 'Student hostels, apartments, single rooms, commercial spaces & more.',
     cta: 'Browse Listings',
     href: '/#listings',
-    image: '/student_campus_vibe.png',
+    image: '/student_campus_vibe.jpg',
   },
   {
     id: 'yuyu-partnership',
@@ -115,7 +117,8 @@ const BANNER_SLIDES = [
 export default function Home() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  
+  const { shouldShowMaintenance, bypass } = useSystemStatus();
+
   // Data State
   const [properties, setProperties] = useState<Property[]>([]);
   const [agents, setAgents] = useState<AgentUser[]>([]);
@@ -408,6 +411,10 @@ export default function Home() {
     return 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80';
   };
 
+  if (shouldShowMaintenance) {
+    return <UnderUpdateView onBypass={bypass} />;
+  }
+
   return (
     <div className="animate-fade-in">
       {/* Hero Banner with Mobile Carousel */}
@@ -443,7 +450,7 @@ export default function Home() {
           
           <div className={styles.heroRight}>
             <div className={styles.heroImageContainer}>
-              <img src="/student_campus_vibe.png" alt="Properties in Ghana" className={styles.heroImage} />
+              <img src="/student_campus_vibe.jpg" alt="Student Hostels in Ghana" className={styles.heroImage} />
             </div>
             <div className={`${styles.floatingBadge} ${styles.badgeTop}`}>
               <ShieldCheck size={16} style={{ color: '#10B981' }} />

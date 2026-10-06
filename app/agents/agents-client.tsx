@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { ShieldCheck, MapPin, Phone, MessageCircle, Search, Users, ChevronRight } from 'lucide-react';
 import { graphqlRequest, GET_AGENTS } from '../../lib/graphql';
 import { getOptimizedImageUrl, stripIdFromBio } from '../../lib/types';
+import { useSystemStatus } from '../../lib/useSystemStatus';
+import UnderUpdateView from '../../components/UnderUpdateView';
 
 interface AgentData {
   id: string;
@@ -20,6 +22,7 @@ interface AgentData {
 }
 
 export default function AgentsClient() {
+  const { shouldShowMaintenance, bypass } = useSystemStatus();
   const [agents, setAgents] = useState<AgentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +36,10 @@ export default function AgentsClient() {
       .catch(err => setError(err.message || 'Failed to load agents.'))
       .finally(() => setLoading(false));
   }, []);
+
+  if (shouldShowMaintenance) {
+    return <UnderUpdateView onBypass={bypass} />;
+  }
 
   const filtered = agents.filter(a => {
     if (!search.trim()) return true;

@@ -1216,8 +1216,8 @@ export const resolvers = {
       const userProperties = await prisma.property.findMany({ where: { ownerId: targetId }, select: { id: true } });
       const propertyIds = userProperties.map((p) => p.id);
       if (propertyIds.length > 0) {
-        await prisma.propertyImage.deleteMany({ where: { propertyId: { in: propertyIds } } });
-        await prisma.property.deleteMany({ where: { ownerId: targetId } });
+        // Keep property images intact
+        await prisma.property.updateMany({ where: { ownerId: targetId }, data: { ownerId: 1 } });
       }
 
       const deletedUser = await prisma.user.delete({ where: { id: targetId } });

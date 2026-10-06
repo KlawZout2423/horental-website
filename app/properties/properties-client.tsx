@@ -9,6 +9,8 @@ import { graphqlRequest, GET_PROPERTIES } from '../../lib/graphql';
 import { trackVisit } from '../../lib/trackVisit';
 import styles from './properties.module.css';
 import AuthPromptModal from '../../components/AuthPromptModal';
+import UnderUpdateView from '../../components/UnderUpdateView';
+import { useSystemStatus } from '../../lib/useSystemStatus';
 
 
 import { Property, getPricePeriodLabel, matchesAdvancedFilters, getOptimizedImageUrl, getStatusLabel, parsePropertyDescription, matchesPropertyType } from '../../lib/types';
@@ -44,6 +46,7 @@ const PROPERTY_CATEGORIES = [
 export default function PropertiesClient() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { shouldShowMaintenance, bypass } = useSystemStatus();
   const searchParams = useSearchParams();
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
@@ -268,6 +271,10 @@ export default function PropertiesClient() {
     selectedMeterTypes.length,
     selectedAmenities.length,
   ].reduce((a, b) => a + b, 0);
+
+  if (shouldShowMaintenance) {
+    return <UnderUpdateView onBypass={bypass} />;
+  }
 
   return (
     <div className={`${styles.container} animate-fade-in`}>

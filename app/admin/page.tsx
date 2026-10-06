@@ -36,7 +36,7 @@ import {
   SEND_ADMIN_SMS
 } from '../../lib/graphql';
 import { buildTrackingUrl } from '../../lib/trackVisit';
-import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp, Send, MessageSquare, Radio, CheckCheck, Smartphone, Sparkles, Zap, PhoneCall, Car, Clock } from 'lucide-react';
+import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp, Send, MessageSquare, Radio, CheckCheck, Smartphone, Sparkles, Zap, PhoneCall, Car, Clock, Globe, Eye, ToggleLeft, ToggleRight, Power } from 'lucide-react';
 import styles from './admin.module.css';
 import { getFriendlyErrorMessage, LandlordRegistration, getStatusLabel, getToggleStatusLabel, formatGhanaPhone, isValidGhanaPhone, getPricePeriodLabel } from '../../lib/types';
 
@@ -330,6 +330,62 @@ function AdminPageContent() {
   const [downloadingQr, setDownloadingQr] = useState(false);
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
+  // System Update / Maintenance Mode State
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState<boolean>(true);
+  const [isMaintenanceLoading, setIsMaintenanceLoading] = useState<boolean>(true);
+  const [isTogglingMaintenance, setIsTogglingMaintenance] = useState<boolean>(false);
+  const [maintenanceUpdatedAt, setMaintenanceUpdatedAt] = useState<string | null>(null);
+
+  const fetchSystemStatus = async () => {
+    try {
+      setIsMaintenanceLoading(true);
+      const res = await fetch(`/api/system-status?_t=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (res.ok && typeof data.isUnderMaintenance === 'boolean') {
+        setIsMaintenanceMode(data.isUnderMaintenance);
+        if (data.updatedAt) setMaintenanceUpdatedAt(data.updatedAt);
+      }
+    } catch (err) {
+      console.error('Failed to load system status:', err);
+    } finally {
+      setIsMaintenanceLoading(false);
+    }
+  };
+
+  const handleToggleMaintenance = async () => {
+    const targetState = !isMaintenanceMode;
+    const confirmMsg = targetState
+      ? 'Are you sure you want to ENABLE Update / Maintenance Mode?\n\nPublic visitors to horentals.com will see the Under Update Info Page with contact details and WhatsApp, instead of property listings.'
+      : 'Are you sure you want to DISABLE Update Mode and bring the website fully LIVE?\n\nAll verified listings will be visible to all visitors.';
+    if (!confirm(confirmMsg)) return;
+
+    setIsTogglingMaintenance(true);
+    try {
+      const res = await fetch('/api/system-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isUnderMaintenance: targetState }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update system mode');
+
+      setIsMaintenanceMode(targetState);
+      setMaintenanceUpdatedAt(new Date().toISOString());
+      setMessage({
+        text: data.message || `System mode successfully updated: ${targetState ? 'Update Mode Active' : 'Website Live'}`,
+        isError: false,
+      });
+    } catch (err: any) {
+      console.error('Error toggling system mode:', err);
+      setMessage({
+        text: err.message || 'Failed to toggle maintenance mode',
+        isError: true,
+      });
+    } finally {
+      setIsTogglingMaintenance(false);
+    }
+  };
+
   // Edit Property States
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
 
@@ -519,6 +575,7 @@ function AdminPageContent() {
   async function loadInitialData({ silent = false }: { silent?: boolean } = {}) {
     if (!silent) setLoadingData(true);
     try {
+      fetchSystemStatus();
       loadRideReferrals();
       const [statsData, usersData, propertiesData, logsData, reportsData, landlordData, feedbacksData] = await Promise.all([
         graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS),
@@ -1173,6 +1230,49 @@ function AdminPageContent() {
           <span className={styles.brandName}>HO<span style={{ color: 'var(--primary)' }}>Rentals</span></span>
         </div>
 
+        {/* Sidebar System Status Pill */}
+        <div style={{
+          margin: '0 12px 14px',
+          padding: '8px 12px',
+          borderRadius: '8px',
+          backgroundColor: isMaintenanceMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+          border: `1px solid ${isMaintenanceMode ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.72rem',
+          fontWeight: 700,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: isMaintenanceMode ? '#EF4444' : '#10B981',
+              display: 'inline-block'
+            }} />
+            <span style={{ color: isMaintenanceMode ? '#FCA5A5' : '#6EE7B7' }}>
+              {isMaintenanceMode ? 'UPDATE MODE' : 'SITE LIVE'}
+            </span>
+          </div>
+          <button
+            onClick={handleToggleMaintenance}
+            disabled={isTogglingMaintenance}
+            title={isMaintenanceMode ? "Click to set site live" : "Click to set site under update"}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#F8FAFC',
+              cursor: 'pointer',
+              fontSize: '0.7rem',
+              textDecoration: 'underline',
+              padding: 0
+            }}
+          >
+            {isTogglingMaintenance ? '...' : (isMaintenanceMode ? 'Go Live' : 'Update')}
+          </button>
+        </div>
+
         <div className={styles.sidebarSection}>
           <span className={styles.sidebarSectionTitle}>System Management</span>
           <nav className={styles.sidebarNav}>
@@ -1558,6 +1658,81 @@ function AdminPageContent() {
               </p>
             </>
           )}
+
+          {/* ── System Status & Maintenance / Update Mode Control Card ── */}
+          <div className={`${styles.systemStatusCard} ${isMaintenanceMode ? styles.systemStatusCardActive : styles.systemStatusCardLive}`}>
+            <div className={styles.systemStatusHeader}>
+              <div className={styles.systemStatusLeft}>
+                <div className={`${styles.systemStatusIconWrapper} ${isMaintenanceMode ? styles.iconWrapperActive : styles.iconWrapperLive}`}>
+                  {isMaintenanceMode ? <AlertTriangle size={24} /> : <Globe size={24} />}
+                </div>
+                <div className={styles.systemStatusDetails}>
+                  <div className={styles.systemStatusTitleRow}>
+                    <h2 className={styles.systemStatusTitle}>
+                      {isMaintenanceMode ? 'Website is in Update / Maintenance Mode' : 'Website is Fully LIVE & Operational'}
+                    </h2>
+                    <span className={`${styles.statusPill} ${isMaintenanceMode ? styles.statusPillActive : styles.statusPillLive}`}>
+                      <span className={isMaintenanceMode ? styles.pulseDot : styles.steadyDot} />
+                      {isMaintenanceMode ? 'Update Mode Active' : 'Live for Visitors'}
+                    </span>
+                  </div>
+                  <p className={styles.systemStatusDesc}>
+                    {isMaintenanceMode
+                      ? 'Visitors to horentals.com currently see the Under Update info page with direct Ho Rentals phone lines (+233 20 494 0602 / 055 792 2593) & WhatsApp quick inquiry. Admins can preview or switch the site live at any time.'
+                      : 'All published properties, hostels, rooms, and furniture listings are currently fully visible and searchable to all visitors in Ghana.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.systemStatusActions}>
+                <button
+                  id="admin-toggle-maintenance-mode-btn"
+                  onClick={handleToggleMaintenance}
+                  disabled={isTogglingMaintenance}
+                  className={`${styles.systemToggleBtn} ${isMaintenanceMode ? styles.systemToggleBtnMakeLive : styles.systemToggleBtnSetUpdate}`}
+                >
+                  {isTogglingMaintenance ? (
+                    <>
+                      <Loader size={16} className={styles.spinner} />
+                      <span>Updating Mode...</span>
+                    </>
+                  ) : isMaintenanceMode ? (
+                    <>
+                      <Globe size={16} />
+                      <span>Switch Website to LIVE Mode 🚀</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle size={16} />
+                      <span>Switch to Update Mode ⚙️</span>
+                    </>
+                  )}
+                </button>
+
+                <Link
+                  href="/?preview=admin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.systemPreviewBtn}
+                  title="Open customer website in a new tab"
+                >
+                  <Eye size={15} />
+                  <span>Preview Customer Site &rarr;</span>
+                </Link>
+              </div>
+            </div>
+
+            <div className={styles.systemStatusFooter}>
+              <span>
+                <strong>Direct Contact Lines Shown to Visitors:</strong> 📞 055 792 2593 &bull; 📞 020 494 0602 &bull; 💬 WhatsApp: 020 494 0602
+              </span>
+              {maintenanceUpdatedAt && (
+                <span style={{ marginLeft: 'auto' }}>
+                  Last toggled: {new Date(maintenanceUpdatedAt).toLocaleString('en-GH', { dateStyle: 'medium', timeStyle: 'short' })}
+                </span>
+              )}
+            </div>
+          </div>
 
           {/* Pending Reports Quick Banner Alert */}
           {reports.some((r) => r.status === 'pending') && activeTab !== 'reports' && (

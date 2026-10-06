@@ -10,6 +10,7 @@ import RequirePhoneModal from "../components/RequirePhoneModal";
 import PwaInstallPrompt from "../components/PwaInstallPrompt";
 import FeedbackWidget from "../components/FeedbackWidget";
 import YuyuMobilePartnerSheet from "../components/YuyuMobilePartnerSheet";
+import AdminMaintenanceBanner from "../components/AdminMaintenanceBanner";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import "./globals.css";
 
@@ -105,6 +106,7 @@ export default function RootLayout({
               <FeedbackWidget />
               <PwaInstallPrompt />
               <YuyuMobilePartnerSheet />
+              <AdminMaintenanceBanner />
             </div>
           </AuthProvider>
         </GoogleOAuthProvider>

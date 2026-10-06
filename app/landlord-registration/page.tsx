@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { graphqlRequest, CREATE_LANDLORD_REGISTRATION } from '../../lib/graphql';
 import { formatGhanaPhone, isValidGhanaPhone, formatAdvanceLabel } from '../../lib/types';
+import UnderUpdateView from '../../components/UnderUpdateView';
+import { useSystemStatus } from '../../lib/useSystemStatus';
 import styles from './landlord-registration.module.css';
 
 interface PhotoItem {
@@ -35,7 +37,12 @@ interface PhotoItem {
 
 export default function LandlordRegistrationPage() {
   const router = useRouter();
+  const { shouldShowMaintenance, bypass } = useSystemStatus();
   const [currentStep, setCurrentStep] = useState(1);
+
+  if (shouldShowMaintenance) {
+    return <UnderUpdateView onBypass={bypass} />;
+  }
 
   // --- Form States ---
   // Personal Details

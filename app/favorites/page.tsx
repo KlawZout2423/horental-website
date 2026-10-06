@@ -8,11 +8,14 @@ import { Heart, MapPin, Loader, ArrowLeft, Trash2, Search } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTIES } from '../../lib/graphql';
 import { Property, getPricePeriodLabel } from '../../lib/types';
 import AuthPromptModal from '../../components/AuthPromptModal';
+import { useSystemStatus } from '../../lib/useSystemStatus';
+import UnderUpdateView from '../../components/UnderUpdateView';
 import styles from './favorites.module.css';
 
 export default function FavoritesPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { shouldShowMaintenance, bypass } = useSystemStatus();
   const [properties, setProperties] = useState<Property[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +81,10 @@ export default function FavoritesPage() {
   };
 
   const savedProperties = properties.filter((p) => savedIds.includes(p.id));
+
+  if (shouldShowMaintenance) {
+    return <UnderUpdateView onBypass={bypass} />;
+  }
 
   return (
     <div className={styles.container}>
