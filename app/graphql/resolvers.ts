@@ -1225,6 +1225,37 @@ export const resolvers = {
       return deletedUser;
     },
 
+    updateUserRole: async (_: any, { id, role }: { id: any; role: string }, { user }: { user: { id: number } | null }) => {
+      if (!user) throw new Error('Not authenticated');
+      const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (fullUser?.role !== 'admin') throw new Error('Admin privileges required');
+
+      const targetId = typeof id === 'string' ? parseInt(id, 10) : Number(id);
+      const targetUser = await prisma.user.findUnique({ where: { id: targetId } });
+      if (!targetUser) {
+        throw new Error('User not found');
+      }
+
+      const cleanRole = (role || '').toLowerCase().trim();
+      if (!cleanRole) {
+        throw new Error('Role cannot be empty');
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: targetId },
+        data: { role: cleanRole },
+        select: USER_SAFE_SELECT,
+      });
+
+      createAuditLog(
+        'USER_ROLE_UPDATED',
+        `Admin ${fullUser.email} changed role of user ${targetUser.name} (${targetUser.email || targetUser.phone}) from '${targetUser.role}' to '${cleanRole}'`,
+        fullUser.email
+      );
+
+      return updatedUser;
+    },
+
     recordPageVisit: async (_: any, { path, utmSource, utmMedium, utmCampaign, utmContent, referrer, sessionId }: any) => {
       try {
         await prisma.pageVisit.create({
