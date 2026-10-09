@@ -54,10 +54,6 @@ export default function AgentRegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  if (shouldShowMaintenance) {
-    return <UnderUpdateView onBypass={bypass} />;
-  }
-
   const [currentStep, setCurrentStep] = useState(1);
 
   // --- Step 1: Personal & Contact Details ---
@@ -336,6 +332,11 @@ export default function AgentRegisterForm() {
       setLoading(false);
     }
   };
+
+  // Must stay after all hooks (see landlord-registration/page.tsx)
+  if (shouldShowMaintenance) {
+    return <UnderUpdateView onBypass={bypass} />;
+  }
 
   if (success) {
     return (

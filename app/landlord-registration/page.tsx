@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { graphqlRequest, CREATE_LANDLORD_REGISTRATION } from '../../lib/graphql';
 import { formatGhanaPhone, isValidGhanaPhone, formatAdvanceLabel } from '../../lib/types';
+import { useAuth } from '../../lib/auth';
 import UnderUpdateView from '../../components/UnderUpdateView';
 import { useSystemStatus } from '../../lib/useSystemStatus';
 import styles from './landlord-registration.module.css';
@@ -37,12 +38,9 @@ interface PhotoItem {
 
 export default function LandlordRegistrationPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { shouldShowMaintenance, bypass } = useSystemStatus();
   const [currentStep, setCurrentStep] = useState(1);
-
-  if (shouldShowMaintenance) {
-    return <UnderUpdateView onBypass={bypass} />;
-  }
 
   // --- Form States ---
   // Personal Details
@@ -57,6 +55,30 @@ export default function LandlordRegistrationPage() {
   const [phone2, setPhone2] = useState('');
   const [email, setEmail] = useState('');
   const [occupation, setOccupation] = useState('');
+
+  // Auto-prefill account details if logged in
+  React.useEffect(() => {
+    if (user) {
+      if (!fullName && user.name) setFullName(user.name);
+      if (!phone1 && (user.phone || user.agentWhatsapp)) setPhone1(formatGhanaPhone(user.phone || user.agentWhatsapp || ''));
+      if (!email && user.email) setEmail(user.email);
+      if (!city && user.agentLocation) {
+        const parts = user.agentLocation.split(',');
+        setCity(parts[0].trim());
+      }
+    }
+  }, [user]);
+
+  const handleAutoFillLandlordProfile = () => {
+    if (!user) return;
+    if (user.name) setFullName(user.name);
+    if (user.phone || user.agentWhatsapp) setPhone1(formatGhanaPhone(user.phone || user.agentWhatsapp || ''));
+    if (user.email) setEmail(user.email);
+    if (user.agentLocation) {
+      const parts = user.agentLocation.split(',');
+      setCity(parts[0].trim());
+    }
+  };
 
   // Property Details
   const [propAddress, setPropAddress] = useState('');
@@ -364,6 +386,12 @@ export default function LandlordRegistrationPage() {
     }
   };
 
+  // Must stay after all hooks: an early return before hooks changes the hook count
+  // when maintenance status updates, which crashes the page in production.
+  if (shouldShowMaintenance) {
+    return <UnderUpdateView onBypass={bypass} />;
+  }
+
   return (
     <div className={styles.app}>
       <div className={styles.topBar}>
@@ -574,7 +602,19 @@ export default function LandlordRegistrationPage() {
       {currentStep === 1 && (
         <div>
           <div className={styles.card}>
-            <div className={styles.sectionTitle}>Personal details</div>
+            <div className={styles.sectionTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <span>Personal details</span>
+              {user && (
+                <button
+                  type="button"
+                  onClick={handleAutoFillLandlordProfile}
+                  className="btn btn-outline"
+                  style={{ padding: '4px 10px', fontSize: '0.76rem', fontWeight: 700, gap: '4px', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                >
+                  ⚡ Auto-Fill from Account ({user.name})
+                </button>
+              )}
+            </div>
             <div className={styles.fieldGrid}>
               <div className={styles.field}>
                 <label>Full name *</label>
@@ -641,6 +681,46 @@ export default function LandlordRegistrationPage() {
               <div className={styles.field}>
                 <label>Property address *</label>
                 <input type="text" placeholder="Full address of the property location" value={propAddress} onChange={e => setPropAddress(e.target.value)} />
+                
+                {/* Location Quick Chips */}
+                <div style={{ marginTop: '6px' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                    Quick Location Suggestions (Tap to auto-fill property address):
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                    {[
+                      'Sokode (UHAS Main Campus)',
+                      'HTU / Ho Poly Area, Ho',
+                      'Dave (UHAS Dave Campus)',
+                      'Bankoe, Ho',
+                      'Civic Center, Ho',
+                      'East Legon, Accra',
+                      'KNUST Campus Area, Kumasi',
+                    ].map((locOption) => (
+                      <button
+                        key={locOption}
+                        type="button"
+                        onClick={() => {
+                          setPropAddress(locOption);
+                          if (!propCity) setPropCity('Ho');
+                          if (!propRegion) setPropRegion('Volta');
+                        }}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          borderRadius: '12px',
+                          border: propAddress === locOption ? '1px solid var(--primary)' : '1px solid var(--border)',
+                          backgroundColor: propAddress === locOption ? 'var(--primary-light)' : 'var(--bg-surface-secondary)',
+                          color: propAddress === locOption ? 'var(--primary)' : 'var(--text-secondary)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📍 {locOption}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
             <div className={styles.fieldGrid}>

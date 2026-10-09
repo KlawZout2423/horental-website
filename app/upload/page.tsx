@@ -67,10 +67,6 @@ function UploadPageContent({
   const [fetchedInitialData, setFetchedInitialData] = useState<Property | null>(null);
   const isAgent = user?.role === 'agent';
 
-  if (!isEmbedded && shouldShowMaintenance) {
-    return <UnderUpdateView onBypass={bypass} />;
-  }
-
   useEffect(() => {
     if (!initialData && editId) {
       const pId = parseInt(editId, 10);
@@ -314,6 +310,34 @@ function UploadPageContent({
       if (lLandmark) setLandmarks(lLandmark);
     }
   }, [activeInitialData]);
+
+  // Auto-prefill landlord & contact details from logged-in user session if creating a new property
+  useEffect(() => {
+    if (!activeInitialData && user) {
+      if (!contact && (user.phone || user.agentWhatsapp)) {
+        setContact(formatGhanaPhone(user.phone || user.agentWhatsapp || ''));
+      }
+      if (!landlordName && user.name) {
+        setLandlordName(user.name);
+      }
+      if (!location && user.agentLocation) {
+        setLocation(user.agentLocation);
+      }
+    }
+  }, [user, activeInitialData]);
+
+  const handleAutoFillProfile = () => {
+    if (!user) return;
+    if (user.phone || user.agentWhatsapp) {
+      setContact(formatGhanaPhone(user.phone || user.agentWhatsapp || ''));
+    }
+    if (user.name) {
+      setLandlordName(user.name);
+    }
+    if (user.agentLocation) {
+      setLocation(user.agentLocation);
+    }
+  };
 
   // Check login status and role privileges
   useEffect(() => {
@@ -700,6 +724,10 @@ function UploadPageContent({
       setSavingAgentProfile(false);
     }
   };
+
+  if (!isEmbedded && shouldShowMaintenance) {
+    return <UnderUpdateView onBypass={bypass} />;
+  }
 
   if (authLoading || !user) {
     if (isEmbedded) return null;
@@ -1254,6 +1282,32 @@ function UploadPageContent({
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
+          {/* Quick Auto-fill Profile Bar */}
+          {user && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: 'var(--bg-surface-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '10px 14px',
+              fontSize: '0.84rem'
+            }}>
+              <span style={{ color: 'var(--text-secondary)' }}>
+                Logged in as <strong style={{ color: 'var(--text-primary)' }}>{user.name}</strong> ({user.role})
+              </span>
+              <button
+                type="button"
+                onClick={handleAutoFillProfile}
+                className="btn btn-outline"
+                style={{ padding: '4px 12px', fontSize: '0.78rem', fontWeight: 700, gap: '4px', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+              >
+                ⚡ Auto-Fill My Profile Details
+              </button>
+            </div>
+          )}
+
           {/* Main info inputs */}
           <div className={styles.formGrid}>
             <div className={styles.fullWidth}>
@@ -1317,7 +1371,7 @@ function UploadPageContent({
               {showAddCustomLocation && (
                 <div style={{ padding: '10px 12px', backgroundColor: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 'var(--radius-sm)', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary-dark)' }}>
-                    Type Custom Area Name (automatically appended with ", Volta Region"):
+                    Type Custom Area Name (automatically appended with &quot;, Volta Region&quot;):
                   </span>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input
@@ -1350,6 +1404,45 @@ function UploadPageContent({
                 required
                 className="form-control"
               />
+
+              {/* Quick Location Chips / Pills */}
+              <div style={{ marginTop: '8px' }}>
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                  Popular Quick Locations (Tap to auto-fill):
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {[
+                    'Sokode (UHAS Main Campus), Volta Region',
+                    'HTU / Ho Poly Area, Ho, Volta Region',
+                    'Dave (UHAS Dave Campus), Volta Region',
+                    'Bankoe, Ho, Volta Region',
+                    'Civic Center, Ho, Volta Region',
+                    'Ahoe, Ho, Volta Region',
+                    'East Legon, Accra, Greater Accra',
+                    'KNUST Campus Area, Kumasi, Ashanti Region',
+                    'UCC Campus Area, Cape Coast, Central Region',
+                  ].map((locChip) => (
+                    <button
+                      key={locChip}
+                      type="button"
+                      onClick={() => setLocation(locChip)}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        borderRadius: '16px',
+                        border: location === locChip ? '1px solid var(--primary)' : '1px solid var(--border)',
+                        backgroundColor: location === locChip ? 'var(--primary-light)' : 'var(--bg-surface-secondary)',
+                        color: location === locChip ? 'var(--primary)' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      📍 {locChip.split(',')[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {!isAgent && (
