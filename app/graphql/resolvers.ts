@@ -1201,9 +1201,20 @@ export const resolvers = {
       if (fullUser?.role !== 'admin') throw new Error('Admin only');
 
       const targetId = typeof id === 'string' ? parseInt(id, 10) : Number(id);
+
+      // Safety Guard 1: Prevent self-deletion
+      if (targetId === user.id) {
+        throw new Error('Safety protection: You cannot delete your own admin account.');
+      }
+
       const targetUser = await prisma.user.findUnique({ where: { id: targetId } });
       if (!targetUser) {
         throw new Error('User record was not found or has already been deleted.');
+      }
+
+      // Safety Guard 2: Prevent deleting any administrator account
+      if (targetUser.role === 'admin') {
+        throw new Error('Protected Account: Administrator accounts cannot be deleted to prevent accidental system lockout.');
       }
 
       // Unbind landlord reference from properties

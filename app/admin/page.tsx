@@ -36,7 +36,7 @@ import {
   SEND_ADMIN_SMS
 } from '../../lib/graphql';
 import { buildTrackingUrl } from '../../lib/trackVisit';
-import { Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp, Send, MessageSquare, Radio, CheckCheck, Smartphone, Sparkles, Zap, PhoneCall, Car, Clock, Globe, Eye, ToggleLeft, ToggleRight, Power } from 'lucide-react';
+import { Shield, Trash2, KeyRound, Users, Building, Loader, PieChart, BarChart3, MapPin, LogOut, Home, RefreshCw, CheckCircle, Activity, Plus, Edit, Star, Menu, X, Flag, AlertTriangle, UploadCloud, Image as ImageIcon, Search, FileText, Check, QrCode, Download, Copy, TrendingUp, Link2, ShieldCheck, ChevronDown, ChevronUp, Send, MessageSquare, Radio, CheckCheck, Smartphone, Sparkles, Zap, PhoneCall, Car, Clock, Globe, Eye, ToggleLeft, ToggleRight, Power } from 'lucide-react';
 import styles from './admin.module.css';
 import { getFriendlyErrorMessage, LandlordRegistration, getStatusLabel, getToggleStatusLabel, formatGhanaPhone, isValidGhanaPhone, getPricePeriodLabel } from '../../lib/types';
 
@@ -329,6 +329,16 @@ function AdminPageContent() {
   const [republishNotify, setRepublishNotify] = useState(false);
   const [downloadingQr, setDownloadingQr] = useState(false);
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
+
+  // Safe Deletion Confirmation Modal State
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
+    type: 'user' | 'property' | 'landlord';
+    id: string | number;
+    name: string;
+    identifier?: string;
+    role?: string;
+  } | null>(null);
+  const [deleteInputText, setDeleteInputText] = useState('');
 
   // System Update / Maintenance Mode State
   const [isMaintenanceMode, setIsMaintenanceMode] = useState<boolean>(true);
@@ -1079,17 +1089,37 @@ function AdminPageContent() {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Delete this user account permanently?')) return;
+  const handleRequestDeleteUser = (target: { id: string | number; name: string; email?: string; phone?: string; role?: string }) => {
+    if (target.role === 'admin') {
+      alert('Security Protection: Administrator accounts cannot be deleted to prevent accidental system lockout.');
+      return;
+    }
+    setDeleteConfirmTarget({
+      type: 'user',
+      id: target.id,
+      name: target.name,
+      identifier: target.email || target.phone || ("User #" + target.id),
+      role: target.role,
+    });
+    setDeleteInputText('');
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!deleteConfirmTarget || deleteInputText.trim() !== 'DELETE') return;
     setActionLoading(true);
     setMessage(null);
     try {
-      const parsedId = parseInt(userId);
-      await graphqlRequest(DELETE_USER, { id: isNaN(parsedId) ? userId : parsedId });
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
-      const statsData = await graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS);
-      if (statsData) setStats(statsData.dashboardStats);
-      setMessage({ text: 'User account deleted successfully.', isError: false });
+      if (deleteConfirmTarget.type === 'user') {
+        const userId = deleteConfirmTarget.id;
+        const parsedId = typeof userId === 'number' ? userId : parseInt(String(userId), 10);
+        await graphqlRequest(DELETE_USER, { id: isNaN(parsedId) ? userId : parsedId });
+        setUsers((prev) => prev.filter((u) => String(u.id) !== String(userId)));
+        const statsData = await graphqlRequest<{ dashboardStats: DashboardStats }>(GET_DASHBOARD_STATS);
+        if (statsData) setStats(statsData.dashboardStats);
+        setMessage({ text: "Account for " + deleteConfirmTarget.name + " deleted permanently.", isError: false });
+      }
+      setDeleteConfirmTarget(null);
+      setDeleteInputText('');
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to delete user.', isError: true });
     } finally {
@@ -2692,14 +2722,26 @@ function AdminPageContent() {
                               >
                                 <KeyRound size={15} />
                               </button>
-                              <button
-                                onClick={() => handleDeleteUser(u.id)}
-                                disabled={actionLoading || u.id === user.id}
-                                className="btn btn-outline"
-                                style={{ padding: '6px', height: '32px', width: '32px', color: 'var(--danger)', borderColor: 'var(--border)' }}
-                              >
-                                <Trash2 size={15} />
-                              </button>
+                              {u.role === 'admin' ? (
+                                <button
+                                  disabled
+                                  className="btn btn-outline"
+                                  title="Admin accounts are protected and cannot be deleted"
+                                  style={{ padding: '6px', height: '32px', width: '32px', color: 'var(--text-muted)', borderColor: 'var(--border)', opacity: 0.45, cursor: 'not-allowed' }}
+                                >
+                                  <Shield size={15} />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleRequestDeleteUser(u)}
+                                  disabled={actionLoading || u.id === user.id}
+                                  className="btn btn-outline"
+                                  title="Delete user account"
+                                  style={{ padding: '6px', height: '32px', width: '32px', color: 'var(--danger)', borderColor: 'var(--border)' }}
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -2752,14 +2794,25 @@ function AdminPageContent() {
                           <option value="agent">Agent</option>
                           <option value="admin">Admin</option>
                         </select>
-                        <button
-                          onClick={() => handleDeleteUser(u.id)}
-                          disabled={actionLoading || u.id === user.id}
-                          className="btn btn-outline"
-                          style={{ padding: '8px 12px', flex: '0 0 auto', color: 'var(--danger)' }}
-                        >
-                          <Trash2 size={15} /> Delete
-                        </button>
+                        {u.role === 'admin' ? (
+                          <button
+                            disabled
+                            className="btn btn-outline"
+                            style={{ padding: '8px 12px', flex: '0 0 auto', color: 'var(--text-muted)', opacity: 0.5, cursor: 'not-allowed' }}
+                            title="Admin accounts are protected and cannot be deleted"
+                          >
+                            <Shield size={14} /> Protected
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleRequestDeleteUser(u)}
+                            disabled={actionLoading || u.id === user.id}
+                            className="btn btn-outline"
+                            style={{ padding: '8px 12px', flex: '0 0 auto', color: 'var(--danger)' }}
+                          >
+                            <Trash2 size={15} /> Delete
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))
@@ -3901,24 +3954,36 @@ function AdminPageContent() {
                                     👁️ Preview Form
                                   </button>
 
-                                  <button
-                                    onClick={() => handleDeleteUser(ag.id)}
-                                    disabled={actionLoading || ag.id === user?.id}
-                                    className="btn btn-outline"
-                                    style={{
-                                      padding: '4px 8px',
-                                      fontSize: '0.72rem',
-                                      color: 'var(--danger)',
-                                      borderColor: 'rgba(239, 68, 68, 0.4)',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px'
-                                    }}
-                                    title="Delete agent account"
-                                  >
-                                    <Trash2 size={13} />
-                                    <span>Delete</span>
-                                  </button>
+                                  {ag.role === 'admin' ? (
+                                    <button
+                                      disabled
+                                      className="btn btn-outline"
+                                      style={{ padding: '4px 8px', fontSize: '0.72rem', color: 'var(--text-muted)', opacity: 0.5, cursor: 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                      title="Admin accounts are protected"
+                                    >
+                                      <Shield size={13} />
+                                      <span>Protected</span>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleRequestDeleteUser(ag)}
+                                      disabled={actionLoading || ag.id === user?.id}
+                                      className="btn btn-outline"
+                                      style={{
+                                        padding: '4px 8px',
+                                        fontSize: '0.72rem',
+                                        color: 'var(--danger)',
+                                        borderColor: 'rgba(239, 68, 68, 0.4)',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                      }}
+                                      title="Delete agent account"
+                                    >
+                                      <Trash2 size={13} />
+                                      <span>Delete</span>
+                                    </button>
+                                  )}
 
                                   <select
                                     value={ag.verificationStatus === 'verified' ? 'verified' : 'unverified'}
@@ -6000,6 +6065,98 @@ function AdminPageContent() {
                 >
                   <Copy size={16} />
                   <span>Copy Link</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── SAFE DELETION CONFIRMATION MODAL ── */}
+      {deleteConfirmTarget && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent} style={{ maxWidth: '480px' }}>
+            <div className={styles.modalHeader}>
+              <h2 style={{ fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
+                <AlertTriangle size={20} style={{ color: 'var(--danger)' }} />
+                <span>Confirm Permanent Deletion</span>
+              </h2>
+              <button
+                onClick={() => { setDeleteConfirmTarget(null); setDeleteInputText(''); }}
+                className={styles.modalCloseBtn}
+                disabled={actionLoading}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '12px 16px'
+              }}>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                  {deleteConfirmTarget.name}
+                </div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  {deleteConfirmTarget.identifier} &bull; <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{deleteConfirmTarget.role || deleteConfirmTarget.type}</span>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                This action <strong>cannot be undone</strong>. This will permanently delete this account, revoke all credentials, and purge related session permissions.
+              </p>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-primary)' }}>
+                  To prevent accidental clicks, type <strong style={{ color: 'var(--danger)', letterSpacing: '0.5px' }}>DELETE</strong> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={deleteInputText}
+                  onChange={(e) => setDeleteInputText(e.target.value)}
+                  placeholder="Type DELETE to confirm"
+                  autoFocus
+                  className="input"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderColor: deleteInputText === 'DELETE' ? 'var(--danger)' : 'var(--border)',
+                    fontWeight: 600,
+                    letterSpacing: '0.5px'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => { setDeleteConfirmTarget(null); setDeleteInputText(''); }}
+                  disabled={actionLoading}
+                  className="btn btn-outline"
+                  style={{ padding: '10px 18px', fontSize: '0.88rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteDelete}
+                  disabled={deleteInputText.trim() !== 'DELETE' || actionLoading}
+                  className="btn btn-danger"
+                  style={{
+                    padding: '10px 20px',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    opacity: deleteInputText.trim() === 'DELETE' ? 1 : 0.45,
+                    cursor: deleteInputText.trim() === 'DELETE' ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {actionLoading ? <Loader className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                  <span>Permanently Delete</span>
                 </button>
               </div>
             </div>
