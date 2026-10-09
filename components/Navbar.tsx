@@ -11,7 +11,9 @@ import styles from './Navbar.module.css';
 import NotificationBell from './NotificationBell';
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user: rawUser, logout } = useAuth();
+  const [mounted, setMounted] = useState(false);
+  const user = mounted ? rawUser : null;
   const pathname = usePathname();
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -67,6 +69,7 @@ export default function Navbar() {
   }, [isSearchOpen]);
 
   useEffect(() => {
+    setMounted(true);
     const storedTheme = localStorage.getItem('app_theme') as 'light' | 'dark' | null;
     const initial = storedTheme ?? 'light';
     setTheme(initial);

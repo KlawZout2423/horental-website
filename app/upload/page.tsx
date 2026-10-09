@@ -9,7 +9,14 @@ import { formatGhanaPhone, isValidGhanaPhone, sanitizeInput, parsePropertyDescri
 import VerifiedAgentModal from '../../components/VerifiedAgentModal';
 import UnderUpdateView from '../../components/UnderUpdateView';
 import { useSystemStatus } from '../../lib/useSystemStatus';
+import { useSortable, arrayMove } from '../../lib/useSortable';
 import styles from './upload.module.css';
+
+interface UploadImageItem {
+  id: string;
+  preview: string;
+  file?: File;
+}
 
 // ── Inline sub-component: show admin rejection notes to rejected agents ──────
 function RejectionNotesBox({ userId }: { userId: number }) {
@@ -97,8 +104,11 @@ function UploadPageContent({
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isDetectingGps, setIsDetectingGps] = useState(false);
   const [gpsStatusMsg, setGpsStatusMsg] = useState<string | null>(null);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [images, setImages] = useState<UploadImageItem[]>([]);
+  const handleMoveImage = React.useCallback((from: number, to: number) => {
+    setImages((prev) => arrayMove(prev, from, to));
+  }, []);
+  const { containerRef: sortableContainerRef, getItemProps: getSortableItemProps } = useSortable(handleMoveImage);
   const [landlordName, setLandlordName] = useState('');
   const [rooms, setRooms] = useState('');
   const [advance, setAdvance] = useState('');
@@ -212,13 +222,18 @@ function UploadPageContent({
       setLandlordName(activeInitialData.landlordName || '');
 
       if (activeInitialData.gallery && activeInitialData.gallery.length > 0) {
-        setImagePreviews(activeInitialData.gallery.map((g) => g.url));
+        setImages(activeInitialData.gallery.map((g, i) => ({
+          id: `existing-${i}-${g.url}`,
+          preview: g.url,
+        })));
       } else if (activeInitialData.imageUrl) {
-        setImagePreviews([activeInitialData.imageUrl]);
+        setImages([{
+          id: `existing-0-${activeInitialData.imageUrl}`,
+          preview: activeInitialData.imageUrl,
+        }]);
       } else {
-        setImagePreviews([]);
+        setImages([]);
       }
-      setImageFiles([]);
 
       let desc = activeInitialData.description || '';
 
@@ -354,29 +369,40 @@ function UploadPageContent({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
-      setImageFiles((prev) => [...prev, ...filesArray]);
-      
-      const previewsArray = filesArray.map((file) => URL.createObjectURL(file));
-      setImagePreviews((prev) => [...prev, ...previewsArray]);
+      const newItems: UploadImageItem[] = filesArray.map((file, i) => ({
+        id: `file-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`,
+        preview: URL.createObjectURL(file),
+        file,
+      }));
+      setImages((prev) => [...prev, ...newItems]);
+      e.target.value = '';
     }
   };
 
   useEffect(() => {
     return () => {
-      imagePreviews.forEach((url) => {
-        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+      images.forEach((item) => {
+        if (item.file && item.preview.startsWith('blob:')) {
+          try { URL.revokeObjectURL(item.preview); } catch {}
+        }
       });
     };
-  }, [imagePreviews]);
+  }, [images]);
 
   const handleRemoveImage = (index: number) => {
-    setImagePreviews((prev) => {
-      if (prev[index] && prev[index].startsWith('blob:')) {
-        URL.revokeObjectURL(prev[index]);
+    setImages((prev) => {
+      const target = prev[index];
+      if (target?.file && target.preview.startsWith('blob:')) {
+        try { URL.revokeObjectURL(target.preview); } catch {}
       }
       return prev.filter((_, i) => i !== index);
     });
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleShiftImage = (from: number, direction: 'prev' | 'next') => {
+    const to = direction === 'prev' ? from - 1 : from + 1;
+    if (to < 0 || to >= images.length) return;
+    setImages((prev) => arrayMove(prev, from, to));
   };
 
   const handleGetGpsLocation = () => {
@@ -450,12 +476,13 @@ function UploadPageContent({
     setSubmitting(true);
 
     try {
-      let urls: string[] = [];
+      const filesToUpload = images.filter((img): img is UploadImageItem & { file: File } => !!img.file);
+      let uploadedUrls: string[] = [];
 
-      if (imageFiles.length > 0) {
+      if (filesToUpload.length > 0) {
         const formData = new FormData();
-        imageFiles.forEach((file) => {
-          formData.append('images', file);
+        filesToUpload.forEach((item) => {
+          formData.append('images', item.file);
         });
 
         const uploadRes = await fetch('/api/upload-multiple', {
@@ -470,13 +497,16 @@ function UploadPageContent({
         }
 
         const uploadBody = await uploadRes.json();
-        const uploadedUrls: string[] = uploadBody.imageUrls || uploadBody.images || [];
-
-        const existingUrls = imagePreviews.filter((p) => !p.startsWith('blob:'));
-        urls = [...existingUrls, ...uploadedUrls];
-      } else {
-        urls = imagePreviews.filter((p) => !p.startsWith('blob:'));
+        uploadedUrls = uploadBody.imageUrls || uploadBody.images || [];
       }
+
+      let uploadIdx = 0;
+      const urls: string[] = images.map((img) => {
+        if (img.file) {
+          return uploadedUrls[uploadIdx++];
+        }
+        return img.preview;
+      }).filter(Boolean);
 
       if (urls.length === 0) {
         throw new Error('Please upload at least one image of your property.');
@@ -963,8 +993,7 @@ function UploadPageContent({
                 setLocation('');
                 setPrice('');
                 setDescription('');
-                setImageFiles([]);
-                setImagePreviews([]);
+                setImages([]);
               }}
               className="btn btn-outline"
               style={{ padding: '12px 20px', fontSize: '0.88rem', flex: '1 1 180px' }}
@@ -1963,20 +1992,77 @@ function UploadPageContent({
                   />
                 </label>
 
-                {imagePreviews.length > 0 && (
-                  <div className={styles.previews}>
-                    {imagePreviews.map((preview, index) => (
-                      <div key={index} className={styles.previewCard}>
-                        <img src={preview} alt="preview" className={styles.previewImage} />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(index)}
-                          className={styles.removePreview}
-                        >
-                          &times;
-                        </button>
-                      </div>
-                    ))}
+                {images.length > 0 && (
+                  <div style={{ marginTop: '14px' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '8px',
+                      fontSize: '0.8rem',
+                      color: 'var(--text-secondary)'
+                    }}>
+                      <span>
+                        <strong style={{ color: 'var(--text-primary)' }}>{images.length} photo{images.length > 1 ? 's' : ''}</strong> &bull; Drag to rearrange (first image is cover)
+                      </span>
+                    </div>
+
+                    <div ref={sortableContainerRef} className={styles.previews}>
+                      {images.map((item, index) => {
+                        const itemProps = getSortableItemProps(index);
+                        const isCover = index === 0;
+                        return (
+                          <div
+                            key={item.id}
+                            {...itemProps}
+                            className={`${styles.previewCard} ${isCover ? styles.previewCardCover : ''}`}
+                            title="Drag to rearrange"
+                          >
+                            <img src={item.preview} alt={`preview-${index}`} className={styles.previewImage} draggable={false} />
+                            
+                            {isCover && (
+                              <span className={styles.coverBadge}>
+                                Cover
+                              </span>
+                            )}
+
+                            <div className={styles.previewActions}>
+                              {index > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleShiftImage(index, 'prev'); }}
+                                  className={styles.reorderBtn}
+                                  title="Move earlier"
+                                  aria-label="Move earlier"
+                                >
+                                  &lsaquo;
+                                </button>
+                              )}
+                              {index < images.length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleShiftImage(index, 'next'); }}
+                                  className={styles.reorderBtn}
+                                  title="Move later"
+                                  aria-label="Move later"
+                                >
+                                  &rsaquo;
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleRemoveImage(index); }}
+                                className={styles.removePreview}
+                                title="Remove photo"
+                                aria-label="Remove photo"
+                              >
+                                &times;
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

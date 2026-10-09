@@ -29,9 +29,11 @@ import { formatGhanaPhone, isValidGhanaPhone, formatAdvanceLabel } from '../../l
 import { useAuth } from '../../lib/auth';
 import UnderUpdateView from '../../components/UnderUpdateView';
 import { useSystemStatus } from '../../lib/useSystemStatus';
+import { useSortable, arrayMove } from '../../lib/useSortable';
 import styles from './landlord-registration.module.css';
 
 interface PhotoItem {
+  id: string;
   file: File;
   previewUrl: string;
 }
@@ -100,6 +102,16 @@ export default function LandlordRegistrationPage() {
   // Photos
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [isResizing, setIsResizing] = useState(false);
+  const handleMovePhoto = React.useCallback((from: number, to: number) => {
+    setPhotos((prev) => arrayMove(prev, from, to));
+  }, []);
+  const { containerRef: photoSortableContainerRef, getItemProps: getPhotoSortableItemProps } = useSortable(handleMovePhoto);
+
+  const handleShiftPhoto = (from: number, direction: 'prev' | 'next') => {
+    const to = direction === 'prev' ? from - 1 : from + 1;
+    if (to < 0 || to >= photos.length) return;
+    setPhotos((prev) => arrayMove(prev, from, to));
+  };
 
   // Agreement Checklist
   const [agreements, setAgreements] = useState<boolean[]>([
@@ -238,6 +250,7 @@ export default function LandlordRegistrationPage() {
       try {
         const resized = await resizeImageFile(f);
         resizedList.push({
+          id: `photo-${Date.now()}-${resizedList.length}-${Math.random().toString(36).slice(2, 7)}`,
           file: resized,
           previewUrl: URL.createObjectURL(resized)
         });
@@ -250,8 +263,24 @@ export default function LandlordRegistrationPage() {
     setIsResizing(false);
   };
 
+  React.useEffect(() => {
+    return () => {
+      photos.forEach(p => {
+        if (p.previewUrl.startsWith('blob:')) {
+          try { URL.revokeObjectURL(p.previewUrl); } catch {}
+        }
+      });
+    };
+  }, [photos]);
+
   const removePhoto = (index: number) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index));
+    setPhotos(prev => {
+      const target = prev[index];
+      if (target?.previewUrl?.startsWith('blob:')) {
+        try { URL.revokeObjectURL(target.previewUrl); } catch {}
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   // --- Step Navigation & Validation ---
@@ -917,19 +946,65 @@ export default function LandlordRegistrationPage() {
             </label>
 
             {photos.length > 0 && (
-              <div className={styles.photoGrid}>
-                {photos.map((ph, idx) => (
-                  <div key={idx} className={styles.photoThumb}>
-                    <img src={ph.previewUrl} alt={`preview-${idx}`} />
-                    <button type="button" className={styles.photoRmBtn} onClick={() => removePhoto(idx)}>
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
+              <div ref={photoSortableContainerRef} className={styles.photoGrid}>
+                {photos.map((ph, idx) => {
+                  const itemProps = getPhotoSortableItemProps(idx);
+                  const isCover = idx === 0;
+                  return (
+                    <div 
+                      key={ph.id} 
+                      {...itemProps}
+                      className={`${styles.photoThumb} ${isCover ? styles.photoThumbCover : ''}`}
+                      title="Drag to rearrange (first image is cover)"
+                    >
+                      <img src={ph.previewUrl} alt={`preview-${idx}`} draggable={false} />
+                      
+                      {isCover && (
+                        <span className={styles.photoCoverBadge}>
+                          Cover
+                        </span>
+                      )}
+
+                      <div className={styles.photoActions}>
+                        {idx > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleShiftPhoto(idx, 'prev'); }}
+                            className={styles.photoReorderBtn}
+                            title="Move earlier"
+                            aria-label="Move earlier"
+                          >
+                            &lsaquo;
+                          </button>
+                        )}
+                        {idx < photos.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleShiftPhoto(idx, 'next'); }}
+                            className={styles.photoReorderBtn}
+                            title="Move later"
+                            aria-label="Move later"
+                          >
+                            &rsaquo;
+                          </button>
+                        )}
+                        <button 
+                          type="button" 
+                          className={styles.photoRmBtn} 
+                          onClick={(e) => { e.stopPropagation(); removePhoto(idx); }}
+                          title="Remove photo"
+                          aria-label="Remove photo"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
             <div className={styles.photoCount}>
-              {photos.length > 0 ? `${photos.length} photo(s) selected` : ''}
+              {photos.length > 0 ? `${photos.length} photo(s) selected • Drag or use arrows to rearrange (first is cover)` : ''}
             </div>
           </div>
 
