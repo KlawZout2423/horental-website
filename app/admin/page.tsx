@@ -341,7 +341,15 @@ function AdminPageContent() {
   const [deleteInputText, setDeleteInputText] = useState('');
 
   // System Update / Maintenance Mode State
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState<boolean>(true);
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('horentals_maintenance_mode');
+        if (cached !== null) return cached === 'true';
+      } catch {}
+    }
+    return false;
+  });
   const [isMaintenanceLoading, setIsMaintenanceLoading] = useState<boolean>(true);
   const [isTogglingMaintenance, setIsTogglingMaintenance] = useState<boolean>(false);
   const [maintenanceUpdatedAt, setMaintenanceUpdatedAt] = useState<string | null>(null);
@@ -353,6 +361,11 @@ function AdminPageContent() {
       const data = await res.json();
       if (res.ok && typeof data.isUnderMaintenance === 'boolean') {
         setIsMaintenanceMode(data.isUnderMaintenance);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('horentals_maintenance_mode', String(data.isUnderMaintenance));
+          } catch {}
+        }
         if (data.updatedAt) setMaintenanceUpdatedAt(data.updatedAt);
       }
     } catch (err) {
@@ -380,6 +393,11 @@ function AdminPageContent() {
       if (!res.ok) throw new Error(data.error || 'Failed to update system mode');
 
       setIsMaintenanceMode(targetState);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('horentals_maintenance_mode', String(targetState));
+        } catch {}
+      }
       setMaintenanceUpdatedAt(new Date().toISOString());
       setMessage({
         text: data.message || `System mode successfully updated: ${targetState ? 'Update Mode Active' : 'Website Live'}`,

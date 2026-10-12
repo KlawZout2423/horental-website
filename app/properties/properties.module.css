@@ -25,6 +25,7 @@
   align-items: start;
 }
 
+
 @media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr;
@@ -929,5 +930,74 @@
   }
   to {
     transform: translateY(0);
+  }
+}
+
+/* ── Desktop Decoupled Scrolling (Properties scroll independently, Sidebar stays stationary) ── */
+@media (min-width: 901px) {
+  .container {
+    height: calc(100vh - 70px);
+    max-height: calc(100vh - 70px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 24px 8px;
+    box-sizing: border-box;
+  }
+
+  .title {
+    flex-shrink: 0;
+    margin-bottom: 12px !important;
+  }
+
+  .layout {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+    align-items: stretch;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    height: 100%;
+    max-height: 100%;
+    position: static !important;
+    top: auto !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+
+  .listingsArea {
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 10px;
+    padding-bottom: 40px;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(150, 150, 150, 0.35) transparent;
+  }
+
+  .listingsArea::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .listingsArea::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .listingsArea::-webkit-scrollbar-thumb {
+    background-color: rgba(150, 150, 150, 0.35);
+    border-radius: 4px;
+  }
+
+  .listingsArea::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(150, 150, 150, 0.6);
   }
 }

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../lib/auth';
-import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart, Building2, Zap, UserCheck, Building, Check, CheckCircle, Infinity, Car } from 'lucide-react';
+import { Search, MapPin, ShieldCheck, HelpCircle, PhoneCall, ArrowRight, SlidersHorizontal, ChevronDown, Star, Sparkles, Heart, Building2, Zap, UserCheck, Building, Check, CheckCircle, Infinity, Car, MessageCircle, X } from 'lucide-react';
 import { graphqlRequest, GET_PROPERTIES, GET_AGENTS } from '../lib/graphql';
 import { trackVisit } from '../lib/trackVisit';
 import styles from './page.module.css';
@@ -124,14 +124,11 @@ export default function Home() {
   const [agents, setAgents] = useState<AgentUser[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Partnership announcement card — visible until Sept 26 2026 (3 days from launch), dismissible
+  // Partnership announcement card — dismissible banner
   const [showPartnershipCard, setShowPartnershipCard] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    // Card expires globally on Sept 26 2026 at midnight (3 days from Sept 23 launch)
-    const EXPIRY = new Date('2026-09-26T00:00:00Z').getTime();
-    if (Date.now() >= EXPIRY) return; // past expiry — never show
     if (localStorage.getItem('partnership_yuyu_dismissed') === 'true') return; // user dismissed
     setShowPartnershipCard(true);
   }, []);
@@ -511,126 +508,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── Partnership Announcement Card (Ho Rentals × Yuyu Rides) ── */}
-      {showPartnershipCard && (
-        <div style={{
-          margin: '0 auto',
-          maxWidth: '700px',
-          padding: '12px 16px 0',
-          position: 'relative',
-          zIndex: 10,
-        }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #0d0d0d 0%, #1a0a0a 40%, #0a1a0a 100%)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-            position: 'relative',
-          }}>
-            {/* Red/green accent bar top */}
-            <div style={{ height: '3px', background: 'linear-gradient(90deg, #C1121F 0%, #111 50%, #16a34a 100%)' }} />
-
-            {/* Dismiss button */}
-            <button
-              onClick={handleDismissPartnership}
-              aria-label="Dismiss partnership announcement"
-              style={{
-                position: 'absolute', top: '12px', right: '12px',
-                background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%',
-                width: '28px', height: '28px', cursor: 'pointer', color: '#aaa',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '1rem', fontWeight: 800, lineHeight: 1, zIndex: 2,
-              }}
-            >
-              ×
-            </button>
-
-            <div style={{ padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-              {/* Label */}
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '99px', padding: '4px 14px',
-              }}>
-                <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.12em', color: '#d1d5db', textTransform: 'uppercase' }}>🤝 Partnership Announcement</span>
-              </div>
-
-              {/* Headline */}
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: 'clamp(0.7rem, 2vw, 0.8rem)', color: '#9ca3af', margin: '0 0 4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Official Partnership</p>
-                <h2 style={{ margin: 0, fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 900, color: '#fff', letterSpacing: '-0.5px', lineHeight: 1.1 }}>
-                  PARTNERSHIP
-                </h2>
-                <p style={{ margin: '2px 0 0', fontSize: 'clamp(0.85rem, 2.5vw, 1rem)', color: '#e5e7eb', fontWeight: 500, textDecoration: 'underline', textUnderlineOffset: '3px' }}>Announcement</p>
-              </div>
-
-              {/* Logos row */}
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px',
-                background: 'rgba(0,0,0,0.35)', borderRadius: '12px', padding: '12px 24px',
-                width: '100%', boxSizing: 'border-box',
-              }}>
-                {/* Ho Rentals logo */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/logo.png"
-                  alt="Ho Rentals Ghana"
-                  style={{ height: '56px', width: 'auto', objectFit: 'contain', borderRadius: '8px' }}
-                />
-
-                {/* X */}
-                <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fff', opacity: 0.9 }}>×</span>
-
-                {/* Yuyu Rides logo */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/yuyu_rides_logo.jpg"
-                  alt="Yuyu Rides"
-                  style={{ height: '56px', width: 'auto', objectFit: 'contain', borderRadius: '6px' }}
-                />
-              </div>
-
-              {/* Tagline */}
-              <p style={{ margin: 0, color: '#d1d5db', fontSize: 'clamp(0.8rem, 2.5vw, 0.92rem)', fontWeight: 500, textAlign: 'center', lineHeight: 1.5 }}>
-                Find Your Home With Us.{' '}
-                <span style={{ color: '#4ade80', fontWeight: 700 }}>Ride There with Yuyu.</span>
-              </p>
-
-              {/* CTA — login required to contact Yuyu Rides */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                <button
-                  onClick={() => {
-                    if (!user) {
-                      setShowAuthModal(true);
-                      return;
-                    }
-                    window.location.href = '/properties';
-                  }}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    background: 'linear-gradient(135deg, #16a34a, #059669)',
-                    color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700,
-                    fontSize: '0.85rem', borderRadius: '99px', padding: '9px 22px',
-                    boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
-                  }}
-                >
-                  <Car size={15} /> Browse Properties with Yuyu
-                </button>
-                {!user && (
-                  <span style={{ fontSize: '0.72rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    🔒 Sign in to access Yuyu Rides partnership
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Bottom accent bar */}
-            <div style={{ height: '3px', background: 'linear-gradient(90deg, #16a34a 0%, #111 50%, #C1121F 100%)' }} />
-          </div>
-        </div>
-      )}
-
       {/* Sticky search + chips wrapper — sticky on mobile */}
       <div className={styles.stickySearchBar}>
         {/* Mobile-only mini search (hidden on desktop since hero has the full one) */}
@@ -722,6 +599,110 @@ export default function Home() {
               {opt.label}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* ── Partnership Announcement Banner (Ho Rentals × Yuyu Rides) — Located directly under chips ── */}
+      {showPartnershipCard && (
+        <div className={styles.yuyuBannerOuter}>
+          <div className={styles.yuyuBannerWrapper}>
+            {/* Top red/green accent line */}
+            <div className={styles.yuyuTopAccentBar} />
+
+            {/* Dismiss button */}
+            <button
+              onClick={handleDismissPartnership}
+              aria-label="Dismiss partnership announcement"
+              className={styles.yuyuBannerDismiss}
+              title="Dismiss banner"
+            >
+              <X size={16} />
+            </button>
+
+            {/* Content left */}
+            <div className={styles.yuyuBannerContent}>
+              <div className={styles.yuyuBadgeRow}>
+                <div className={styles.yuyuBannerBadge}>
+                  <span className={styles.yuyuPulseDot} />
+                  <span>OFFICIAL RIDE &amp; INSPECTION PARTNER</span>
+                </div>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  padding: '4px 10px',
+                  borderRadius: '99px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: '#e2e8f0'
+                }}>
+                  <ShieldCheck size={13} style={{ color: '#34d399' }} />
+                  <span>Verified Drivers in Ho</span>
+                </div>
+              </div>
+
+              <h2 className={styles.yuyuBannerTitle}>
+                Need a Ride to Inspect Properties in Ho?{' '}
+                <span className={styles.yuyuBannerTitleHighlight}>Ride with Yuyu.</span>
+              </h2>
+
+              <p className={styles.yuyuBannerSub}>
+                Find verified student hostels, rooms &amp; apartments on Ho Rentals, then ride there directly with verified Yuyu keke drivers across Ho, Trafalgar, UHAS &amp; HTU campuses.
+              </p>
+
+              <div className={styles.yuyuPerksList}>
+                <span className={styles.yuyuPerkItem}>⚡ Instant Keke Dispatches</span>
+                <span className={styles.yuyuPerkItem}>🎓 Campus &amp; Town Viewings</span>
+                <span className={styles.yuyuPerkItem}>🛡️ Trusted &amp; Safe Transport</span>
+              </div>
+
+              <div className={styles.yuyuBannerActions}>
+                <Link
+                  href="/properties"
+                  className={styles.yuyuPrimaryBtn}
+                >
+                  <Car size={16} />
+                  <span>Browse Properties &amp; Request Ride</span>
+                </Link>
+
+                <a
+                  href="https://wa.me/233538792644?text=Hello%20Yuyu%20Rides%2C%20I%20am%20looking%20for%20a%20ride%20for%20property%20inspection%20in%20Ho."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.yuyuWhatsAppBtn}
+                >
+                  <MessageCircle size={16} style={{ color: '#25D366' }} />
+                  <span>Chat with Yuyu Dispatch</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Visual right */}
+            <div className={styles.yuyuBannerVisual}>
+              <div className={styles.yuyuCoBrandBox}>
+                <img
+                  src="/logo.png"
+                  alt="Ho Rentals Ghana"
+                  className={styles.yuyuLogoImg}
+                />
+                <span className={styles.yuyuCoBrandX}>×</span>
+                <img
+                  src="/yuyu_rides_logo.jpg"
+                  alt="Yuyu Rides"
+                  className={styles.yuyuLogoImg}
+                />
+              </div>
+
+              <div className={styles.yuyuBannerImageWrapper}>
+                <img
+                  src="/keke_ride_hero.png"
+                  alt="Yuyu Rides Keke"
+                  className={styles.yuyuBannerImage}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

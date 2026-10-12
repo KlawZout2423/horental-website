@@ -3,7 +3,7 @@
  */
 export const SITE_CONFIG = {
   // Toggle this to true to display the "System Undergoing Update" info page to visitors
-  isUnderMaintenance: true,
+  isUnderMaintenance: false,
 
   headline: "System Update & Catalog Refresh in Progress",
   subheadline: "We're currently enhancing our listings and photo alignment to bring you the cleanest, most accurate property experience in Ho.",
